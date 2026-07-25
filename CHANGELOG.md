@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-07-25
+
 ### Added
 
 - A full MkDocs (Material) documentation site under `docs/`, published to
@@ -169,6 +171,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   group) rather than blocking the test run indefinitely; a regression test
   proves the timeout actually fires. Test-only; does not affect `cl-cli`
   itself, which never spawns subprocesses.
+- The man page and Markdown doc renderers (`%MANPAGE-OPTION-ENTRY`,
+  `%MD-OPTION-TABLE`) no longer rebuild a full `%OPTION-TARGET-TABLE` from
+  scratch for every single option in their loop -- an O(n^2) hash-table-
+  construction cost that dominated both renderers' profiles on a large app.
+  Each loop now hoists one table build to the top and threads it through
+  explicitly, mirroring the plain-text help renderer's existing pattern.
+  Measured on a 330-option/33-command benchmark app: `render-manpage` ~40%
+  faster (682us -> 406us), `render-markdown` ~50% faster (1073us -> 534us).
+  No public API or observable output changed; see
+  `tests/cases-parser-benchmark.lisp`.
+- `render-json` writes directly into a shared stream instead of each layer
+  (`%option->json`, `%command->json`, `%app->json`, ...) building and
+  returning its own string for its caller to copy again one level up --
+  the same allocation-cascade bug already fixed in the bash/zsh/PowerShell
+  completion renderers, one level removed. `render-json`'s public contract
+  (a string when called without a stream, no return value when passed one)
+  is unchanged. Measured on a 330-option/33-command benchmark app: ~3.7x
+  faster (963us -> 263us per call), verified against `cl-json-kit`'s
+  independent reader to confirm the output is still valid and semantically
+  identical, not just byte-similar. See `tests/cases-parser-benchmark.lisp`.
+- `MAKE-APP`-time option-relation validation (`:requires`,
+  `:requires-any-of`, `:required-if`, `:required-unless`, `:conflicts-with`)
+  no longer rebuilds a full option target-table from scratch once per
+  declared relation target, plus again independently in cycle detection and
+  relation-graph construction -- the table is now built once per `MAKE-APP`
+  call and threaded through. Measured on a relation-heavy 100-option
+  benchmark app: `MAKE-APP` ~36% faster (4.822ms -> 3.109ms). Apps declaring
+  no option relations at all also skip relation-graph construction entirely
+  now, rather than building an empty one: ~27% faster `MAKE-APP` on a
+  330-option/33-command app with no relations declared (1.755ms -> 1.288ms).
+  No public API or observable behavior changed; see
+  `tests/cases-parser-benchmark.lisp`.
+- `PARSE-ARGV`'s four option-relation validators (`VALIDATE-OPTION-
+  RELATIONSHIPS`, `VALIDATE-REQUIRED-OPTION-GROUPS`, `VALIDATE-INCLUSIVE-
+  GROUPS`, `VALIDATE-CONDITIONAL-REQUIREMENTS`) no longer each independently
+  rebuild their own key/target lookup tables from the validated-specs list
+  on every parse; the tables are now cached once per app/command scope
+  (alongside the existing relation-graph cache) and threaded through.
+  Measured on an app combining multiple relation kinds on overlapping
+  options: `PARSE-ARGV` ~37% faster (2.862us -> 1.801us per call). No public
+  API or observable behavior changed; see `tests/cases-parser-benchmark.lisp`.
 
 ## [0.2.0] - 2026-07-20
 
@@ -459,5 +502,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   escape or other terminal control sequences into a user's terminal. Spec
   construction additionally rejects control characters in option value names.
 
-[Unreleased]: https://github.com/nerima-lisp/cl-cli/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/nerima-lisp/cl-cli/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/nerima-lisp/cl-cli/releases/tag/v0.3.0
 [0.2.0]: https://github.com/nerima-lisp/cl-cli/releases/tag/v0.2.0
