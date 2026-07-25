@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `consume-value-option` (`src/parser-option-consumption.lisp`) had a
+  provably unreachable `:flag`-kind guard clause -- its sole call site is
+  the `(:value :optional-value :key-value)` case arm of
+  `consume-long-option-token`, so `(option-kind spec)` can never be `:flag`
+  inside its body. Removed as dead code.
+
+### Changed
+
+- Bumped `cl-weave`, `cl-process-kit`, `cl-boundary-kit`, `cl-log-kit`, and
+  `cl-json-kit` to their latest upstream revisions (`cl-prolog` was already
+  current). Verified `cl-boundary-kit`'s new default 60-second process
+  timeout (previously unbounded when `:timeout` was omitted) doesn't affect
+  `cl-cli`: every `process-kit:run` call site in the test suite already
+  passes an explicit `:timeout`.
+
 ## [0.3.0] - 2026-07-25
 
 ### Added
