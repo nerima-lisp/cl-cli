@@ -19,6 +19,15 @@ ecl --norc --load tests/run-tests.lisp --eval '(cl-cli/tests:run-tests)'
 nix flake check
 ```
 
+SBCL is the release-blocking target and must be green. ECL is currently
+expected to fail: `cl-log-kit` (a transitive test dependency via
+`cl-process-kit`) hard-codes `sb-thread:*` with no portability guard, so
+it cannot compile under any non-SBCL implementation --
+[nerima-lisp/cl-log-kit#1](https://github.com/nerima-lisp/cl-log-kit/issues/1),
+open upstream. `nix flake check`'s `ecl` output — and any local ECL run —
+will fail until that's fixed; do not treat it as a release-blocking
+regression to chase, and do not skip the SBCL check to compensate.
+
 If a release changes parser semantics, help output, or completion rendering,
 add or update focused tests before tagging.
 
