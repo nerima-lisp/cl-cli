@@ -20,19 +20,6 @@ copies per value is the highest-leverage single change in this renderer."
       (%completion-write-shell-quoted stream string)))
   (write-char #\) stream))
 
-(defun %completion-bash-write-case-labels (stream strings)
-  "Write STRINGS as `|`-separated, shell-quoted case labels directly to STREAM.
-
-See %COMPLETION-BASH-WRITE-ARRAY-LITERAL for why writing straight to STREAM
-instead of through %COMPLETION-CASE-LABELS avoids two extra string copies
-per call."
-  (let ((firstp t))
-    (dolist (string strings)
-      (if firstp
-          (setf firstp nil)
-          (write-char #\| stream))
-      (%completion-write-shell-quoted stream string))))
-
 (defun %completion-bash-write-static-compreply-source (stream values indent &key replace-p)
   (when replace-p
     (format stream "~ACOMPREPLY=()~%" indent))
@@ -52,7 +39,7 @@ per call."
              (value-source (%completion-option-value-source option)))
         (when (and labels value-source)
           (format stream "    ")
-          (%completion-bash-write-case-labels stream labels)
+          (%completion-write-case-labels stream labels)
           (format stream ")~%")
           (%completion-bash-write-static-compreply-source stream value-source "      "
                                                            :replace-p t)
@@ -80,7 +67,7 @@ per call."
                              "expect_optional_value=1")))
             (when emit-p
               (format stream "      ")
-              (%completion-bash-write-case-labels
+              (%completion-write-case-labels
                stream
                (%completion-option-token-patterns option :command-name command-name))
               (format stream ") ")
@@ -149,7 +136,7 @@ separated value (`--option <TAB>`) actually completes its candidates."
         (progn
           (format stream "    case \"${words[1]}\" in~%")
           (format stream "      ")
-          (%completion-bash-write-case-labels stream (%completion-visible-command-tokens app))
+          (%completion-write-case-labels stream (%completion-visible-command-tokens app))
           (format stream ") ;;~%")
           (format stream "      *)~%")
           (%completion-bash-write-static-compreply-source
@@ -192,7 +179,7 @@ per ancestor on the way back up the tree."
          (child-depth (1+ depth)))
     (format stream "  case \"${words[~A]}\" in~%" depth)
     (format stream "    ")
-    (%completion-bash-write-case-labels stream (%completion-command-names command))
+    (%completion-write-case-labels stream (%completion-command-names command))
     (format stream ")~%")
     (format stream "      case \"~A:$cur\" in~%" prefix)
     (%completion-bash-write-value-case-body stream options :command-name prefix)

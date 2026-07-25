@@ -138,9 +138,33 @@ value entirely."
   (format nil "~{~A~^ ~}"
           (remove-duplicates strings :test #'equal)))
 
-(defun %completion-case-labels (strings)
-  (format nil "~{~A~^|~}"
-          (mapcar #'%completion-shell-quote strings)))
+(defun %completion-write-case-labels (stream strings)
+  "Write STRINGS as `|`-separated, shell-quoted case labels directly to STREAM.
+
+Shared by the bash and zsh renderers' `case \"$word\" in ...` sections --
+quotes each label straight into STREAM instead of quoting it into its own
+string, joining those into a second string via %COMPLETION-CASE-LABELS, and
+copying that into the caller's buffer a third time."
+  (let ((firstp t))
+    (dolist (string strings)
+      (if firstp
+          (setf firstp nil)
+          (write-char #\| stream))
+      (%completion-write-shell-quoted stream string))))
+
+(defun %completion-write-space-joined-quoted (stream strings)
+  "Write STRINGS shell-quoted and space-separated directly to STREAM.
+
+Shared by the bash/zsh renderers' `compadd`/array-literal builders for the
+same reason as %COMPLETION-WRITE-CASE-LABELS: one quote pass straight into
+STREAM instead of quoting each value into its own string and then joining
+those strings a second time."
+  (let ((firstp t))
+    (dolist (string strings)
+      (if firstp
+          (setf firstp nil)
+          (write-char #\Space stream))
+      (%completion-write-shell-quoted stream string))))
 
 (defun %completion-option-candidates (option)
   (or (option-completion-candidates option)

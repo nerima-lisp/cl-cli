@@ -29,38 +29,39 @@ lists. KEY-NAME is the downcased option key, matching RENDER-COMPLETE-REPLY."
             (dolist (name (%completion-recognized-option-names option))
               (push (cons (option-token-display-name name) key) alist))))))))
 
-(defun %completion-zsh-option-value-case-body (options &key attached-p)
-  (with-output-to-string (out)
-    (dolist (option options)
-      (unless (option-hidden-p option)
-        (let ((candidates (%completion-option-candidates option))
-              (hint (option-value-hint option))
-              (dynamic-p (and (option-complete option) t)))
-          (when (or candidates (member hint '(:file :dir)) dynamic-p)
-            (format out "      ~A)~%"
-                    (%completion-case-labels
-                     (%completion-option-token-patterns option :attached-p attached-p)))
-            (cond
-              (candidates
-               (write-string (%completion-zsh-option-candidate-body candidates) out))
-              (dynamic-p
-               (format out "        local comp_value~%")
-               (format out "        while IFS=$'\\t' read -r comp_value _; do~%")
-               (format out "          [[ -n \"$comp_value\" && \"$comp_value\" == \"$current_word\"* ]] && compadd -- \"$comp_value\"~%")
-               (format out "        done < <(\"${words[1]}\" __complete ~A \"$current_word\" 2>/dev/null)~%"
-                       (string-downcase (symbol-name (option-key option)))))
-              ((eq hint :dir)
-               (format out "        _files -/~%"))
-              ((eq hint :file)
-               (format out "        _files~%")))
-            (format out "        return 0~%")
-            (format out "        ;;~%")))))))
+(defun %completion-zsh-write-option-value-case-body (stream options &key attached-p)
+  "Write the `case \"$word\" in ...` body for OPTIONS' value candidates directly to STREAM.
 
-(defun %completion-zsh-value-case-body (options)
-  (%completion-zsh-option-value-case-body options :attached-p nil))
-
-(defun %completion-zsh-attached-value-case-body (options)
-  (%completion-zsh-option-value-case-body options :attached-p t))
+Each option's case label and candidate body used to be built as their own
+separately-allocated strings and then copied into this function's own
+WITH-OUTPUT-TO-STRING buffer; now every value is quoted straight into
+whatever buffer the caller passes, matching the bash renderer's
+%COMPLETION-BASH-WRITE-VALUE-CASE-BODY."
+  (dolist (option options)
+    (unless (option-hidden-p option)
+      (let ((candidates (%completion-option-candidates option))
+            (hint (option-value-hint option))
+            (dynamic-p (and (option-complete option) t)))
+        (when (or candidates (member hint '(:file :dir)) dynamic-p)
+          (format stream "      ")
+          (%completion-write-case-labels
+           stream (%completion-option-token-patterns option :attached-p attached-p))
+          (format stream ")~%")
+          (cond
+            (candidates
+             (%completion-zsh-write-option-candidate-body stream candidates))
+            (dynamic-p
+             (format stream "        local comp_value~%")
+             (format stream "        while IFS=$'\\t' read -r comp_value _; do~%")
+             (format stream "          [[ -n \"$comp_value\" && \"$comp_value\" == \"$current_word\"* ]] && compadd -- \"$comp_value\"~%")
+             (format stream "        done < <(\"${words[1]}\" __complete ~A \"$current_word\" 2>/dev/null)~%"
+                     (string-downcase (symbol-name (option-key option)))))
+            ((eq hint :dir)
+             (format stream "        _files -/~%"))
+            ((eq hint :file)
+             (format stream "        _files~%")))
+          (format stream "        return 0~%")
+          (format stream "        ;;~%"))))))
 
 (defun %completion-command-option-tokens (app command)
   (append (%completion-visible-option-tokens (app-global-options app))
@@ -81,27 +82,53 @@ lists. KEY-NAME is the downcased option key, matching RENDER-COMPLETE-REPLY."
                       (%completion-zsh-describe-field (command-name command)))
               specs)))))
 
-(defun %completion-zsh-command-specs-source (app)
-  (%completion-zsh-assignment-source "command_specs"
-                                     (%completion-zsh-command-specs app)))
+(defun %completion-zsh-write-command-specs (stream app)
+  (%completion-zsh-write-assignment stream "command_specs"
+                                    (%completion-zsh-command-specs app)))
 
-(defun %completion-zsh-assignment-source (variable-name values)
-  (format nil "  ~A=(~{~A~^ ~})~%"
-          variable-name
-          (mapcar #'%completion-shell-quote values)))
+(defun %completion-zsh-write-assignment (stream variable-name values)
+  "Write `  VARIABLE-NAME=(quoted quoted ...)~%` directly to STREAM.
+
+VALUES are already-composed descriptor strings (e.g. \"name:description\");
+this only handles the shell-quote-and-join step, straight into STREAM
+instead of quoting each value into its own string, joining those into a
+second string, and copying that into the caller's buffer a third time."
+  (format stream "  ~A=(" variable-name)
+  (%completion-write-space-joined-quoted stream values)
+  (format stream ")~%"))
 
 (defun %completion-zsh-option-placeholder (option)
   (or (option-value-name option)
       "value"))
 
 (defun %completion-zsh-arguments-field (value)
-  "Return VALUE safe for zsh `_arguments` bracket/placeholder fields."
-  (with-output-to-string (out)
-    (loop for char across (%completion-control-safe-string value)
-          do (write-char (if (find char "[]:\\")
-                             #\Space
-                             char)
-                         out))))
+  "Return VALUE safe for zsh `_arguments` bracket/placeholder fields.
+
+Strips control characters and blanks out `[`/`]`/`:`/`\\` (zsh `_arguments`
+field delimiters) in one pass over VALUE, rather than through
+%COMPLETION-CONTROL-SAFE-STRING (a second, separately-allocated
+WITH-OUTPUT-TO-STRING pass) -- the same fix already applied to
+%COMPLETION-SHELL-QUOTE. The two character sets are disjoint (none of
+`[]:\\` is a control code), so folding both into one COND is behavior-
+preserving; %COMPLETION-CONTROL-SAFE-STRING's other call sites are
+untouched."
+  (let ((string (if value (princ-to-string value) "")))
+    (with-output-to-string (out)
+      (loop for char across string
+            for code = (char-code char)
+            do (cond
+                 ((find char "[]:\\")
+                  (write-char #\Space out))
+                 ((or (char= char #\Newline)
+                      (char= char #\Return)
+                      (char= char #\Tab))
+                  (write-char #\Space out))
+                 ((or (< code 32)
+                      (= code 127)
+                      (and (>= code 128) (< code 160)))
+                  nil)
+                 (t
+                  (write-char char out)))))))
 
 (defun %completion-zsh-option-spec (option name)
   (let* ((token (option-token-display-name name))
@@ -139,30 +166,32 @@ lists. KEY-NAME is the downcased option key, matching RENDER-COMPLETE-REPLY."
 (defun %completion-zsh-built-in-option-specs (app)
   (%completion-zsh-option-specs-for-specs (built-in-option-specs app)))
 
-(defun %completion-zsh-option-specs-source (options variable-name &key app)
-  (%completion-zsh-assignment-source
-   variable-name
+(defun %completion-zsh-write-option-specs (stream options variable-name &key app)
+  (%completion-zsh-write-assignment
+   stream variable-name
    (append (%completion-zsh-option-specs-for-options options)
            (when app
              (%completion-zsh-built-in-option-specs app)))))
 
-(defun %completion-zsh-option-candidate-body (candidates)
+(defun %completion-zsh-write-option-candidate-body (stream candidates)
   (if (some #'cdr candidates)
-      (with-output-to-string (out)
-        (format out "        local -a value_candidates~%")
-        (format out "        value_candidates=(~%")
+      (progn
+        (format stream "        local -a value_candidates~%")
+        (format stream "        value_candidates=(~%")
         (dolist (candidate candidates)
-          (format out "          ~A~%"
-                  (%completion-shell-quote
-                   (format nil "~A:~A"
-                           (car candidate)
-                           (%completion-zsh-describe-field
-                            (or (cdr candidate) ""))))))
-        (format out "        )~%")
-        (format out "        _describe 'values' value_candidates~%"))
-      (format nil "        compadd -Q -S '' -- ~{~A~^ ~}~%"
-              (mapcar #'%completion-shell-quote
-                      (mapcar #'car candidates)))))
+          (format stream "          ")
+          (%completion-write-shell-quoted
+           stream
+           (format nil "~A:~A"
+                   (car candidate)
+                   (%completion-zsh-describe-field (or (cdr candidate) ""))))
+          (format stream "~%"))
+        (format stream "        )~%")
+        (format stream "        _describe 'values' value_candidates~%"))
+      (progn
+        (format stream "        compadd -Q -S '' -- ")
+        (%completion-write-space-joined-quoted stream (mapcar #'car candidates))
+        (format stream "~%"))))
 
 (defun %completion-fish-option-arguments (option &key condition)
   (with-output-to-string (out)

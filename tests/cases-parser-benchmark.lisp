@@ -102,13 +102,14 @@
       (expect (< (median-ms result) 2000))))
 
   (it "deduplicates a large candidate list in well under budget (guards against an O(n^2) regression)"
-    ;; %COMPLETION-SPACE-JOINED/%COMPLETION-BASH-ARRAY-LITERAL use
-    ;; :TEST #'EQUAL rather than #'STRING= -- semantically identical for
-    ;; strings, but lets SBCL dispatch REMOVE-DUPLICATES to a hash-table-based
-    ;; scan. On 10,000 strings (1,000 distinct, so real duplicates get
-    ;; removed), :TEST #'STRING= takes ~35ms on a fast machine; :TEST #'EQUAL
-    ;; is sub-millisecond. 50ms budget leaves generous room for a slow CI
-    ;; machine while still failing hard if this regresses to #'STRING=.
+    ;; %COMPLETION-SPACE-JOINED and the bash/zsh renderers' shell-quoting
+    ;; writers use :TEST #'EQUAL rather than #'STRING= -- semantically
+    ;; identical for strings, but lets SBCL dispatch REMOVE-DUPLICATES to a
+    ;; hash-table-based scan. On 10,000 strings (1,000 distinct, so real
+    ;; duplicates get removed), :TEST #'STRING= takes ~35ms on a fast
+    ;; machine; :TEST #'EQUAL is sub-millisecond. 50ms budget leaves
+    ;; generous room for a slow CI machine while still failing hard if this
+    ;; regresses to #'STRING=.
     (let* ((strings (loop for i below 10000 collect (format nil "cmd-~D" (mod i 1000))))
            (result (benchmark (:warmup 1 :samples 5)
                      (cl-cli::%completion-space-joined strings))))
@@ -125,4 +126,18 @@
     (let ((result (benchmark (:warmup 1 :samples 5)
                     (dotimes (i 200)
                       (render-completion *benchmark-large-completion-app* "bash")))))
+      (expect (< (median-ms result) 2000))))
+
+  (it "renders a zsh completion script for a 230-option/20-command app in well under budget"
+    ;; Guards the stream-threaded zsh renderer (src/completion-renderers-zsh.lisp,
+    ;; src/completion-renderer-helpers.lisp): the recursive command-node tree and
+    ;; the option-spec/command-spec/subcommand-spec assignment builders write
+    ;; straight into one shared stream, and %COMPLETION-ZSH-ARGUMENTS-FIELD folds
+    ;; control-stripping and bracket-blanking into a single pass instead of two
+    ;; nested WITH-OUTPUT-TO-STRING calls. 2000ms for 200 iterations leaves
+    ;; generous headroom over the ~1.3ms/call measured on a similarly-sized
+    ;; synthetic app on a fast machine.
+    (let ((result (benchmark (:warmup 1 :samples 5)
+                    (dotimes (i 200)
+                      (render-completion *benchmark-large-completion-app* "zsh")))))
       (expect (< (median-ms result) 2000)))))

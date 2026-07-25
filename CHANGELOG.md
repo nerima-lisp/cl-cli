@@ -34,20 +34,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The bash completion renderer (`RENDER-BASH-COMPLETION`) writes directly
-  into one shared output stream instead of building a separate string per
-  recursive subcommand node (each of which a parent then copied again via
-  `WRITE-STRING`) and per shell-quoted value (each of which was quoted into
-  its own string, joined into a second string, then copied a third time
-  into a parent's buffer). Profiling a 330-option/33-command benchmark app
-  showed the quote-then-join-then-copy pattern accounting for the large
-  majority of sampled render time, dominated by repeated
+- The bash and zsh completion renderers (`RENDER-BASH-COMPLETION`,
+  `RENDER-ZSH-COMPLETION`) write directly into one shared output stream
+  instead of building a separate string per recursive subcommand node (each
+  of which a parent then copied again via `WRITE-STRING`) and per
+  shell-quoted or array/case-label value (each of which was quoted into its
+  own string, joined into a second string, then copied a third time into a
+  parent's buffer). Profiling a 330-option/33-command benchmark app showed
+  this quote-then-join-then-copy pattern accounting for the large majority
+  of sampled render time in both renderers, dominated by repeated
   `WITH-OUTPUT-TO-STRING` setup/copy overhead rather than the actual
   shell-quoting logic. `%COMPLETION-SHELL-QUOTE`'s core loop is now also
   exposed as `%COMPLETION-WRITE-SHELL-QUOTED`, which writes straight to a
-  caller-supplied stream; `%COMPLETION-BASH-ARRAY-LITERAL` (now dead, and
-  removed) and equivalent `%COMPLETION-CASE-LABELS` call sites in the bash
-  renderer were replaced by stream-writing equivalents built on top of it.
+  caller-supplied stream, with shared `%COMPLETION-WRITE-CASE-LABELS` /
+  `%COMPLETION-WRITE-SPACE-JOINED-QUOTED` writers built on top of it used by
+  both renderers (`%COMPLETION-BASH-ARRAY-LITERAL` and
+  `%COMPLETION-CASE-LABELS`, now dead, were removed). Zsh's
+  `%COMPLETION-ZSH-ARGUMENTS-FIELD` (used to build every `_arguments`
+  bracket/placeholder field) also folded its control-character-stripping and
+  bracket-blanking into one pass instead of two nested
+  `WITH-OUTPUT-TO-STRING` calls, the same fix already applied to
+  `%COMPLETION-SHELL-QUOTE`. Measured on the 330-option benchmark app: bash
+  rendering is roughly 1.5x faster and zsh rendering roughly 1.5x faster
+  than before this round of changes. No public API or observable script
+  output changed; see `tests/cases-parser-benchmark.lisp`.
   Measured on the same 330-option benchmark app: bash completion rendering
   is roughly twice as fast as before this round of changes (and faster
   still relative to the pre-caching baseline). No public API or observable

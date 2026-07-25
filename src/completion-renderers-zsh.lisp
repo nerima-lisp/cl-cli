@@ -1,8 +1,12 @@
 (in-package :cl-cli)
 
-(defun %completion-zsh-command-labels (command)
-  (format nil "~{~A~^|~}"
-          (%completion-command-names command)))
+(defun %completion-zsh-write-command-labels (stream command)
+  (let ((firstp t))
+    (dolist (name (%completion-command-names command))
+      (if firstp
+          (setf firstp nil)
+          (write-char #\| stream))
+      (write-string name stream))))
 
 (defun %completion-zsh-write-case-section (stream word body)
   (when (plusp (length body))
@@ -11,16 +15,22 @@
     (format stream "    esac~%")))
 
 (defun %completion-zsh-render-value-cases (options stream)
-  (dolist (section (list (list "previous_word"
-                               (%completion-zsh-value-case-body options))
-                         (list "current_word"
-                               (%completion-zsh-attached-value-case-body options))))
-    (%completion-zsh-write-case-section stream (first section) (second section))))
+  ;; %COMPLETION-ZSH-WRITE-OPTION-VALUE-CASE-BODY's emission condition never
+  ;; depends on ATTACHED-P, so previous_word and current_word are always
+  ;; either both empty or both non-empty for a given OPTIONS list; each still
+  ;; gets its own small buffer (not one per option) purely so
+  ;; %COMPLETION-ZSH-WRITE-CASE-SECTION can skip the `case ... esac` wrapper
+  ;; entirely when there is nothing to complete.
+  (dolist (section (list (cons "previous_word" nil) (cons "current_word" t)))
+    (let ((body (with-output-to-string (buf)
+                  (%completion-zsh-write-option-value-case-body
+                   buf options :attached-p (cdr section)))))
+      (%completion-zsh-write-case-section stream (car section) body))))
 
-(defun %completion-zsh-subcommand-specs-source (subcommands)
-  "Assign the NAME:description specs of SUBCOMMANDS to `subcommand_specs`."
-  (%completion-zsh-assignment-source
-   "subcommand_specs"
+(defun %completion-zsh-write-subcommand-specs (stream subcommands)
+  "Write the `subcommand_specs=(...)` assignment for SUBCOMMANDS directly to STREAM."
+  (%completion-zsh-write-assignment
+   stream "subcommand_specs"
    (let (specs)
      (dolist (command subcommands (nreverse specs))
        (push (format nil "~A:~A"
@@ -33,53 +43,55 @@
                        (%completion-zsh-describe-field (command-name command)))
                specs))))))
 
-(defun %completion-zsh-command-node (app command scope-options depth)
-  "Render the `NAME) ... ;;' case clause for COMMAND at word index DEPTH.
+(defun %completion-zsh-write-command-node (stream app command scope-options depth)
+  "Write the `NAME) ... ;;' case clause for COMMAND at word index DEPTH directly to STREAM.
 
 SCOPE-OPTIONS accumulates globals plus every ancestor command's options; a
-command with subcommands dispatches the next word to them and offers their names
-when the cursor is at DEPTH+1. `command_option_specs` is rebuilt per clause,
-which is safe because only the single matched command chain executes."
-  (with-output-to-string (out)
-    (let* ((options (append scope-options (command-options command)))
-           (subcommands (remove-if #'command-hidden-p (command-subcommands command)))
-           (child-depth (1+ depth)))
-      (format out "    ~A)~%" (%completion-zsh-command-labels command))
-      (write-string (%completion-zsh-option-specs-source options
-                                                         "command_option_specs"
-                                                         :app app)
-                    out)
-      (%completion-zsh-render-value-cases options out)
-      (when subcommands
-        (format out "      case \"${words[~A]}\" in~%" child-depth)
-        (dolist (subcommand subcommands)
-          (write-string (%completion-zsh-command-node app subcommand options child-depth)
-                        out))
-        (format out "      esac~%"))
-      (format out "      if [[ \"$current_word\" == -* ]]; then~%")
-      (format out "        _describe 'options' command_option_specs~%")
-      (format out "        return 0~%")
-      (format out "      fi~%")
-      (when subcommands
-        (format out "      if (( CURRENT == ~A )); then~%" child-depth)
-        (write-string (%completion-zsh-subcommand-specs-source subcommands) out)
-        (format out "        _describe 'commands' subcommand_specs~%")
-        (format out "        return 0~%")
-        (format out "      fi~%"))
-      (let ((positional-values (%completion-command-positional-values command)))
-        (when positional-values
-          (format out "      compadd -- ~{~A~^ ~}~%"
-                  (mapcar #'%completion-shell-quote positional-values))))
-      (when (%completion-command-positional-hint-p command :file)
-        (format out "      _files~%"))
-      (when (%completion-command-positional-hint-p command :dir)
-        (format out "      _files -/~%"))
-      (format out "      _describe 'options' command_option_specs~%")
-      (format out "      return 0~%")
-      (format out "      ;;~%"))))
+command with subcommands dispatches the next word to them and offers their
+names when the cursor is at DEPTH+1. `command_option_specs` is rebuilt per
+clause, which is safe because only the single matched command chain executes.
 
-(defun %completion-zsh-command-case-source (app command)
-  (%completion-zsh-command-node app command (app-global-options app) 2))
+Writes straight into the shared STREAM instead of building its own string for
+a parent to copy again -- see %COMPLETION-BASH-WRITE-COMMAND-NODE for the
+same fix applied to the bash renderer."
+  (let* ((options (append scope-options (command-options command)))
+         (subcommands (remove-if #'command-hidden-p (command-subcommands command)))
+         (child-depth (1+ depth)))
+    (format stream "    ")
+    (%completion-zsh-write-command-labels stream command)
+    (format stream ")~%")
+    (%completion-zsh-write-option-specs stream options "command_option_specs" :app app)
+    (%completion-zsh-render-value-cases options stream)
+    (when subcommands
+      (format stream "      case \"${words[~A]}\" in~%" child-depth)
+      (dolist (subcommand subcommands)
+        (%completion-zsh-write-command-node stream app subcommand options child-depth))
+      (format stream "      esac~%"))
+    (format stream "      if [[ \"$current_word\" == -* ]]; then~%")
+    (format stream "        _describe 'options' command_option_specs~%")
+    (format stream "        return 0~%")
+    (format stream "      fi~%")
+    (when subcommands
+      (format stream "      if (( CURRENT == ~A )); then~%" child-depth)
+      (%completion-zsh-write-subcommand-specs stream subcommands)
+      (format stream "        _describe 'commands' subcommand_specs~%")
+      (format stream "        return 0~%")
+      (format stream "      fi~%"))
+    (let ((positional-values (%completion-command-positional-values command)))
+      (when positional-values
+        (format stream "      compadd -- ")
+        (%completion-write-space-joined-quoted stream positional-values)
+        (format stream "~%")))
+    (when (%completion-command-positional-hint-p command :file)
+      (format stream "      _files~%"))
+    (when (%completion-command-positional-hint-p command :dir)
+      (format stream "      _files -/~%"))
+    (format stream "      _describe 'options' command_option_specs~%")
+    (format stream "      return 0~%")
+    (format stream "      ;;~%")))
+
+(defun %completion-zsh-write-command-case-source (stream app command)
+  (%completion-zsh-write-command-node stream app command (app-global-options app) 2))
 
 (defun render-zsh-completion (app &optional stream)
   "Render a zsh completion script.
@@ -107,18 +119,14 @@ write the script to it and return no values."
     (format stream "  else~%")
     (format stream "    command_word=~%")
     (format stream "  fi~%")
-    (write-string (%completion-zsh-command-specs-source app) stream)
-    (write-string (%completion-zsh-option-specs-source (app-global-options app)
-                                                       "option_specs"
-                                                       :app app)
-                  stream)
+    (%completion-zsh-write-command-specs stream app)
+    (%completion-zsh-write-option-specs stream (app-global-options app) "option_specs" :app app)
     (%completion-zsh-render-value-cases (app-global-options app) stream)
     (if (%completion-visible-commands app)
         (progn
           (format stream "  case \"$command_word\" in~%")
           (dolist (command (%completion-visible-commands app))
-            (write-string (%completion-zsh-command-case-source app command)
-                          stream))
+            (%completion-zsh-write-command-case-source stream app command))
           (format stream "    *)~%")
           (format stream "      if [[ \"$current_word\" == -* ]]; then~%")
           (format stream "        _describe 'options' option_specs~%")
@@ -126,8 +134,9 @@ write the script to it and return no values."
           (format stream "      fi~%")
           (let ((positional-values (%completion-app-positional-values app)))
             (when positional-values
-              (format stream "      compadd -- ~{~A~^ ~}~%"
-                      (mapcar #'%completion-shell-quote positional-values))))
+              (format stream "      compadd -- ")
+              (%completion-write-space-joined-quoted stream positional-values)
+              (format stream "~%")))
           (when (%completion-app-positional-hint-p app :file)
             (format stream "      _files~%"))
           (when (%completion-app-positional-hint-p app :dir)
@@ -143,14 +152,15 @@ write the script to it and return no values."
           (format stream "  fi~%")
           (let ((positional-values (%completion-app-positional-values app)))
             (when positional-values
-              (format stream "  compadd -- ~{~A~^ ~}~%"
-                      (mapcar #'%completion-shell-quote positional-values))))
+              (format stream "  compadd -- ")
+              (%completion-write-space-joined-quoted stream positional-values)
+              (format stream "~%")))
           (when (%completion-app-positional-hint-p app :file)
             (format stream "  _files~%"))
           (when (%completion-app-positional-hint-p app :dir)
             (format stream "  _files -/~%"))))
     (format stream "}~%")
-    (format stream "compdef ~A ~A~%"
-            function-name
-            (%completion-shell-quote app-name))
+    (format stream "compdef ~A " function-name)
+    (%completion-write-shell-quoted stream app-name)
+    (format stream "~%")
     (values)))
