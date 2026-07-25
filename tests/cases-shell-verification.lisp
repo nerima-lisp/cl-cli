@@ -3,19 +3,42 @@
 ;;;; Verify generated scripts with the REAL tools that consume them (bash, zsh,
 ;;;; fish, mandoc) -- catching structural errors substring assertions cannot.
 ;;;; Each check is skipped when its tool is absent.
+;;;;
+;;;; Every subprocess launch here goes through CL-PROCESS-KIT with an explicit
+;;;; :TIMEOUT: a hung syntax-checker (a broken local install prompting on
+;;;; stdin, for example) escalates SIGTERM/SIGKILL and returns rather than
+;;;; blocking the test run indefinitely. PROCESS-KIT also puts each child in
+;;;; its own process group, so a timeout cannot leave an orphaned grandchild
+;;;; behind the way a bare terminate-process could.
+
+(defparameter +shell-tool-timeout-seconds+ 10
+  "Deadline for every real-shell verification subprocess in this file.")
 
 (defun %tool-available-p (name)
   (ignore-errors
-    (zerop (nth-value 2
-                      (uiop:run-program (list "sh" "-c" (format nil "command -v ~A" name))
-                                        :ignore-error-status t :output nil :error-output nil)))))
+    (let ((result (process-kit:run "sh" (list "-c" (format nil "command -v ~A" name))
+                                   :search t
+                                   :timeout +shell-tool-timeout-seconds+
+                                   :on-timeout :return)))
+      (and (not (process-kit:process-result-timed-out-p result))
+           (zerop (process-kit:process-result-exit-code result))))))
 
-(defun %check-tool (program args script)
+(defun %check-tool (program args script &key (timeout +shell-tool-timeout-seconds+))
+  "Run PROGRAM ARGS against SCRIPT (written to a temp file), returning
+(values stdout stderr exit-code) -- a timed-out run reports exit code 124,
+the conventional shell timeout(1) exit status."
   (uiop:with-temporary-file (:pathname path :stream stream :direction :output)
     (write-string script stream)
     (finish-output stream)
-    (uiop:run-program (append (list program) args (list (namestring path)))
-                      :ignore-error-status t :output :string :error-output :string)))
+    (let ((result (process-kit:run program (append args (list (namestring path)))
+                                   :search t
+                                   :timeout timeout
+                                   :on-timeout :return)))
+      (values (process-kit:process-result-stdout result)
+              (process-kit:process-result-stderr result)
+              (if (process-kit:process-result-timed-out-p result)
+                  124
+                  (process-kit:process-result-exit-code result))))))
 
 (defun verification-app ()
   (make-app
@@ -82,4 +105,15 @@
         (%check-tool "pwsh" '("-NoProfile" "-File")
                      (render-completion (verification-app) "powershell"))
       (declare (ignore out err))
-      (expect (zerop code)))))
+      (expect (zerop code))))
+
+  (it-run-if (%tool-available-p "sh")
+      "%check-tool's timeout actually terminates a hung child instead of trusting it unverified"
+    (let ((started (get-internal-real-time)))
+      (multiple-value-bind (out err code)
+          (%check-tool "sh" '() (format nil "sleep 5~%") :timeout 1)
+        (declare (ignore out err))
+        (expect (= code 124))
+        (expect (< (/ (- (get-internal-real-time) started)
+                     internal-time-units-per-second)
+                  4))))))
