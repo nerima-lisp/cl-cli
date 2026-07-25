@@ -1,21 +1,64 @@
-# Nix build outputs
-result
-result-*
+# nerima-lisp standard .gitignore
+# Copy to <repo>/.gitignore and append repository-specific entries below the
+# marked section. Everything above the marker must stay identical across repos
+# so that "is this artifact ignored?" has the same answer everywhere.
 
-# Common Lisp build artifacts
+# --- Common Lisp build output ---
 *.fasl
 *.fas
 *.lib
+*.dfsl
+*.ufsl
+*.fsl
+
+# --- Nix ---
+/result
+/result-*
+/.direnv/
+
+# --- Test and coverage output ---
+/coverage/
+/coverage-report/
+/*-coverage-report/
+*.coverage
+coverage.dat
+/__snapshots__/
+/*-snapshots/
+
+# --- Local caches and scratch space ---
+/.cache/
+/.deps/
+/tmp/
+/.worktrees/
+/.paredit.cleanup/
+
+# --- Credentials ---
+# Not because anyone plans to put a key here, but because the cost of the one
+# time it happens by accident is a rotation across the whole org. See
+# SUPPLY_CHAIN.md for what to do if one is committed anyway.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+/secrets/
+
+# --- Editor and OS noise ---
+.DS_Store
+*~
+\#*\#
+.\#*
+
+# --- Repository-specific entries below this line ---
+
+# CCL and ABCL fasl extensions. cl-cli's compatibility promise covers more
+# implementations than SBCL, so their build output has to be ignored too.
 *.ufasl
 *.abcl
 *.lx64fsl
 *.dx64fsl
 
-# MkDocs local build output (docs/mkdocs.yml sets site_dir: ../site)
+# `mkdocs build` run by hand outside Nix (docs/mkdocs.yml sets site_dir: ../site).
 /site/
-
-# Editor / OS noise
-*~
-\#*\#
-.#*
-.DS_Store
