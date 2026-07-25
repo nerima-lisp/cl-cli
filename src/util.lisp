@@ -36,12 +36,22 @@
 (defun built-in-option-p (spec)
   (member (option-key spec) '(:help :version)))
 
-(defun built-in-option-specs (app)
+(defun %compute-built-in-option-specs (app)
   (let ((specs (when (app-auto-help app)
                  (list (make-built-in-help-option)))))
     (when (app-supports-version-p app)
       (push (make-built-in-version-option) specs))
     (nreverse specs)))
+
+(defun built-in-option-specs (app)
+  "Return APP's built-in --help/--version specs, cached at MAKE-APP time.
+
+APP-AUTO-HELP/APP-SUPPORTS-VERSION-P are fixed at construction, so the
+result never changes; every caller here (help/completion renderers,
+PREPARE-OPTION-PARSER-STATE's fallback) shares one cached list instead of
+each re-running MAKE-OPTION to reconstruct it. %VALIDATE-APP-SPEC populates
+the cache via %COMPUTE-BUILT-IN-OPTION-SPECS; this just reads it."
+  (app-cached-built-in-option-specs app))
 
 (defun option-specs-with-built-ins (app option-specs)
   (append (built-in-option-specs app)

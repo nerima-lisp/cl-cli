@@ -137,7 +137,8 @@ keyed by the command object."
                                     (command-name command)))))))
 
 (defun %validate-app-spec (app)
-  (let* ((built-ins (option-specs-with-built-ins app nil))
+  (let* ((built-ins (setf (app-cached-built-in-option-specs app)
+                          (%compute-built-in-option-specs app)))
          (global-specs (append built-ins (app-global-options app)))
          (command-table (%validate-command-table (app-commands app))))
     (%validate-positional-sequence (app-positionals app)

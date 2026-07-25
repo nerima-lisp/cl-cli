@@ -50,8 +50,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   value that actually needs it, instead of unconditionally on every call.
   Measured on a representative subcommand-dispatch benchmark: ~4.5x faster
   for repeated parses against one app, up to ~15x for a flag-only app with
-  no subcommands. No public API or observable behavior changed; see
-  `tests/cases-parser-benchmark.lisp`.
+  no subcommands. `BUILT-IN-OPTION-SPECS` -- also called directly by every
+  help and completion renderer, not just the parser -- is cached the same
+  way, so generating help text or a shell-completion script no longer
+  reruns `MAKE-OPTION` for the built-ins either. No public API or
+  observable behavior changed; see `tests/cases-parser-benchmark.lisp`.
 - `cl-cli` no longer depends on `cl-prolog` at runtime. Option-relation
   validation (`:requires`, `:requires-any-of`, `:conflicts-with`) is now a
   plain in-memory adjacency graph (`src/option-relations.lisp`) with the same

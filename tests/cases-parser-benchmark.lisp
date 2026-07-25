@@ -45,6 +45,16 @@
       (expect (consp cache))
       (expect (member :target (mapcar #'option-key (car cache))))))
 
+  (it "caches built-in-option-specs once at MAKE-APP time for help/completion renderers too"
+    ;; BUILT-IN-OPTION-SPECS is called directly by the help printers and every
+    ;; completion renderer, not just PREPARE-OPTION-PARSER-STATE -- confirm it
+    ;; reads a cache populated at MAKE-APP time instead of re-running
+    ;; MAKE-OPTION to reconstruct --help/--version on every render.
+    (let ((specs (cl-cli::built-in-option-specs *benchmark-subcommand-app*)))
+      (expect (eq specs (cl-cli::app-cached-built-in-option-specs
+                        *benchmark-subcommand-app*)))
+      (expect (eq (option-key (first specs)) :help))))
+
   (it "repeated small parses against the same app stay well under budget"
     ;; The realistic cl-cli workload: many independent PARSE-ARGV calls
     ;; against one long-lived APP (a REPL, a server, or simply this loop),

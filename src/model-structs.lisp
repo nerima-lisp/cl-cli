@@ -121,7 +121,12 @@
   ;; on every call. COMMAND-SUBCOMMAND-TABLES is keyed by command, mirroring
   ;; COMMAND-RELATION-GRAPHS/COMMAND-OPTION-CACHES above.
   root-command-table
-  (command-subcommand-tables (make-hash-table :test 'eq)))
+  (command-subcommand-tables (make-hash-table :test 'eq))
+  ;; BUILT-IN-OPTION-SPECS (src/util.lisp) is called directly by the help and
+  ;; completion renderers, not just PREPARE-OPTION-PARSER-STATE above -- cache
+  ;; its result too so every one of those call sites shares one list instead
+  ;; of each re-running MAKE-OPTION to reconstruct --help/--version.
+  cached-built-in-option-specs)
 
 (defstruct (invocation
             (:constructor %make-invocation)
