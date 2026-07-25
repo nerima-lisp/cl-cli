@@ -36,8 +36,8 @@ without changing the documented contract.
 - **Unexported symbols.** Anything reachable only through the `cl-cli::`
   double-colon escape — including every `%`-prefixed internal helper — is
   implementation detail and moves without notice. If you find yourself needing
-  one, that is worth [an issue](support.md): the fix is to export a supported
-  entry point, not for you to reach through.
+  one, that is worth [an issue](https://github.com/nerima-lisp/cl-cli/issues):
+  the fix is to export a supported entry point, not for you to reach through.
 - **Exact rendered text.** The line wrapping and section ordering of `--help`,
   the internal layout of a generated completion script, the roff or Markdown
   formatting details. These are improved in minor releases. Assert on the

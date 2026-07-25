@@ -42,6 +42,19 @@ user option may not reuse them.
 Value-bearing short options also accept attached forms out of the box, so
 `-Lmain` or `-S/tmp/tmux.sock` parse without special-case handling.
 
+```lisp
+(let* ((app (cl-cli:make-app
+             :name "cl-tmux"
+             :global-options
+             (list (cl-cli:make-option :name "socket"
+                                       :short #\S
+                                       :kind :value))))
+       (invocation
+        (cl-cli:parse-argv app '("cl-tmux" "-S/tmp/tmux.sock"))))
+  (cl-cli:option-value invocation :socket))
+;; => "/tmp/tmux.sock"
+```
+
 ## Typed values
 
 Declare a `:type` instead of writing a `:parser` lambda for the common case of

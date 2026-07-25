@@ -13,7 +13,7 @@ in minimal Common Lisp and Nix environments.
     Load it, describe an app spec, and dispatch it in a few lines:
 
     ```lisp
-    (ql:quickload :cl-cli)
+    (asdf:load-system "cl-cli")
 
     (defparameter *app*
       (cl-cli:make-app
@@ -87,7 +87,7 @@ Stable. From `1.0.0` the exported API is covered by Semantic Versioning — see
 Lisp implementations are tested, and how a symbol is deprecated.
 
 The capability list below is the current public surface, validated by the test
-suite documented in [Contributing](contributing.md):
+suite documented in [Development](development.md):
 
 - strict, exact-match option and flag parsing, with optional GNU-style
   abbreviated-prefix matching
@@ -121,21 +121,14 @@ See [Scope and Non-Goals](scope.md) for what `cl-cli` deliberately leaves to
 the application, and [Migration Guide](migration-guide.md) for mapping an
 existing in-house parser onto `cl-cli`.
 
-## Test
-
-```bash
-sbcl --non-interactive --load tests/run-tests.lisp --eval '(cl-cli/tests:run-tests)' --quit
-nix flake check
-```
-
-SBCL is the target that must be green. `nix flake check` also builds an `ecl`
-check, which currently fails: `cl-log-kit` (a transitive test dependency via
-`cl-process-kit`) hard-codes `sb-thread:*` with no portability guard, so it
-cannot compile under any non-SBCL implementation —
-[nerima-lisp/cl-log-kit#1](https://github.com/nerima-lisp/cl-log-kit/issues/1),
-open upstream.
-
 ## Contributing
 
-Development workflow, change expectations, and verification requirements are
-documented in [Contributing](contributing.md).
+Build, test and formatting commands are in [Development](development.md).
+
+Contribution process, the code of conduct, security reporting and support
+channels are org-wide and live in
+[nerima-lisp/.github](https://github.com/nerima-lisp/.github):
+[CONTRIBUTING](https://github.com/nerima-lisp/.github/blob/main/CONTRIBUTING.md),
+[CODE_OF_CONDUCT](https://github.com/nerima-lisp/.github/blob/main/CODE_OF_CONDUCT.md),
+[SECURITY](https://github.com/nerima-lisp/.github/blob/main/SECURITY.md) and
+[SUPPORT](https://github.com/nerima-lisp/.github/blob/main/SUPPORT.md).

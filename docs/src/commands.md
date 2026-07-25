@@ -165,6 +165,9 @@ examples to the app or command spec and let generated help reuse them:
 - command aliases are shown in the command list
 - command lists can be grouped with `:group` for large subcommand surfaces
 - invalid app specs fail fast during `make-app`, not only during parsing
+- spec constructors reject empty strings for user-facing identifiers such as
+  names, aliases, value names, env vars, choices, completion candidates,
+  groups, and examples
 - app, command, and option names are restricted to safe identifier characters
   (letters, digits, `-`, `_`, `.`), so author- or config-supplied names cannot
   inject shell syntax into generated completion scripts

@@ -1,8 +1,17 @@
 # cl-cli documentation — MkDocs + Material configuration.
 #
-# Build:   mkdocs build -f docs/mkdocs.yml --strict
-# Serve:   mkdocs serve  -f docs/mkdocs.yml
+# Build:   mkdocs build --strict -f docs/mkdocs.yml
+# Serve:   mkdocs serve --no-strict -f docs/mkdocs.yml
 # The Nix flake (`nix build .#docs`) drives the same config offline.
+#
+# Always start mkdocs from the REPOSITORY ROOT. pymdownx.snippets resolves
+# base_path against the working directory, and docs/src/changelog.md includes
+# the top-level CHANGELOG.md.
+
+# Broken links and pages missing from the nav are build failures. It is set
+# here as well as passed on the command line so that every invocation path
+# gets the same verdict.
+strict: true
 
 site_name: cl-cli
 site_description: >-
@@ -94,8 +103,18 @@ markdown_extensions:
       line_spans: __span
       pygments_lang_class: true
   - pymdownx.inlinehilite
-  - pymdownx.snippets
-  - pymdownx.superfences
+  # base_path is relative to the directory mkdocs was started from, which is
+  # the repository root. check_paths turns a missing include into a build
+  # failure, matching what --strict does for links.
+  - pymdownx.snippets:
+      base_path:
+        - "."
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   # Content tabs (e.g. the Nix / ASDF / Quicklisp install paths).
   - pymdownx.tabbed:
       alternate_style: true
@@ -116,8 +135,16 @@ markdown_extensions:
       permalink: true
       title: On this page
 
+# The six sections and their order are fixed by DOCS_STANDARD.md. They track
+# reader state: Getting Started has not run anything yet, Guide has it working
+# but does not know the design, Reference is looking up one answer, Internals
+# is about to change something, Project is about to contribute. Readership
+# falls off along that axis, so reference and internals stay at the back.
+#
+# Guide topics are ordered by dependency, not alphabetically: later pages use
+# the vocabulary the earlier ones introduce.
 nav:
-  - Home: README.md
+  - Home: index.md
   - Getting Started:
       - Installation: installation.md
       - Quick Start: quick-start.md
@@ -129,14 +156,15 @@ nav:
       - CLI Behavior: cli-behavior.md
       - Shell Completion: shell-completion.md
       - Documentation Generation: documentation-generation.md
+      - Migration Guide: migration-guide.md
   - Reference:
       - API Reference: api-reference.md
       - Compatibility: compatibility.md
-      - Migration Guide: migration-guide.md
+  - Internals:
       - Scope and Non-Goals: scope.md
-  - Governance:
-      - Contributing: contributing.md
-      - Support: support.md
-      - Security: security.md
-      - Release Process: releasing.md
-      - Code of Conduct: code-of-conduct.md
+  - Project:
+      - Development: development.md
+      - Changelog: changelog.md
+
+not_in_nav: |
+  notes/

@@ -1,0 +1,122 @@
+# Development
+
+Build, test and formatting commands for working on `cl-cli` itself.
+
+Contribution process, review expectations and the code of conduct are org-wide
+and live in
+[nerima-lisp/.github](https://github.com/nerima-lisp/.github/blob/main/CONTRIBUTING.md).
+
+## Environment
+
+```console
+$ nix develop
+```
+
+The dev shell provides SBCL, ECL, `rlwrap`, and every tool the
+shell-verification suite pipes generated output through: `bash`, `zsh`,
+`fish`, `nushell`, `pwsh`, `elvish`, and `mandoc`. It also exports the
+`CL_*_SOURCE_DIR` variables that point the test loader at the sibling
+packages, so no checkout layout is assumed.
+
+Without Nix, install SBCL and load the system through ASDF. `cl-cli` itself
+depends only on `uiop`, which ships with every modern ASDF.
+
+## Commands
+
+```console
+$ nix flake check      # the full gate: SBCL, ECL, formatting, docs
+$ nix run .#test       # SBCL suite only, fastest feedback
+$ nix fmt              # format Nix sources (treefmt/nixfmt)
+$ nix build .#docs     # render the documentation site with --strict
+```
+
+Granularity lives in the flake's `checks.*` attributes rather than in extra CI
+jobs, so `nix flake check` runs exactly what CI runs:
+
+| Check | What it covers |
+|---|---|
+| `default` | SBCL, core suite plus shell verification |
+| `ecl` | ECL, core suite only |
+| `formatting` | every tracked `.nix` file is nixfmt-clean |
+| `docs` | `mkdocs build --strict` — broken links and unlisted pages fail |
+
+`nix flake check` only evaluates the outputs for the system it runs on, so a
+local run verifies your machine and nothing else. CI covers `x86_64-linux` and
+`aarch64-darwin` on separate runners for that reason.
+
+To run a suite without Nix:
+
+```console
+$ sbcl --non-interactive --load run-tests.lisp --eval '(cl-cli/test:run-tests)' --quit
+$ ecl --norc --load run-tests.lisp --eval '(cl-cli/test:run-tests)'
+```
+
+## The suite is split in two
+
+`run-tests.lisp` prints which half it loaded on every run, because a suite that
+quietly shrinks when a dependency goes missing reads exactly like a suite that
+passed.
+
+- **`cl-cli/test`** is the portable core and runs everywhere. Its dependencies
+  are all portable Common Lisp.
+- **`cl-cli/test/shell-verification`** additionally pipes every generated
+  completion script and man page through the real `bash`, `zsh`, `fish`,
+  `nushell`, `pwsh`, `elvish`, and `mandoc` that will consume them. It depends
+  on `cl-process-kit` for subprocess timeouts, whose own `cl-log-kit`
+  dependency hard-codes `sb-thread:*`
+  ([nerima-lisp/cl-log-kit#1](https://github.com/nerima-lisp/cl-log-kit/issues/1),
+  open upstream), so this half runs under SBCL only.
+
+The split lives at the system boundary precisely so that a non-SBCL
+implementation runs the core suite for real instead of failing to compile the
+whole thing. Both implementations are release-blocking.
+
+Two suites are gated rather than run everywhere: the fuzz suite needs a harness
+timeout capability `cl-weave` does not offer on every implementation, and the
+benchmark budgets are absolute millisecond thresholds calibrated against SBCL.
+Both report as skipped, with a reason, rather than as failures. See
+[Compatibility](compatibility.md) for the supported implementation matrix.
+
+## Writing tests
+
+Add or update a focused test in the matching `t/cases-*.lisp` file and register
+any new file in `cl-cli.asd`. `run-tests.lisp` is the loader, not a place to
+put tests. A test that shells out to a real tool belongs in
+`t/cases-shell-verification.lisp` under the `cl-cli/test/shell-verification`
+system; everything else goes in the portable `cl-cli/test`.
+
+Cover both the success path and the expected failure mode when relevant.
+
+Prefer an assertion that would fail if the behavior were wrong over one that
+merely records what the code prints today. A completion renderer emitting
+`e:'app'` shipped broken because a test asserted that exact string; the
+question to ask is "what property does this encode", not "does this match".
+
+If a test cannot run on a given implementation, gate it on the capability that
+is actually missing and let it report as a skip with a reason. Do not widen a
+threshold or delete an assertion so that a red run turns green.
+
+## Changing the public surface
+
+Keep public exports intentional: add one only when it is reusable outside a
+single local consumer. Preserve constructor fail-fast behavior for invalid
+specs, and reuse the shared normalization helpers instead of re-implementing
+string or list validation in several places.
+
+When the user-visible surface changes, update
+[API Reference](api-reference.md) and the matching guide page in the same pull
+request, and record the change under `## [Unreleased]` in `CHANGELOG.md`.
+
+## Releasing
+
+The org-wide procedure is in
+[RELEASE_STANDARD.md](https://github.com/nerima-lisp/.github/blob/main/RELEASE_STANDARD.md).
+
+Two things are specific to this repository:
+
+- `:version` appears three times in `cl-cli.asd` — in `cl-cli`, `cl-cli/test`
+  and `cl-cli/test/shell-verification` — and all three must match. `flake.nix`
+  reads the first `:version` line, and `release.yml` refuses to publish a tag
+  that disagrees with it.
+- A release verified only by the portable core has not exercised the generated
+  completion scripts. Confirm the runner's own line about which half it loaded.
