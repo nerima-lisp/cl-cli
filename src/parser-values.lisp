@@ -334,10 +334,9 @@ shared by both literal :default and :config resolution so they behave alike."
     values))
 
 (defun collect-option-values (specs parsed-values)
-  (let ((values nil))
+  (collecting
     (map-option-values specs parsed-values
                        (lambda (spec key value)
                          (declare (ignore spec))
-                         (push key values)
-                         (push value values)))
-    (nreverse values)))
+                         (collect key)
+                         (collect value)))))

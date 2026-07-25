@@ -57,11 +57,10 @@
 
 (defun %path-command-option-specs (path)
   "The option specs contributed by the commands in PATH (excluding globals)."
-  (let ((specs '()))
+  (collecting
     (dolist (command path)
       (dolist (option (command-options command))
-        (push option specs)))
-    (nreverse specs)))
+        (collect option)))))
 
 (defun %scope-stop-parsing-p (option-specs values)
   "True when a stop-parsing option in OPTION-SPECS has been set in VALUES."
@@ -75,12 +74,12 @@
           token
           (format-suggestion-suffix
            token
-           (let (names)
-             (dolist (subcommand (command-subcommands command) (nreverse names))
+           (collecting
+             (dolist (subcommand (command-subcommands command))
                (unless (command-hidden-p subcommand)
-                 (push (command-name subcommand) names)
+                 (collect (command-name subcommand))
                  (dolist (alias (command-aliases subcommand))
-                   (push alias names))))))))
+                   (collect alias))))))))
 
 (defun %resolve-subcommand (command subcommand-table remaining stop-parsing-p
                             literal-separator-seen-p)

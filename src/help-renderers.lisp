@@ -17,13 +17,13 @@
 
 (defun %public-relation-targets
     (option options relation-targets &optional (target-table (%option-target-table options)))
-  (let ((targets nil))
-    (dolist (target relation-targets (nreverse targets))
+  (collecting
+    (dolist (target relation-targets)
       (let ((resolved (%lookup-option-target target-table target)))
         (when (and resolved
                    (not (eq (option-key resolved) (option-key option)))
                    (public-option-candidate-p resolved))
-          (push target targets))))))
+          (collect target))))))
 
 (defun %option-group-member-names
     (option options &optional (target-table (%option-target-table options)))

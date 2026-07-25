@@ -17,10 +17,10 @@
                (app-name app))))
 
 (defun %completion-option-items-for-specs (options names-fn item-fn)
-  (let (items)
-    (dolist (option options (nreverse items))
+  (collecting
+    (dolist (option options)
       (dolist (name (funcall names-fn option))
-        (push (funcall item-fn option name) items)))))
+        (collect (funcall item-fn option name))))))
 
 (defun %completion-option-tokens-for-specs (options)
   (%completion-option-items-for-specs
@@ -58,11 +58,11 @@
    :test #'equal))
 
 (defun %completion-visible-command-tokens (app)
-  (let (tokens)
-    (dolist (command (%completion-visible-commands app) (nreverse tokens))
-      (push (command-name command) tokens)
+  (collecting
+    (dolist (command (%completion-visible-commands app))
+      (collect (command-name command))
       (dolist (alias (command-aliases command))
-        (push alias tokens)))))
+        (collect alias)))))
 
 (defun %completion-control-safe-string (value)
   "Return VALUE as a single printable completion protocol field."

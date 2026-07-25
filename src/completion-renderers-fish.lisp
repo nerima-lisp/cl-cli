@@ -55,10 +55,10 @@ three are quoted once and reused, rather than re-running
         (path (nreverse (copy-list reversed-path)))
         (visible (remove-if #'command-hidden-p commands)))
     (when visible
-      (let* ((sibling-names (let (names)
-                              (dolist (command visible (nreverse names))
+      (let* ((sibling-names (collecting
+                              (dolist (command visible)
                                 (dolist (name (%completion-command-names command))
-                                  (push (%completion-shell-quote name) names)))))
+                                  (collect (%completion-shell-quote name))))))
              (offer-condition
                (format nil "~A; and not __fish_seen_subcommand_from ~{~A~^ ~}"
                        (%fish-path-seen-condition path)

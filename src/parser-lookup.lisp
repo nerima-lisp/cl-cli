@@ -39,23 +39,22 @@
   (not (command-hidden-p command)))
 
 (defun option-candidate-names (specs &key short-only-p long-only-p)
-  (let ((candidates nil))
-    (dolist (spec specs (nreverse candidates))
+  (collecting
+    (dolist (spec specs)
       (when (public-option-candidate-p spec)
         (dolist (name (option-names spec))
           (when (or (and short-only-p (= (length name) 1))
                     (and long-only-p (> (length name) 1))
                     (and (not short-only-p) (not long-only-p)))
-            (push (option-token-display-name name)
-                  candidates)))))))
+            (collect (option-token-display-name name))))))))
 
 (defun command-candidate-names (app)
-  (let ((candidates nil))
-    (dolist (command (app-commands app) (nreverse candidates))
+  (collecting
+    (dolist (command (app-commands app))
       (when (public-command-candidate-p command)
-        (push (command-name command) candidates)
+        (collect (command-name command))
         (dolist (alias (command-aliases command))
-          (push alias candidates))))))
+          (collect alias))))))
 
 (defun unknown-option-message (raw-name candidates)
   (format nil "Unknown option: ~A~A"

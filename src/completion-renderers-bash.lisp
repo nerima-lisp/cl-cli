@@ -192,10 +192,10 @@ per ancestor on the way back up the tree."
       (format stream "      if (( cword == ~A )); then~%" child-depth)
       (%completion-bash-write-static-compreply-source
        stream
-       (let (names)
-         (dolist (sub subcommands (nreverse names))
+       (collecting
+         (dolist (sub subcommands)
            (dolist (name (%completion-command-names sub))
-             (push name names))))
+             (collect name))))
        "        ")
       (format stream "      fi~%")
       (dolist (sub subcommands)

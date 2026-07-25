@@ -176,6 +176,22 @@ treating it as \"looks like another option, stop here\"."
                          ,@initargs
                          :cause condition))))
 
+(defmacro collecting (&body body)
+  "Run BODY with COLLECT bound to a local function that accumulates values in
+the order collected, then return the accumulated list.
+
+Replaces the repeated `(let (acc) (dolist (x seq (nreverse acc)) ... (push
+value acc)))' shape found throughout src/ (option-candidate-names,
+%public-relation-targets, %completion-option-items-for-specs, etc.) with a
+form that can't forget the final NREVERSE and doesn't need a named
+accumulator variable in every caller."
+  (let ((accumulator (gensym "COLLECTING")))
+    `(let (,accumulator)
+       (flet ((collect (item) (push item ,accumulator) item))
+         (declare (ignorable (function collect)))
+         ,@body)
+       (nreverse ,accumulator))))
+
 (defmacro ensure-output-stream (stream-var self-name app-var)
   "Give every render-X function its `(app &optional stream)' contract in one line.
 
