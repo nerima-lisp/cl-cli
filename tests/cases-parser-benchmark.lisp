@@ -115,6 +115,32 @@ app in this file (none of which declare any :requires/:conflicts-with)."
                                :global-options (%benchmark-relation-heavy-options 100))))))
       (expect (< (median-ms result) 2000))))
 
+  (it "constructs a 330-option relation-free app in well under budget"
+    ;; VALIDATE-OPTION-RELATIONSHIPS-DECLARED used to unconditionally build
+    ;; the target-lookup table and run OPTION-REQUIREMENT-CYCLE-P/
+    ;; MAKE-OPTION-RELATION-GRAPH's full graph-population work on every
+    ;; MAKE-APP call, even for the overwhelmingly common case of an app that
+    ;; declares no option relations at all -- wasted work the parse-time
+    ;; sibling validator already knew to skip via an early-exit guard, just
+    ;; never applied at MAKE-APP time until now. 200 iterations, same 2000ms
+    ;; budget convention.
+    (let ((result (benchmark (:warmup 1 :samples 5)
+                    (dotimes (i 200)
+                      (make-app
+                       :name "bench-large"
+                       :global-options (loop for i below 30
+                                             collect (make-option
+                                                      :name (format nil "global-opt-~D" i)
+                                                      :kind :value))
+                       :commands (loop for i below 20
+                                       collect (make-command
+                                                :name (format nil "cmd-~D" i)
+                                                :options (loop for j below 10
+                                                              collect (make-option
+                                                                       :name (format nil "cmd~D-opt-~D" i j)
+                                                                       :kind :value)))))))))
+      (expect (< (median-ms result) 2000))))
+
   (it "repeated small parses against the same app stay well under budget"
     ;; The realistic cl-cli workload: many independent PARSE-ARGV calls
     ;; against one long-lived APP (a REPL, a server, or simply this loop),

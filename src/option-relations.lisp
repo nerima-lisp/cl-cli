@@ -136,6 +136,25 @@ least one of the returned keys, they do not walk a transitive closure."
   (gethash option-key (option-relation-graph-requires-any graph)))
 
 (defun validate-option-relationships-declared (specs)
+  ;; Most CLIs declare no option relations at all -- skip building the
+  ;; target-lookup table and the (otherwise unconditional)
+  ;; cycle-check/graph-population/conflicting-closure work entirely when
+  ;; there is nothing to validate, mirroring the same early-exit already
+  ;; applied to each parse-time relation validator
+  ;; (src/parser-relation-validation.lisp). A trivial empty graph is a
+  ;; correct cache value here: VALIDATE-OPTION-RELATIONSHIPS (the parse-time
+  ;; consumer) never even looks at the cached graph when specs declare no
+  ;; :requires/:requires-any-of/:conflicts-with, so building a real one here
+  ;; for that case is pure waste on every single MAKE-APP call.
+  (unless (some (lambda (spec)
+                  (or (option-requires spec)
+                      (option-requires-any-of spec)
+                      (option-required-if spec)
+                      (option-required-unless spec)
+                      (option-conflicts-with spec)))
+                specs)
+    (return-from validate-option-relationships-declared
+      (values specs (%make-option-relation-graph))))
   (let ((target-table (%option-target-table specs)))
     (dolist (spec specs)
       (%validate-related-option-targets specs spec "requires" (option-requires spec)
