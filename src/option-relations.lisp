@@ -28,13 +28,16 @@ instead of a graph walk on every PARSE-ARGV."
       (visit root))
     (nreverse result)))
 
-(defun make-option-relation-graph (specs)
+(defun make-option-relation-graph (specs &optional (spec-by-target (%option-target-table specs)))
   "Build the requires/requires-any/conflicts adjacency for SPECS.
 
 Cycles are rejected by OPTION-REQUIREMENT-CYCLE-P before this is ever called,
-so the transitive walk below never needs cycle protection of its own."
-  (let ((graph (%make-option-relation-graph))
-        (spec-by-target (%option-target-table specs)))
+so the transitive walk below never needs cycle protection of its own.
+
+SPEC-BY-TARGET defaults to a fresh %OPTION-TARGET-TABLE for standalone
+callers; VALIDATE-OPTION-RELATION-GRAPH passes its own already-built one so
+the same specs list isn't hashed twice in one validation pass."
+  (let ((graph (%make-option-relation-graph)))
     (flet ((resolved-keys (targets)
              (mapcar (lambda (target)
                        (option-key (%lookup-option-target spec-by-target target)))
@@ -52,10 +55,9 @@ so the transitive walk below never needs cycle protection of its own."
       (setf (gethash (option-key spec) (option-relation-graph-transitive-requires graph))
             (%relation-graph-transitive-requires graph (option-key spec))))))
 
-(defun option-requirement-cycle-p (specs)
+(defun option-requirement-cycle-p (specs &optional (spec-by-target (%option-target-table specs)))
   (let ((visiting (make-hash-table :test #'equal))
-        (visited (make-hash-table :test #'equal))
-        (spec-by-target (%option-target-table specs)))
+        (visited (make-hash-table :test #'equal)))
     (labels ((visit (spec)
                (let ((key (option-key spec)))
                  (cond
@@ -97,18 +99,19 @@ two options that conflict with each other."
                   reachable)))
         keys))
 
-(defun validate-option-relation-graph (specs)
+(defun validate-option-relation-graph (specs &optional (spec-by-target (%option-target-table specs)))
   "Validate SPECS' :requires/:conflicts graph and return (values specs graph).
 
 The graph built here to check for conflicting closures is exactly the one
 parse-time validation needs again for transitive :requires lookups. Returning
 it lets callers cache it on the app/command spec instead of rebuilding an
-equivalent graph from scratch on every PARSE-ARGV call."
-  (when (option-requirement-cycle-p specs)
+equivalent graph from scratch on every PARSE-ARGV call. SPEC-BY-TARGET
+defaults to a fresh table for standalone callers, but
+VALIDATE-OPTION-RELATIONSHIPS-DECLARED passes its own already-built one."
+  (when (option-requirement-cycle-p specs spec-by-target)
     (signal-cli-error 'cli-invalid-specification
                       "Option requirements must not contain a cycle."))
-  (let ((graph (make-option-relation-graph specs))
-        (spec-by-target (%option-target-table specs)))
+  (let ((graph (make-option-relation-graph specs spec-by-target)))
     (when (%relation-graph-conflicting-closure-p graph (mapcar #'option-key specs))
       (signal-cli-error
        'cli-invalid-specification
@@ -133,24 +136,28 @@ least one of the returned keys, they do not walk a transitive closure."
   (gethash option-key (option-relation-graph-requires-any graph)))
 
 (defun validate-option-relationships-declared (specs)
-  (dolist (spec specs)
-    (%validate-related-option-targets specs spec "requires" (option-requires spec))
-    (%validate-related-option-targets specs spec "requires-any-of"
-                                      (option-requires-any-of spec))
-    (%validate-related-option-targets specs spec "required-if"
-                                      (option-required-if spec))
-    (%validate-related-option-targets specs spec "required-unless"
-                                      (option-required-unless spec))
-    (%validate-related-option-targets specs spec "conflicts-with"
-                                      (option-conflicts-with spec)))
-  (validate-option-relation-graph specs))
+  (let ((target-table (%option-target-table specs)))
+    (dolist (spec specs)
+      (%validate-related-option-targets specs spec "requires" (option-requires spec)
+                                        target-table)
+      (%validate-related-option-targets specs spec "requires-any-of"
+                                        (option-requires-any-of spec) target-table)
+      (%validate-related-option-targets specs spec "required-if"
+                                        (option-required-if spec) target-table)
+      (%validate-related-option-targets specs spec "required-unless"
+                                        (option-required-unless spec) target-table)
+      (%validate-related-option-targets specs spec "conflicts-with"
+                                        (option-conflicts-with spec) target-table))
+    (validate-option-relation-graph specs target-table)))
 
-(defun %validate-related-option-targets (specs spec relation targets)
+(defun %validate-related-option-targets
+    (specs spec relation targets &optional (target-table (%option-target-table specs)))
   (dolist (target targets)
-    (%validate-related-option-target specs spec target relation)))
+    (%validate-related-option-target specs spec target relation target-table)))
 
-(defun %validate-related-option-target (specs spec target relation)
-  (let ((resolved (resolve-related-option-spec specs target)))
+(defun %validate-related-option-target
+    (specs spec target relation &optional (target-table (%option-target-table specs)))
+  (let ((resolved (resolve-related-option-spec specs target target-table)))
     (unless resolved
       (signal-cli-error 'cli-invalid-specification
                         (format nil "Unknown option in ~A for ~A: ~A"

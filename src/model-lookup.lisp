@@ -18,5 +18,12 @@
 (defun %lookup-option-target (table target)
   (gethash target table))
 
-(defun resolve-related-option-spec (specs target)
-  (%lookup-option-target (%option-target-table specs) target))
+(defun resolve-related-option-spec (specs target &optional (target-table (%option-target-table specs)))
+  "Resolve TARGET (an option name/key) to its SPECS member via TARGET-TABLE.
+
+TARGET-TABLE defaults to a fresh %OPTION-TARGET-TABLE for standalone callers,
+but VALIDATE-OPTION-RELATIONSHIPS-DECLARED passes its own already-built one
+down through every :requires/:conflicts-with/etc target it validates -- this
+function used to rebuild the whole table from scratch on every single call,
+once per declared relation target across every option."
+  (%lookup-option-target target-table target))

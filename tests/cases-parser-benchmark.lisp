@@ -32,6 +32,17 @@
                              :positionals (list (make-positional :key :input
                                                                  :required-p t))))))
 
+(defun %benchmark-relation-heavy-options (n)
+  "N flag options, each requiring its predecessor and conflicting with a
+shared sentinel -- exercises VALIDATE-OPTION-RELATIONSHIPS-DECLARED's
+per-target resolution loop at MAKE-APP time, unlike every other benchmark
+app in this file (none of which declare any :requires/:conflicts-with)."
+  (cons (make-option :name "sentinel" :kind :flag)
+        (loop for i below n
+              collect (make-option :name (format nil "opt-~D" i) :kind :flag
+                                   :requires (when (plusp i) (list (format nil "opt-~D" (1- i))))
+                                   :conflicts-with (list "sentinel")))))
+
 (defparameter *benchmark-large-completion-app*
   (make-app
    :name "bench-large"
@@ -68,6 +79,21 @@
       (expect (eq specs (cl-cli::app-cached-built-in-option-specs
                         *benchmark-subcommand-app*)))
       (expect (eq (option-key (first specs)) :help))))
+
+  (it "constructs a 100-option relation-heavy app in well under budget"
+    ;; VALIDATE-OPTION-RELATIONSHIPS-DECLARED used to rebuild
+    ;; %OPTION-TARGET-TABLE from scratch on every single declared relation
+    ;; target across every option (via RESOLVE-RELATED-OPTION-SPEC), plus
+    ;; independently again inside OPTION-REQUIREMENT-CYCLE-P and
+    ;; MAKE-OPTION-RELATION-GRAPH -- an O(n^2)-ish construction cost for any
+    ;; app that actually uses :requires/:conflicts-with, unlike every other
+    ;; benchmark app in this file. 200 iterations, same 2000ms budget
+    ;; convention as the parse/render benchmarks.
+    (let ((result (benchmark (:warmup 1 :samples 5)
+                    (dotimes (i 200)
+                      (make-app :name "reltool"
+                               :global-options (%benchmark-relation-heavy-options 100))))))
+      (expect (< (median-ms result) 2000))))
 
   (it "repeated small parses against the same app stay well under budget"
     ;; The realistic cl-cli workload: many independent PARSE-ARGV calls
