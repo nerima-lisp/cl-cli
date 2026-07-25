@@ -13,7 +13,14 @@ OPTION-VALUE-SOURCE derives :COMMAND-LINE without threading state through the
 whole parser.")
 
 (defvar *option-value-tail-cells* nil
-  "Per-parse cache of tail cons cells for accumulating option values.")
+  "Per-parse cache of tail cons cells for accumulating option values.
+
+PARSE-ARGV binds this to :LAZY rather than an already-allocated hash table:
+most parses never touch a :MULTIPLE-P/accumulating option, so the table
+itself -- not just its entries -- is built lazily, on the first value that
+actually needs one. NIL (the global default) instead means \"not inside
+PARSE-ARGV's dynamic extent at all\", the signal %APPEND-ACCUMULATING-OPTION-
+VALUE uses to fall back to a plain O(n) APPEND for standalone callers.")
 
 (defun %record-option-source (spec source)
   "Note that SPEC's value was supplied by SOURCE (:env / :config / :default)."
@@ -47,9 +54,18 @@ from a legitimate config value of NIL (or any keyword).")
       (option-key spec)
       (positional-spec-key spec)))
 
+(defun %ensure-option-value-tail-cells ()
+  "Materialize *OPTION-VALUE-TAIL-CELLS* on first use, replacing its :LAZY
+placeholder with a real hash table. Only ever called when the variable is
+already known truthy (:LAZY or a hash table), never when it is the NIL
+\"outside PARSE-ARGV\" signal."
+  (if (hash-table-p *option-value-tail-cells*)
+      *option-value-tail-cells*
+      (setf *option-value-tail-cells* (make-hash-table :test #'eq))))
+
 (defun %remember-option-value-tail (key list)
   (when (and *option-value-tail-cells* list)
-    (setf (gethash key *option-value-tail-cells*) (last list))))
+    (setf (gethash key (%ensure-option-value-tail-cells)) (last list))))
 
 (defun %append-accumulating-option-value (values key value)
   (let ((cell (list value)))
@@ -58,14 +74,14 @@ from a legitimate config value of NIL (or any keyword).")
        (setf (getf values key) cell)
        (%remember-option-value-tail key cell))
       (*option-value-tail-cells*
-       (let* ((current (getf values key))
-              (tail (or (gethash key *option-value-tail-cells*)
+       (let* ((table (%ensure-option-value-tail-cells))
+              (current (getf values key))
+              (tail (or (gethash key table)
                         (when current
-                          (setf (gethash key *option-value-tail-cells*)
-                                (last current))))))
+                          (setf (gethash key table) (last current))))))
          (if tail
              (setf (cdr tail) cell
-                   (gethash key *option-value-tail-cells*) cell)
+                   (gethash key table) cell)
              (progn
                (setf (getf values key) cell)
                (%remember-option-value-tail key cell)))))
@@ -211,16 +227,28 @@ still records the key. Values stay strings; only the split is interpreted."
   (signal-cli-error 'cli-usage-error
                     (format nil "Option ~A does not take a value." token-name)))
 
-(defun prepare-option-parser-state (app option-specs)
+(defun prepare-option-parser-state (app option-specs &optional cache)
   ;; The declared option-relationship graph is validated once, at spec
   ;; construction time, by MAKE-APP -> %VALIDATE-APP-SPEC (which checks the
   ;; identical built-in + global (+ command) spec sets). Specs are immutable
   ;; after construction, so re-running VALIDATE-OPTION-RELATIONSHIPS-DECLARED on
   ;; every PARSE-ARGV is pure waste -- it rebuilt the option-relation graph and
   ;; re-ran its conflicting-closure check twice per parse (~82% of parse time).
-  (let* ((specs (option-specs-with-built-ins app option-specs))
-         (table (option-table-from-specs specs)))
-    (values specs table)))
+  ;;
+  ;; The same immutability argument applies to the built-in-augmented specs
+  ;; list and its lookup table: %VALIDATE-APP-SPEC/%VALIDATE-COMMAND-NODE
+  ;; already compute both once and cache them as a (SPECS . TABLE) cons on
+  ;; the app (see APP-GLOBAL-OPTION-CACHE / APP-COMMAND-OPTION-CACHES). When
+  ;; a caller supplies that CACHE, reuse it directly -- rebuilding it here
+  ;; would re-run MAKE-OPTION for the built-ins and repopulate a hash table
+  ;; from scratch on every PARSE-ARGV call for no reason. CACHE is optional
+  ;; (and OPTION-SPECS still required) so this stays usable standalone with
+  ;; an ad hoc spec list never run through MAKE-APP.
+  (if cache
+      (values (car cache) (cdr cache))
+      (let* ((specs (option-specs-with-built-ins app option-specs))
+             (table (option-table-from-specs specs)))
+        (values specs table))))
 
 (defun map-option-values (specs parsed-values fn)
   (dolist (spec specs)

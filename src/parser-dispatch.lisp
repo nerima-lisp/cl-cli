@@ -55,16 +55,6 @@
     (t
      (values nil remaining))))
 
-(defun %command-path-option-specs (app path)
-  "The option specs in scope at the leaf of PATH: globals plus each command's."
-  (let ((specs '()))
-    (dolist (option (app-global-options app))
-      (push option specs))
-    (dolist (command path)
-      (dolist (option (command-options command))
-        (push option specs)))
-    (nreverse specs)))
-
 (defun %path-command-option-specs (path)
   "The option specs contributed by the commands in PATH (excluding globals)."
   (let ((specs '()))
@@ -78,11 +68,6 @@
   (loop for spec in option-specs
         thereis (and (option-stop-parsing-p spec)
                      (plist-has-key-p values (option-key spec)))))
-
-(defun %subcommand-table-for (command table-cache)
-  (or (gethash command table-cache)
-      (setf (gethash command table-cache)
-            (command-table-from-specs (command-subcommands command)))))
 
 (defun %unknown-subcommand-message (command token)
   (format nil "Unknown subcommand of ~A: ~A~A"
@@ -134,12 +119,13 @@ mis-dispatched."
   "Terminal parse for the leaf command of PATH: its options and positionals."
   (let* ((command (first path))
          (forward-path (nreverse (copy-list path)))
-         (scope-specs (%command-path-option-specs app forward-path)))
+         (cache (gethash command (app-command-option-caches app))))
     (multiple-value-bind (combined-option-values parsed-positionals command-action)
-        (parse-mixed-arguments app remaining scope-specs
+        (parse-mixed-arguments app remaining (car cache)
                                (command-positionals command)
                                :initial-option-values accumulated-values
-                               :command command)
+                               :command command
+                               :cache cache)
       (let ((resolved-global-options
               (merge-global-options app combined-option-values accumulated-values))
             (resolved-command-options
@@ -154,8 +140,7 @@ mis-dispatched."
                                 parsed-positionals
                                 forward-path)))))
 
-(defun dispatch-command-node (app path argv0 raw-argv remaining accumulated-values
-                              subcommand-table-cache)
+(defun dispatch-command-node (app path argv0 raw-argv remaining accumulated-values)
   "Parse the leaf command of PATH, recursing into a nested subcommand if present.
 
 ACCUMULATED-VALUES carries the option values parsed by ancestors (starting from
@@ -166,9 +151,10 @@ visible down the whole subtree."
     (if (null (command-subcommands command))
         (%finalize-command-node app path argv0 raw-argv remaining accumulated-values)
         (let* ((forward-path (nreverse (copy-list path)))
-               (scope-specs (%command-path-option-specs app forward-path)))
+               (cache (gethash command (app-command-option-caches app)))
+               (scope-specs (car cache)))
           (multiple-value-bind (values remaining2 action literal-separator-seen-p)
-              (parse-options-prefix app remaining scope-specs accumulated-values)
+              (parse-options-prefix app remaining scope-specs accumulated-values cache)
             (if (member action '(:help :version))
                 (make-parser-invocation
                  app command argv0 raw-argv action
@@ -176,23 +162,21 @@ visible down the whole subtree."
                   (collect-option-values (%path-command-option-specs forward-path) values)
                   nil
                   forward-path)
-                (let ((subcommand-table (%subcommand-table-for command subcommand-table-cache))
+                (let ((subcommand-table (gethash command (app-command-subcommand-tables app)))
                       (stop-parsing-p (%scope-stop-parsing-p scope-specs values)))
                   (multiple-value-bind (subcommand sub-remaining)
                       (%resolve-subcommand command subcommand-table remaining2
                                             stop-parsing-p literal-separator-seen-p)
                     (if subcommand
                         (dispatch-command-node app (cons subcommand path)
-                                               argv0 raw-argv sub-remaining values
-                                               subcommand-table-cache)
+                                               argv0 raw-argv sub-remaining values)
                         ;; No subcommand token: this command handles the rest as
                         ;; its own positionals/options, seeded with the prefix.
                         (%finalize-command-node app path argv0 raw-argv
                                                 remaining2 values))))))))))
 
 (defun parse-command-argv (app command argv0 raw-argv remaining global-values)
-  (dispatch-command-node app (list command) argv0 raw-argv remaining global-values
-                         (make-hash-table :test #'eq)))
+  (dispatch-command-node app (list command) argv0 raw-argv remaining global-values))
 
 (defun parse-root-argv (app argv0 raw-argv remaining global-values
                         global-stop-parsing-p global-literal-separator-seen-p)
@@ -205,7 +189,8 @@ visible down the whole subtree."
           (parse-mixed-arguments app remaining
                                  (app-global-options app)
                                  (app-positionals app)
-                                 :initial-option-values global-values))
+                                 :initial-option-values global-values
+                                 :cache (app-global-option-cache app)))
     (let ((resolved-global-options
             (merge-global-options app parsed-global-options global-values)))
       (unless (member parsed-action '(:help :version))
@@ -226,7 +211,7 @@ file without forking the parser."
   (let* ((*cli-error-app* app)
          (*cli-error-command* nil)
          (*option-value-sources* nil)
-         (*option-value-tail-cells* (make-hash-table :test #'eq))
+         (*option-value-tail-cells* :lazy)
          (*option-config-values* config)
          (*allow-abbreviated-options* (app-allow-abbreviated-options app))
          (*abbreviated-option-entry-cache*
@@ -237,10 +222,11 @@ file without forking the parser."
          (arguments (if (app-expand-response-files app)
                         (expand-response-files (rest argv))
                         (rest argv)))
-         (command-table (command-table-from-specs (app-commands app))))
+         (command-table (app-root-command-table app)))
     (multiple-value-bind (global-values remaining global-action
                           literal-separator-seen-p)
-        (parse-options-prefix app arguments (app-global-options app))
+        (parse-options-prefix app arguments (app-global-options app)
+                              nil (app-global-option-cache app))
       (let ((global-stop-parsing-p
               (app-global-stop-parsing-p app global-values)))
         (multiple-value-bind (command command-remaining)

@@ -22,7 +22,41 @@
             :global-options (list (make-option :name "verbose" :short #\v
                                                :kind :count))))
 
+(defparameter *benchmark-subcommand-app*
+  (make-app :name "bench"
+            :global-options (list (make-option :name "verbose" :short #\v :kind :flag))
+            :commands (list (make-command
+                             :name "build"
+                             :options (list (make-option :name "target" :kind :value)
+                                           (make-option :name "release" :kind :flag))
+                             :positionals (list (make-positional :key :input
+                                                                 :required-p t))))))
+
 (describe-sequential "parser benchmark"
+  (it "caches each scope's built-in-augmented specs and lookup table once at MAKE-APP time"
+    ;; PREPARE-OPTION-PARSER-STATE reuses these (SPECS . TABLE) conses instead
+    ;; of rebuilding them (re-running MAKE-OPTION for --help/--version and
+    ;; repopulating a hash table) on every PARSE-ARGV call -- see
+    ;; src/model-validation.lisp's %VALIDATE-APP-SPEC/%VALIDATE-COMMAND-NODE.
+    (expect (consp (cl-cli::app-global-option-cache *benchmark-subcommand-app*)))
+    (let* ((build-command (first (app-commands *benchmark-subcommand-app*)))
+           (cache (gethash build-command
+                          (cl-cli::app-command-option-caches *benchmark-subcommand-app*))))
+      (expect (consp cache))
+      (expect (member :target (mapcar #'option-key (car cache))))))
+
+  (it "repeated small parses against the same app stay well under budget"
+    ;; The realistic cl-cli workload: many independent PARSE-ARGV calls
+    ;; against one long-lived APP (a REPL, a server, or simply this loop),
+    ;; not one huge argv -- exercises the per-scope caches above rather than
+    ;; the CPS scan loops' own asymptotic behavior. 100,000 calls, same
+    ;; 2000ms budget convention as the CPS benchmarks below.
+    (let ((result (benchmark (:warmup 1 :samples 5)
+                    (dotimes (i 100000)
+                      (parse-argv *benchmark-subcommand-app*
+                                 '("bench" "-v" "build" "--target" "x86" "in.lisp"))))))
+      (expect (< (median-ms result) 2000))))
+
   (it "scans a 5,000-flag argv (%SCAN-OPTIONS-PREFIX) in well under budget"
     (let* ((argv (list* "bench" (loop repeat 5000 collect "--verbose")))
            (result (benchmark (:warmup 1 :samples 5)

@@ -29,13 +29,13 @@ growth regardless of TOKENS' length."
           (%scan-options-prefix validated-specs table new-remaining new-values
                                 new-action literal-separator-seen-p on-done)))))))
 
-(defun parse-options-prefix (app tokens option-specs &optional initial-values)
+(defun parse-options-prefix (app tokens option-specs &optional initial-values cache)
   (let ((*abbreviated-option-entry-cache*
           (or *abbreviated-option-entry-cache*
               (and *allow-abbreviated-options*
                    (make-hash-table :test #'eq)))))
     (multiple-value-bind (validated-specs table)
-        (prepare-option-parser-state app option-specs)
+        (prepare-option-parser-state app option-specs cache)
       (%scan-options-prefix validated-specs table tokens initial-values
                             :dispatch nil #'values))))
 
@@ -91,13 +91,13 @@ with no stack growth regardless of REMAINING's length."
                                     action literal-mode-p on-done)))))))
 
 (defun parse-mixed-arguments (app tokens option-specs positional-specs
-                               &key initial-option-values command)
+                               &key initial-option-values command cache)
   (let ((*abbreviated-option-entry-cache*
           (or *abbreviated-option-entry-cache*
               (and *allow-abbreviated-options*
                    (make-hash-table :test #'eq)))))
     (multiple-value-bind (validated-specs table)
-        (prepare-option-parser-state app option-specs)
+        (prepare-option-parser-state app option-specs cache)
       (%scan-mixed-arguments
        validated-specs table tokens positional-specs initial-option-values nil
        :dispatch nil

@@ -34,6 +34,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `PARSE-ARGV` is dramatically faster, especially across repeated calls
+  against the same `APP` (a REPL, a long-running server, or simply a hot
+  loop). `MAKE-APP` now precomputes and caches, once per app/command scope,
+  the built-in-augmented option list, its name/alias lookup table, and the
+  command-name/alias lookup table -- previously all three were rebuilt from
+  scratch (including re-running `MAKE-OPTION` for the built-in `--help`/
+  `--version` specs) on every single `PARSE-ARGV` call. Three option-
+  relationship validators (`VALIDATE-CONDITIONAL-REQUIREMENTS`,
+  `VALIDATE-REQUIRED-OPTION-GROUPS`, `VALIDATE-INCLUSIVE-GROUPS`) now skip
+  building their lookup tables entirely when the app declares none of the
+  corresponding feature (conditional requirements / option groups), mirroring
+  `VALIDATE-OPTION-RELATIONSHIPS`' existing early exit. The per-parse
+  accumulating-option-value hash table is now allocated lazily, on the first
+  value that actually needs it, instead of unconditionally on every call.
+  Measured on a representative subcommand-dispatch benchmark: ~4.5x faster
+  for repeated parses against one app, up to ~15x for a flag-only app with
+  no subcommands. No public API or observable behavior changed; see
+  `tests/cases-parser-benchmark.lisp`.
 - `cl-cli` no longer depends on `cl-prolog` at runtime. Option-relation
   validation (`:requires`, `:requires-any-of`, `:conflicts-with`) is now a
   plain in-memory adjacency graph (`src/option-relations.lisp`) with the same

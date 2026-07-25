@@ -98,6 +98,13 @@
 Exclusivity within a group is already enforced through :conflicts-with, so this
 only checks the at-least-one obligation that REQUIRED-EXCLUSIVE-GROUP adds. Each
 distinct group is checked once."
+  ;; Most CLIs declare no required option groups at all -- skip building the
+  ;; lookup tables when there is nothing to check.
+  (unless (some (lambda (spec)
+                  (let ((group (option-group spec)))
+                    (and group (option-group-required-p group))))
+                specs)
+    (return-from validate-required-option-groups values))
   (let ((seen (make-hash-table :test #'eq))
         (spec-by-key (%option-key-table specs)))
     (dolist (spec specs values)
@@ -124,6 +131,13 @@ distinct group is checked once."
 
 Each distinct :INCLUSIVE group is checked once. Hidden members are named
 generically in the error, mirroring the other relationship diagnostics."
+  ;; Most CLIs declare no inclusive option groups at all -- skip building the
+  ;; lookup tables when there is nothing to check.
+  (unless (some (lambda (spec)
+                  (let ((group (option-group spec)))
+                    (and group (eq (option-group-mode group) :inclusive))))
+                specs)
+    (return-from validate-inclusive-groups values))
   (let ((seen (make-hash-table :test #'eq))
         (spec-by-key (%option-key-table specs)))
     (dolist (spec specs values)
@@ -154,6 +168,13 @@ generically in the error, mirroring the other relationship diagnostics."
 
 :required-if makes an option mandatory when any listed target is present;
 :required-unless makes it mandatory unless any listed target is present."
+  ;; Most CLIs declare no :required-if/:required-unless at all -- skip
+  ;; building the target-lookup table when there is nothing to check,
+  ;; mirroring VALIDATE-OPTION-RELATIONSHIPS' early exit.
+  (unless (some (lambda (spec)
+                  (or (option-required-if spec) (option-required-unless spec)))
+                specs)
+    (return-from validate-conditional-requirements values))
   (let ((spec-by-target (%option-target-table specs)))
     (dolist (spec specs values)
       (unless (plist-has-key-p values (option-key spec))

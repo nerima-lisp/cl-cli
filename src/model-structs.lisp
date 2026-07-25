@@ -105,7 +105,23 @@
   ;; already-in-use app depends on. Keyed by command object (EQ) instead, this
   ;; table lives on the APP -- which is never itself shared as another app's
   ;; input -- so each app owns an independent cache even when commands are.
-  (command-relation-graphs (make-hash-table :test 'eq)))
+  (command-relation-graphs (make-hash-table :test 'eq))
+  ;; Option specs are immutable and their built-ins/lookup table are fully
+  ;; determined at MAKE-APP time, so both are computed once here (mirroring
+  ;; the relation-graph caches above) instead of being rebuilt --
+  ;; reconstructing the built-in --help/--version specs via MAKE-OPTION and
+  ;; re-populating a hash table -- on every PARSE-ARGV call. Each cache is a
+  ;; (SPECS . TABLE) cons; see PREPARE-OPTION-PARSER-STATE.
+  global-option-cache
+  (command-option-caches (make-hash-table :test 'eq))
+  ;; Likewise, the app's root command-name/alias -> command lookup table and
+  ;; each command's own subcommand-name/alias table are fully determined at
+  ;; MAKE-APP time (commands/subcommands are immutable), so both are cached
+  ;; once instead of PARSE-ARGV/dispatch rebuilding a hash table from scratch
+  ;; on every call. COMMAND-SUBCOMMAND-TABLES is keyed by command, mirroring
+  ;; COMMAND-RELATION-GRAPHS/COMMAND-OPTION-CACHES above.
+  root-command-table
+  (command-subcommand-tables (make-hash-table :test 'eq)))
 
 (defstruct (invocation
             (:constructor %make-invocation)
