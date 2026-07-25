@@ -9,25 +9,22 @@ out to `app __complete KEY` when the word before the cursor is a dynamic option.
 A token that appears on two options resolves to whichever comes first, the same
 single-pool ambiguity the flat completers already accept for their candidate
 lists. KEY-NAME is the downcased option key, matching RENDER-COMPLETE-REPLY."
-  (labels ((collect-command-options (commands)
-             (let (specs)
-               (labels ((walk (items)
-                          (dolist (command items)
-                            (dolist (option (command-options command))
-                              (push option specs))
-                            (walk (command-subcommands command)))))
-                 (walk commands)
-                 (nreverse specs)))))
-    (let ((specs (collect-command-options (app-commands app)))
-          (alist nil))
-      (dolist (option (reverse (app-global-options app)))
-        (push option specs))
-      (dolist (option specs (nreverse alist))
+  (let ((specs (collecting
+                 (dolist (option (app-global-options app))
+                   (collect option))
+                 (labels ((walk (commands)
+                            (dolist (command commands)
+                              (dolist (option (command-options command))
+                                (collect option))
+                              (walk (command-subcommands command)))))
+                   (walk (app-commands app))))))
+    (collecting
+      (dolist (option specs)
         (when (and (option-complete option)
                    (not (option-hidden-p option)))
           (let ((key (string-downcase (symbol-name (option-key option)))))
             (dolist (name (%completion-recognized-option-names option))
-              (push (cons (option-token-display-name name) key) alist))))))))
+              (collect (cons (option-token-display-name name) key)))))))))
 
 (defun %completion-zsh-write-option-value-case-body (stream options &key attached-p)
   "Write the `case \"$word\" in ...` body for OPTIONS' value candidates directly to STREAM.
@@ -70,17 +67,15 @@ whatever buffer the caller passes, matching the bash renderer's
           (%completion-option-tokens-for-specs (built-in-option-specs app))))
 
 (defun %completion-zsh-command-specs (app)
-  (let (specs)
-    (dolist (command (%completion-visible-commands app) (nreverse specs))
-      (push (format nil "~A:~A"
-                    (%completion-zsh-describe-field (command-name command))
-                    (%completion-zsh-describe-field (command-description command)))
-            specs)
+  (collecting
+    (dolist (command (%completion-visible-commands app))
+      (collect (format nil "~A:~A"
+                       (%completion-zsh-describe-field (command-name command))
+                       (%completion-zsh-describe-field (command-description command))))
       (dolist (alias (command-aliases command))
-        (push (format nil "~A:alias for ~A"
-                      (%completion-zsh-describe-field alias)
-                      (%completion-zsh-describe-field (command-name command)))
-              specs)))))
+        (collect (format nil "~A:alias for ~A"
+                         (%completion-zsh-describe-field alias)
+                         (%completion-zsh-describe-field (command-name command))))))))
 
 (defun %completion-zsh-write-command-specs (stream app)
   (%completion-zsh-write-assignment stream "command_specs"

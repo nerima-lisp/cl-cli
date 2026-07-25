@@ -26,26 +26,25 @@ as `--output`."
 Newlines terminate a line; other terminal controls are removed or normalized so
 author text cannot smuggle roff requests or terminal escapes into generated man
 pages."
-  (let ((lines nil)
-        (current (make-string-output-stream)))
-    (labels ((flush-line ()
-               (push (get-output-stream-string current) lines)
-               (setf current (make-string-output-stream))))
-      (loop for char across (or text "")
-            do (let ((code (char-code char)))
-                 (cond
-                   ((or (char= char #\Newline)
-                        (char= char #\Return))
-                    (flush-line))
-                   ((char= char #\Tab)
-                    (write-char #\Space current))
-                   ((or (< code 32)
-                        (= code 127)
-                        (and (>= code 128) (< code 160))))
-                   (t
-                    (write-char char current)))))
-      (flush-line)
-      (nreverse lines))))
+  (let ((current (make-string-output-stream)))
+    (collecting
+      (labels ((flush-line ()
+                 (collect (get-output-stream-string current))
+                 (setf current (make-string-output-stream))))
+        (loop for char across (or text "")
+              do (let ((code (char-code char)))
+                   (cond
+                     ((or (char= char #\Newline)
+                          (char= char #\Return))
+                      (flush-line))
+                     ((char= char #\Tab)
+                      (write-char #\Space current))
+                     ((or (< code 32)
+                          (= code 127)
+                          (and (>= code 128) (< code 160))))
+                     (t
+                      (write-char char current)))))
+        (flush-line)))))
 
 (defun %roff-single-line (text)
   "Return TEXT folded to one roff-safe line for macro arguments."
@@ -195,19 +194,17 @@ appears as its own path-qualified entry."
 
 (defun %manpage-env-backed-options (app)
   "Every visible option (global or on any command, nested included) with env vars."
-  (let (options)
-    (labels ((collect (commands)
-               (dolist (command commands)
-                 (dolist (option (command-options command))
-                   (push option options))
-                 (collect (command-subcommands command)))))
-      (collect (app-commands app))
-      (setf options (nreverse options))
-      (dolist (option (reverse (app-global-options app)))
-        (push option options))
-      (remove-if-not #'option-env-vars
-                     (remove-if #'option-hidden-p
-                                options)))))
+  (remove-if-not #'option-env-vars
+                 (remove-if #'option-hidden-p
+                            (collecting
+                              (dolist (option (app-global-options app))
+                                (collect option))
+                              (labels ((walk (commands)
+                                         (dolist (command commands)
+                                           (dolist (option (command-options command))
+                                             (collect option))
+                                           (walk (command-subcommands command)))))
+                                (walk (app-commands app)))))))
 
 (defun %manpage-environment-section (app stream)
   (let ((options (%manpage-env-backed-options app)))
