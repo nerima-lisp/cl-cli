@@ -134,10 +134,15 @@ escape the former and fold the latter to a space."
   (when row-options
     (format stream "| Option | Description |~%")
     (format stream "| --- | --- |~%")
-    (dolist (option row-options)
-      (format stream "| ~A | ~A |~%"
-              (%md-inline-code (%doc-option-synopsis option))
-              (%md-escape-cell (%option-description-string option resolution-options))))
+    ;; %OPTION-TARGET-TABLE builds a hash table over every option in scope --
+    ;; hoisted here so it's built once per table, not once per ROW-OPTIONS
+    ;; entry (which made a large app's option-table rendering effectively
+    ;; O(n^2) in the number of options).
+    (let ((target-table (%option-target-table resolution-options)))
+      (dolist (option row-options)
+        (format stream "| ~A | ~A |~%"
+                (%md-inline-code (%doc-option-synopsis option))
+                (%md-escape-cell (%option-description-string option resolution-options target-table)))))
     (format stream "~%")))
 
 (defun %md-positional-table (positionals stream)

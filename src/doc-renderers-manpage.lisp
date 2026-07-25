@@ -113,10 +113,11 @@ every physical line after embedded newlines are split."
           (format stream ".PP~%"))
         (%roff-text-line stream footer)))))
 
-(defun %manpage-option-entry (option options stream)
+(defun %manpage-option-entry
+    (option options stream &optional (target-table (%option-target-table options)))
   (format stream ".TP~%")
   (format stream ".B ~A~%" (%roff-escape (%doc-option-synopsis option)))
-  (let ((description (%option-description-string option options)))
+  (let ((description (%option-description-string option options target-table)))
     (%roff-text-line stream (if (plusp (length description))
                                 description
                                 "(no description)"))))
@@ -133,8 +134,11 @@ every physical line after embedded newlines are split."
   (let ((options (%doc-visible-options (app-global-options app))))
     (when options
       (format stream ".SH OPTIONS~%")
-      (dolist (option options)
-        (%manpage-option-entry option options stream)))))
+      ;; Build the shared target-lookup table once for this whole section --
+      ;; %MANPAGE-OPTION-ENTRY's default would otherwise rebuild it per option.
+      (let ((target-table (%option-target-table options)))
+        (dolist (option options)
+          (%manpage-option-entry option options stream target-table))))))
 
 (defun %manpage-arguments-section (app stream)
   (when (app-positionals app)
@@ -162,8 +166,9 @@ appears as its own path-qualified entry."
       (format stream ".RS~%")
       (dolist (positional positionals)
         (%manpage-positional-entry positional stream))
-      (dolist (option options)
-        (%manpage-option-entry option options stream))
+      (let ((target-table (%option-target-table options)))
+        (dolist (option options)
+          (%manpage-option-entry option options stream target-table)))
       (format stream ".RE~%")))
   (when (command-help-footer command)
     (format stream ".PP~%")
