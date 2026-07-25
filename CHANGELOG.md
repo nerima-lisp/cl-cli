@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+Conformance work against the org's
+[PACKAGE_STANDARD.md](https://github.com/nerima-lisp/.github/blob/main/PACKAGE_STANDARD.md).
+No behavior of the `cl-cli` system itself changed; its dependency set is still
+`uiop` alone.
+
+### Changed
+
+- **The test systems were renamed.** `cl-cli/tests` is now `cl-cli/test`, and
+  `cl-cli/tests/shell-verification` is now `cl-cli/test/shell-verification`,
+  matching the org-wide `<pkg>/test` convention. The Lisp package
+  `cl-cli/tests` was renamed to `cl-cli/test` to match. Anything calling
+  `(asdf:test-system "cl-cli/tests")` directly must be updated;
+  `(asdf:test-system "cl-cli")` is unaffected.
+- **Tests moved from `tests/` to `t/`,** and the loader moved from
+  `tests/run-tests.lisp` to `run-tests.lisp` at the repository root. The
+  documented invocation is now
+  `sbcl --non-interactive --load run-tests.lisp --eval '(cl-cli/test:run-tests)' --quit`.
+- **`flake.nix` declares `x86_64-linux` and `aarch64-darwin` only.**
+  `aarch64-linux` and `x86_64-darwin` were declared but never built or tested
+  anywhere, so the flake no longer advertises them.
+- Sibling flake inputs are pinned to release tags instead of tracking each
+  repository's default branch, so an upstream push can no longer break this
+  repository's CI without warning.
+
+### Added
+
+- `packages.default` (`sbcl.buildASDFSystem`), `apps.test`, `checks.formatting`
+  (treefmt/nixfmt) and `nix fmt` in `flake.nix`. `checks.default` is the SBCL
+  suite; the ECL suite is `checks.ecl`.
+- `release.yml` and `flake-update.yml` workflows, and a `nix-setup` composite
+  action shared by all four workflows. Every `uses:` is pinned to a
+  40-character commit SHA.
+
+### Removed
+
+- `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `RELEASING.md`, `SECURITY.md` and
+  `SUPPORT.md`. These are served org-wide from
+  [nerima-lisp/.github](https://github.com/nerima-lisp/.github); the parts
+  specific to this repository moved to `docs/src/development.md`.
+
+### Fixed
+
+- The documentation claimed the ECL check "currently fails". It has passed
+  since the test suite was split at the system boundary; the shell-verification
+  half is simply excluded there.
+
 ## [1.0.1] - 2026-07-26
 
 Three renderer bugs that 1.0.0 shipped with, found by an adversarial audit that
