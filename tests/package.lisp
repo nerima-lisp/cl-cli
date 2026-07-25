@@ -22,7 +22,8 @@
                 :median-ms
                 :run-all
                 :run-mutations
-                :signals)
+                :signals
+                :with-soft-assertions)
   (:export :run-tests))
 
 (in-package :cl-cli/tests)

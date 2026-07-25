@@ -94,13 +94,13 @@
               pairs
               (loop for (key expected) on pairs by #'cddr
                     collect (list key expected)))))
-    `(progn
+    `(with-soft-assertions
        ,@(loop for pair in normalized-pairs
                for (key expected) = pair
                collect `(expect (equal (,accessor ,invocation ,key) ,expected))))))
 
 (defmacro invocation-values= (invocation &rest clauses)
-  `(progn
+  `(with-soft-assertions
      ,@(loop for clause in clauses
              collect (destructuring-bind (kind key expected) clause
                        (ecase kind
