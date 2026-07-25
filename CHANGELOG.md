@@ -34,6 +34,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The fish completion renderer (`RENDER-FISH-COMPLETION`) no longer
+  re-shell-quotes the same loop-invariant value on every iteration of a
+  loop it's constant across: the app name, each level's "already seen a
+  sibling command" condition, and each command's description are now
+  quoted once and reused, instead of being re-quoted once per command
+  alias, once per option candidate, or once per `complete` line as
+  before. (Profiling on a 330-option/33-command benchmark app after fixing
+  the bash and zsh renderers, above, found fish was the next-most-expensive
+  renderer, dominated almost entirely by this redundant re-quoting rather
+  than the tree-copy pattern those two had; nushell and elvish were also
+  profiled and are already fast enough -- tens of microseconds per call --
+  that optimizing them further would be immeasurable.) Measured: fish
+  rendering on the same benchmark app is roughly 1.5x faster. No public API
+  or observable script output changed; see
+  `tests/cases-parser-benchmark.lisp`.
 - The bash and zsh completion renderers (`RENDER-BASH-COMPLETION`,
   `RENDER-ZSH-COMPLETION`) write directly into one shared output stream
   instead of building a separate string per recursive subcommand node (each

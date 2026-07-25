@@ -223,12 +223,21 @@ untouched."
           (%completion-shell-quote (app-name app))
           (string-downcase (symbol-name (option-key option)))))
 
-(defun %completion-fish-option-candidate-lines (app option arguments stream)
+(defun %completion-fish-option-candidate-lines (quoted-app-name app option arguments stream)
+  "Emit OPTION's `complete -c ...` lines to STREAM.
+
+QUOTED-APP-NAME is (%COMPLETION-SHELL-QUOTE (APP-NAME APP)), computed once by
+the caller and reused across every line here (and across every option, via
+%RENDER-FISH-OPTION-LINES) instead of being re-quoted per candidate as the
+original did -- for an option with many candidates this was the dominant
+redundant allocation in this renderer. APP itself is still needed for
+%COMPLETION-FISH-DYNAMIC-COMMAND, which composes a *different*, unquoted
+embedded expression rather than a plain `-c` argument."
   (let ((candidates (%completion-option-candidates option)))
     (if (some #'cdr candidates)
         (dolist (candidate candidates)
           (format stream "complete -c ~A~A -a ~A~@[ -d ~A~]~%"
-                  (%completion-shell-quote (app-name app))
+                  quoted-app-name
                   arguments
                   (%completion-shell-quote (car candidate))
                   (and (cdr candidate)
@@ -236,7 +245,7 @@ untouched."
         (cond
           (candidates
            (format stream "complete -c ~A~A -a ~A~%"
-                   (%completion-shell-quote (app-name app))
+                   quoted-app-name
                    arguments
                    (%completion-shell-quote
                     (%completion-space-joined
@@ -245,7 +254,7 @@ untouched."
           ;; token to `app __complete KEY ...` and offers the lines it prints.
           ((option-complete option)
            (format stream "complete -c ~A~A -f -a ~A~%"
-                   (%completion-shell-quote (app-name app))
+                   quoted-app-name
                    arguments
                    (%completion-shell-quote
                     (%completion-fish-dynamic-command app option))))
@@ -253,16 +262,16 @@ untouched."
           ;; file fallback); a :file hint / plain value option keeps that default.
           ((eq (option-value-hint option) :dir)
            (format stream "complete -c ~A~A -f -a '(__fish_complete_directories)'~%"
-                   (%completion-shell-quote (app-name app))
+                   quoted-app-name
                    arguments))
           (t
            (format stream "complete -c ~A~A~%"
-                   (%completion-shell-quote (app-name app))
+                   quoted-app-name
                    arguments))))))
 
-(defun %render-fish-option-lines (app options condition stream)
+(defun %render-fish-option-lines (quoted-app-name app options condition stream)
   (dolist (option options)
     (unless (option-hidden-p option)
       (let ((arguments (%completion-fish-option-arguments option
                                                            :condition condition)))
-        (%completion-fish-option-candidate-lines app option arguments stream)))))
+        (%completion-fish-option-candidate-lines quoted-app-name app option arguments stream)))))

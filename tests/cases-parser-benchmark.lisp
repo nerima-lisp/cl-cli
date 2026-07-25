@@ -140,4 +140,17 @@
     (let ((result (benchmark (:warmup 1 :samples 5)
                     (dotimes (i 200)
                       (render-completion *benchmark-large-completion-app* "zsh")))))
+      (expect (< (median-ms result) 2000))))
+
+  (it "renders a fish completion script for a 230-option/20-command app in well under budget"
+    ;; Guards the fish renderer's loop-invariant shell-quoting
+    ;; (src/completion-renderers-fish.lisp, src/completion-renderer-helpers.lisp):
+    ;; APP-NAME, each command's DESCRIPTION, and each level's OFFER-CONDITION are
+    ;; quoted once and reused across every alias/candidate/option instead of being
+    ;; re-quoted on every iteration. 2000ms for 200 iterations leaves generous
+    ;; headroom over the ~0.34ms/call measured on a similarly-sized synthetic app
+    ;; on a fast machine.
+    (let ((result (benchmark (:warmup 1 :samples 5)
+                    (dotimes (i 200)
+                      (render-completion *benchmark-large-completion-app* "fish")))))
       (expect (< (median-ms result) 2000)))))
