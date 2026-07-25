@@ -66,10 +66,16 @@ rather than assuming `*standard-output*` / `*error-output*`:
 ## Conditions
 
 Every condition below subclasses `cli-usage-error`, so `run-app` maps them all
-to `:usage-exit-code`. Specification errors (invalid `make-app` /
-`make-command` / `make-option` / `make-positional` arguments) signal
-`cli-invalid-specification` — also a `cli-usage-error` subclass — immediately,
-before any parsing happens.
+to `:usage-exit-code`.
+
+Specification errors are the exception, deliberately. Invalid `make-app` /
+`make-command` / `make-option` / `make-positional` arguments signal
+`cli-invalid-specification`, which descends from `cli-error` but **not** from
+`cli-usage-error` — it reports a programmer's mistake, not a user's. So
+`(handler-case (run-app …) (cli-usage-error (e) …))` does not swallow your own
+spec bug, and if one does reach `run-app` it exits with `:error-exit-code`
+(`70`, `EX_SOFTWARE`) rather than `:usage-exit-code`. In practice it is raised
+while the spec is being built, before any parsing happens.
 
 Concrete usage conditions include `cli-unknown-option`, `cli-unknown-command`,
 `cli-missing-option-value`, `cli-missing-dependent-option`,

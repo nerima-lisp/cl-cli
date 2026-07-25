@@ -154,33 +154,33 @@ existing style of computing its own value expression inline."
 (defun %write-positional-json (stream positional)
   (with-json-object (stream)
     (json-member stream "key" t
-                 (lambda () (%json-write-keyword-name stream (positional-spec-key positional))))
-    (json-member stream "description" (positional-spec-description positional)
-                 (lambda () (%json-write-escaped-string stream (positional-spec-description positional))))
+                 (lambda () (%json-write-keyword-name stream (positional-key positional))))
+    (json-member stream "description" (positional-description positional)
+                 (lambda () (%json-write-escaped-string stream (positional-description positional))))
     (json-member stream "required" t
-                 (lambda () (%json-write-bool stream (positional-spec-required-p positional))))
+                 (lambda () (%json-write-bool stream (positional-required-p positional))))
     (json-member stream "rest" t
-                 (lambda () (%json-write-bool stream (positional-spec-rest-p positional))))
-    (json-member stream "type" (positional-spec-value-type positional)
-                 (lambda () (%json-write-keyword-name stream (positional-spec-value-type positional))))
-    (json-member stream "min" (positional-spec-value-min positional)
-                 (lambda () (%json-write-number stream (positional-spec-value-min positional))))
-    (json-member stream "max" (positional-spec-value-max positional)
-                 (lambda () (%json-write-number stream (positional-spec-value-max positional))))
-    (json-member stream "choices" (positional-spec-choices positional)
-                 (lambda () (%json-write-string-array stream (positional-spec-choices positional))))
-    (json-member stream "completionCandidates" (positional-spec-completion-candidates positional)
+                 (lambda () (%json-write-bool stream (positional-rest-p positional))))
+    (json-member stream "type" (positional-value-type positional)
+                 (lambda () (%json-write-keyword-name stream (positional-value-type positional))))
+    (json-member stream "min" (positional-value-min positional)
+                 (lambda () (%json-write-number stream (positional-value-min positional))))
+    (json-member stream "max" (positional-value-max positional)
+                 (lambda () (%json-write-number stream (positional-value-max positional))))
+    (json-member stream "choices" (positional-choices positional)
+                 (lambda () (%json-write-string-array stream (positional-choices positional))))
+    (json-member stream "completionCandidates" (positional-completion-candidates positional)
                  (lambda ()
                    (%json-write-string-array
-                    stream (mapcar #'car (positional-spec-completion-candidates positional)))))
-    (json-member stream "valueHint" (positional-spec-value-hint positional)
-                 (lambda () (%json-write-keyword-name stream (positional-spec-value-hint positional))))
-    (json-member stream "minCount" (positional-spec-min-count positional)
-                 (lambda () (%json-write-number stream (positional-spec-min-count positional))))
-    (json-member stream "maxCount" (positional-spec-max-count positional)
-                 (lambda () (%json-write-number stream (positional-spec-max-count positional))))
-    (json-member stream "default" (positional-spec-default-present-p positional)
-                 (lambda () (%json-write-scalar stream (positional-spec-default positional))))))
+                    stream (mapcar #'car (positional-completion-candidates positional)))))
+    (json-member stream "valueHint" (positional-value-hint positional)
+                 (lambda () (%json-write-keyword-name stream (positional-value-hint positional))))
+    (json-member stream "minCount" (positional-min-count positional)
+                 (lambda () (%json-write-number stream (positional-min-count positional))))
+    (json-member stream "maxCount" (positional-max-count positional)
+                 (lambda () (%json-write-number stream (positional-max-count positional))))
+    (json-member stream "default" (positional-default-present-p positional)
+                 (lambda () (%json-write-scalar stream (positional-default positional))))))
 
 (defun %write-command-json (stream command)
   (with-json-object (stream)
@@ -209,7 +209,7 @@ existing style of computing its own value expression inline."
       (json-member stream "subcommands" subcommands
                    (lambda () (%json-write-array stream subcommands #'%write-command-json))))))
 
-(defparameter +json-schema-version+ 1
+(defconstant +json-schema-version+ 1
   "Version of the object shape RENDER-JSON emits, written as its first member.
 
 This is the format's own version, independent of both the cl-cli release and

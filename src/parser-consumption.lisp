@@ -48,7 +48,7 @@ Returns (values new-pending new-positional-values new-remaining)."
   (let ((spec (first pending)))
     (multiple-value-bind (new-positional-values new-remaining)
         (apply-positional-spec spec positional-values remaining)
-      (values (if (positional-spec-rest-p spec) nil (rest pending))
+      (values (if (positional-rest-p spec) nil (rest pending))
               new-positional-values
               new-remaining))))
 

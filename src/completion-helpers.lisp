@@ -176,9 +176,9 @@ those strings a second time."
   (mapcar #'car (%completion-option-candidates option)))
 
 (defun %completion-positional-candidates (positional)
-  (or (positional-spec-completion-candidates positional)
+  (or (positional-completion-candidates positional)
       (mapcar (lambda (choice) (cons choice nil))
-              (positional-spec-choices positional))))
+              (positional-choices positional))))
 
 (defun %completion-positional-candidate-values (positional)
   (mapcar #'car (%completion-positional-candidates positional)))
@@ -197,7 +197,7 @@ those strings a second time."
 
 (defun %completion-positionals-hint-p (positionals hint)
   "True when any positional in POSITIONALS declares :value-hint HINT."
-  (some (lambda (positional) (eq (positional-spec-value-hint positional) hint))
+  (some (lambda (positional) (eq (positional-value-hint positional) hint))
         positionals))
 
 (defun %completion-app-positional-hint-p (app hint)

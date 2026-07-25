@@ -86,6 +86,7 @@
                (:file "tests/test-fixtures")
                (:file "examples/consumer-migrations")
                (:file "tests/test-support")
+               (:file "tests/cases-public-api")
                (:file "tests/cases-parse")
                (:file "tests/cases-property-parse")
                (:file "tests/cases-mutation-testing")

@@ -3,8 +3,8 @@
 (defun signal-missing-positional (spec)
   (signal-cli-error 'cli-missing-positional
                     (format nil "Missing positional argument: ~A"
-                            (positional-spec-key spec))
-                    :name (positional-spec-key spec)))
+                            (positional-key spec))
+                    :name (positional-key spec)))
 
 (defun signal-unexpected-positionals (rest)
   (signal-cli-error 'cli-unexpected-argument
@@ -18,7 +18,7 @@
       (mapcar (lambda (value)
                 (parse-positional-value spec value))
               tokens)
-      (let ((default (positional-spec-default spec)))
+      (let ((default (positional-default spec)))
         (cond
           ((null default) nil)
           ((listp default)
@@ -30,28 +30,28 @@
 
 (defun %validate-rest-arity (spec token-count)
   "Enforce a rest positional's :min-count / :max-count against TOKEN-COUNT."
-  (let ((min (positional-spec-min-count spec))
-        (max (positional-spec-max-count spec)))
+  (let ((min (positional-min-count spec))
+        (max (positional-max-count spec)))
     (when (and min (< token-count min))
       (signal-cli-error 'cli-missing-positional
                         (format nil "Positional ~A requires at least ~A value~:P (got ~A)."
-                                (positional-spec-key spec) min token-count)
-                        :name (positional-spec-key spec)))
+                                (positional-key spec) min token-count)
+                        :name (positional-key spec)))
     (when (and max (> token-count max))
       (signal-cli-error 'cli-unexpected-argument
                         (format nil "Positional ~A accepts at most ~A value~:P (got ~A)."
-                                (positional-spec-key spec) max token-count)
-                        :argument (positional-spec-key spec)))))
+                                (positional-key spec) max token-count)
+                        :argument (positional-key spec)))))
 
 (defun apply-positional-spec (spec values tokens)
   (cond
-    ((positional-spec-rest-p spec)
+    ((positional-rest-p spec)
      (cond
        (tokens
         (%validate-rest-arity spec (length tokens))
         (setf values (store-option-value values spec
                                          (parse-positional-rest-values spec tokens))))
-       ((positional-spec-default-present-p spec)
+       ((positional-default-present-p spec)
         (setf values (store-option-value values spec
                                          (parse-positional-rest-values spec nil))))
        (t
@@ -59,13 +59,13 @@
         (%validate-rest-arity spec 0)))
      (values values nil))
     ((null tokens)
-     (if (positional-spec-required-p spec)
+     (if (positional-required-p spec)
          (signal-missing-positional spec)
-         (when (positional-spec-default-present-p spec)
+         (when (positional-default-present-p spec)
            (setf values (store-option-value values spec
                                             (coerce-positional-default-value
                                              spec
-                                             (positional-spec-default spec))))))
+                                             (positional-default spec))))))
      (values values nil))
     (t
      (setf values (store-option-value values spec

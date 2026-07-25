@@ -81,8 +81,9 @@ response-file path itself might be influenced by untrusted input.")
   (handler-case (funcall *response-file-reader* path)
     (cli-usage-error (condition) (error condition))
     (error (condition)
-      (signal-cli-error 'cli-usage-error
-                        (format nil "Cannot read response file ~A: ~A" path condition)))))
+      (signal-cli-error 'cli-response-file-error
+                        (format nil "Cannot read response file ~A: ~A" path condition)
+                        :path path))))
 
 (defun %split-response-file-contents (contents)
   (remove-if (lambda (token) (zerop (length token)))
@@ -101,7 +102,7 @@ that must start with `@` can still be passed. A bare `@` is left untouched."
     (loop while frames
           do (destructuring-bind (current-depth current-args) (pop frames)
                (when (> current-depth +response-file-max-depth+)
-                 (signal-cli-error 'cli-usage-error
+                 (signal-cli-error 'cli-response-file-error
                                    "Response file inclusion nested too deeply."))
                (when current-args
                  (let ((arg (first current-args))
@@ -120,8 +121,9 @@ that must start with `@` can still be passed. A bare `@` is left untouched."
                       (let ((contents (%read-response-file (subseq arg 1))))
                         (incf total-bytes-read (length contents))
                         (when (> total-bytes-read +response-file-max-total-bytes+)
-                          (signal-cli-error 'cli-usage-error
-                                            "Response file inclusion exceeds the total size limit."))
+                          (signal-cli-error 'cli-response-file-error
+                                            "Response file inclusion exceeds the total size limit."
+                                            :path (subseq arg 1)))
                         (push (list (1+ current-depth)
                                     (%split-response-file-contents contents))
                               frames)))

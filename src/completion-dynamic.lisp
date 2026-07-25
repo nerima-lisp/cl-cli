@@ -17,8 +17,8 @@
                  (setf (gethash (string-downcase (symbol-name (option-key spec))) index)
                        spec)))
              (register-positional (spec)
-               (when (positional-spec-complete spec)
-                 (setf (gethash (string-downcase (symbol-name (positional-spec-key spec))) index)
+               (when (positional-complete spec)
+                 (setf (gethash (string-downcase (symbol-name (positional-key spec))) index)
                        spec)))
              (walk-command (command)
                (dolist (spec (command-options command))
@@ -44,7 +44,7 @@
 (defun %spec-complete-function (spec)
   (if (typep spec 'option-spec)
       (option-complete spec)
-      (positional-spec-complete spec)))
+      (positional-complete spec)))
 
 (defun render-complete-reply (app key partial &optional (stream *standard-output*))
   "Print the dynamic completion candidates for KEY given the PARTIAL word.

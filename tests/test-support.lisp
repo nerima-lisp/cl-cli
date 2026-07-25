@@ -268,15 +268,6 @@ would land in the wrong package and the engine would raise EXISTENCE_ERROR.")
 (defun prolog-fact (&rest term)
   (cl-prolog:make-clause term))
 
-(defun positional-key (positional)
-  (cl-cli::positional-spec-key positional))
-
-(defun positional-required-p (positional)
-  (cl-cli::positional-spec-required-p positional))
-
-(defun positional-rest-p (positional)
-  (cl-cli::positional-spec-rest-p positional))
-
 (defun option-atom (option)
   (prolog-atom (option-key option)))
 

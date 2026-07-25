@@ -52,7 +52,7 @@ from a legitimate config value of NIL (or any keyword).")
 (defun option->plist-key (spec)
   (if (typep spec 'option-spec)
       (option-key spec)
-      (positional-spec-key spec)))
+      (positional-key spec)))
 
 (defun %ensure-option-value-tail-cells ()
   "Materialize *OPTION-VALUE-TAIL-CELLS* on first use, replacing its :LAZY
@@ -139,28 +139,28 @@ already known truthy (:LAZY or a hash table), never when it is the NIL
     (funcall (option-parser spec) raw-value)))
 
 (defun validate-positional-choice (spec raw-value)
-  (let ((choices (positional-spec-choices spec)))
+  (let ((choices (positional-choices spec)))
     (when (and choices
                (stringp raw-value)
                (not (member raw-value choices :test #'string=)))
       (signal-cli-error 'cli-invalid-positional-value
                         (format nil "Invalid value for positional ~A: ~A (expected one of: ~{~A~^, ~})~A"
-                                (positional-spec-key spec)
+                                (positional-key spec)
                                 raw-value
                                 choices
                                 (format-suggestion-suffix raw-value choices))
-                        :name (positional-spec-key spec)
+                        :name (positional-key spec)
                         :value raw-value))))
 
 (defun parse-positional-value (spec raw-value)
   (validate-positional-choice spec raw-value)
   (with-value-parse-errors ('cli-invalid-positional-value
                             (format nil "Invalid value for positional ~A: ~A"
-                                    (positional-spec-key spec)
+                                    (positional-key spec)
                                     raw-value)
-                            :name (positional-spec-key spec)
+                            :name (positional-key spec)
                             :value raw-value)
-    (funcall (positional-spec-parser spec) raw-value)))
+    (funcall (positional-parser spec) raw-value)))
 
 (defun prepare-option-parser-state (app option-specs &optional cache)
   ;; The declared option-relationship graph is validated once, at spec
@@ -255,7 +255,10 @@ shared by both literal :default and :config resolution so they behave alike."
   (dolist (spec specs values)
     (when (and (option-required-p spec)
                (not (plist-has-key-p values (option-key spec))))
-      (signal-cli-error 'cli-missing-option-value
+      ;; The more specific subtype: a required option never supplied at all,
+      ;; as opposed to one typed with no value after it. Both remain
+      ;; CLI-MISSING-OPTION-VALUE for a handler that does not care.
+      (signal-cli-error 'cli-missing-required-option
                         (format nil "Missing required option: ~A"
                                 (%option-display-name spec))
                         :option (option-key spec)))))

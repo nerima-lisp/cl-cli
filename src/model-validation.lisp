@@ -72,7 +72,7 @@ that key survives :requires/:conflicts-with resolution."
         (rest-seen-p nil)
         (optional-seen-p nil))
     (dolist (spec positionals positionals)
-      (let ((key (positional-spec-key spec)))
+      (let ((key (positional-key spec)))
         (when (gethash key seen-keys)
           (signal-cli-error 'cli-invalid-specification
                             (format nil "Duplicate positional key for ~A: ~A"
@@ -88,13 +88,13 @@ that key survives :requires/:conflicts-with resolution."
       ;; an optional one can never receive a value: the optional one consumes
       ;; it first, then the required one fails as "missing" even though a
       ;; value was supplied.
-      (if (positional-spec-required-p spec)
+      (if (positional-required-p spec)
           (when optional-seen-p
             (signal-cli-error 'cli-invalid-specification
                               (format nil "Required positional for ~A must not follow an optional positional."
                                       owner-name)))
           (setf optional-seen-p t))
-      (when (positional-spec-rest-p spec)
+      (when (positional-rest-p spec)
         (setf rest-seen-p t)))))
 
 (defun %validate-command-node (app command accumulated-specs)

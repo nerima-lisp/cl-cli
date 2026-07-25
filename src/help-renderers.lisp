@@ -95,13 +95,13 @@ are no required options, leaving existing usage lines untouched."
     (terpri out)))
 
 (defun %format-positional-token (positional)
-  (let ((name (symbol-name (positional-spec-key positional))))
+  (let ((name (symbol-name (positional-key positional))))
     (cond
-      ((positional-spec-rest-p positional)
-       (if (positional-spec-required-p positional)
+      ((positional-rest-p positional)
+       (if (positional-required-p positional)
            (format nil "~A..." name)
            (format nil "[~A...]" name)))
-      ((positional-spec-required-p positional)
+      ((positional-required-p positional)
        name)
       (t
        (format nil "[~A]" name)))))
@@ -151,21 +151,21 @@ deprecated command reads the same everywhere."
 
 (defun %positional-metadata-parts (positional)
   (collecting
-    (when (positional-spec-default-present-p positional)
-      (collect (format nil "default: ~A" (positional-spec-default positional))))
-    (when (and (positional-spec-value-type positional)
-               (not (eq (positional-spec-value-type positional) :string)))
-      (collect (format nil "type: ~(~A~)" (positional-spec-value-type positional))))
-    (let ((range (%numeric-range-metadata (positional-spec-value-min positional)
-                                          (positional-spec-value-max positional))))
+    (when (positional-default-present-p positional)
+      (collect (format nil "default: ~A" (positional-default positional))))
+    (when (and (positional-value-type positional)
+               (not (eq (positional-value-type positional) :string)))
+      (collect (format nil "type: ~(~A~)" (positional-value-type positional))))
+    (let ((range (%numeric-range-metadata (positional-value-min positional)
+                                          (positional-value-max positional))))
       (when range
         (collect range)))
-    (when (positional-spec-choices positional)
-      (collect (format nil "choices: ~{~A~^ | ~}" (positional-spec-choices positional))))
-    (let ((hint (%value-hint-note (positional-spec-value-hint positional))))
+    (when (positional-choices positional)
+      (collect (format nil "choices: ~{~A~^ | ~}" (positional-choices positional))))
+    (let ((hint (%value-hint-note (positional-value-hint positional))))
       (when hint (collect hint)))
-    (let ((min (positional-spec-min-count positional))
-          (max (positional-spec-max-count positional)))
+    (let ((min (positional-min-count positional))
+          (max (positional-max-count positional)))
       (cond
         ((and min max) (collect (format nil "~A..~A values" min max)))
         (min (collect (format nil "at least ~A value~:P" min)))
@@ -173,7 +173,7 @@ deprecated command reads the same everywhere."
 
 (defun %positional-description-string (positional)
   (concatenate 'string
-               (or (positional-spec-description positional) "")
+               (or (positional-description positional) "")
                (%join-help-metadata (%positional-metadata-parts positional))))
 
 (defun %print-positional-row (stream positional)

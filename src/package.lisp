@@ -39,6 +39,7 @@
    :print-app-help
    :print-command-help
    :command-by-name
+   :built-in-option-specs
    :option-value
    :option-value-source
    :positional-value
@@ -80,6 +81,8 @@
    :command-examples
    :command-options
    :command-positionals
+   :command-subcommands
+   :command-default-command
    :command-handler
    :command-hidden-p
    :command-deprecated
@@ -114,10 +117,33 @@
    :option-hidden-p
    :option-deprecated
    :option-help-group
+   :option-group
+   :option-group-members
+   :option-group-mode
+   :option-group-required-p
+   :positional-key
+   :positional-description
+   :positional-value-type
+   :positional-value-min
+   :positional-value-max
+   :positional-choices
+   :positional-completion-candidates
+   :positional-value-hint
+   :positional-complete
+   :positional-parser
+   :positional-default
+   :positional-default-present-p
+   :positional-required-p
+   :positional-rest-p
+   :positional-min-count
+   :positional-max-count
+   :cli-error
    :cli-usage-error
    :cli-unknown-option
    :cli-unknown-command
    :cli-missing-option-value
+   :cli-missing-required-option
+   :cli-response-file-error
    :cli-missing-dependent-option
    :cli-missing-any-of-options
    :cli-conflicting-options
@@ -127,8 +153,11 @@
    :cli-unexpected-argument
    :cli-invalid-specification
    :cli-error-message
+   :cli-error-app
+   :cli-error-command
    :cli-usage-error-app
    :cli-usage-error-command
+   :cli-response-file-error-path
    :cli-unknown-option-name
    :cli-unknown-command-name
    :cli-missing-option-value-name

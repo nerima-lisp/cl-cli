@@ -39,24 +39,24 @@ They require :rest-p and must be non-negative with MIN-COUNT <= MAX-COUNT."
     (when (and complete (not (functionp complete)))
       (signal-cli-error 'cli-invalid-specification
                         (format nil "Positional ~S: :complete must be a function." resolved-key)))
-    (setf (positional-spec-key spec) resolved-key
-          (positional-spec-description spec) (normalize-positional-description description)
-          (positional-spec-value-type spec) type
-          (positional-spec-value-min spec) min
-          (positional-spec-value-max spec) max
-          (positional-spec-choices spec) (normalize-option-choices choices)
-          (positional-spec-completion-candidates spec)
+    (setf (positional-key spec) resolved-key
+          (positional-description spec) (normalize-positional-description description)
+          (positional-value-type spec) type
+          (positional-value-min spec) min
+          (positional-value-max spec) max
+          (positional-choices spec) (normalize-option-choices choices)
+          (positional-completion-candidates spec)
           (normalize-option-completion-candidates completion-candidates)
-          (positional-spec-value-hint spec) value-hint
-          (positional-spec-complete spec) complete
-          (positional-spec-parser spec) (cond
+          (positional-value-hint spec) value-hint
+          (positional-complete spec) complete
+          (positional-parser spec) (cond
                                           (type (build-typed-value-parser type min max))
                                           (parser parser)
                                           (t #'identity))
-          (positional-spec-default spec) default
-          (positional-spec-default-present-p spec) default-supplied-p
-          (positional-spec-required-p spec) required-p
-          (positional-spec-rest-p spec) rest-p
-          (positional-spec-min-count spec) min-count
-          (positional-spec-max-count spec) max-count)
+          (positional-default spec) default
+          (positional-default-present-p spec) default-supplied-p
+          (positional-required-p spec) required-p
+          (positional-rest-p spec) rest-p
+          (positional-min-count spec) min-count
+          (positional-max-count spec) max-count)
     spec))

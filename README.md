@@ -1027,17 +1027,28 @@ values; `option-value-source` reports where an option value came from
 `invocation-stdout`, and `invocation-stderr` expose the rest of the parsed
 invocation. `command-by-name` resolves a command spec by name or alias.
 
-**Spec accessors** — every `make-app` / `make-command` / `make-option` keyword
-has a matching reader in the `app-*`, `command-*`, and `option-*` families (for
-example `app-commands`, `command-options`, `option-required-p`). Positional
-specs are reached through `app-positionals` / `command-positionals`; their
-per-slot readers are internal and not exported.
+**Spec accessors** — every `make-app` / `make-command` / `make-option` /
+`make-positional` keyword has a matching reader in the `app-*`, `command-*`,
+`option-*`, and `positional-*` families (for example `app-commands`,
+`command-options`, `option-required-p`, `positional-rest-p`). Positional specs
+are reached through `app-positionals` / `command-positionals`. `option-group`
+returns the group an option was declared in, readable via
+`option-group-members` / `option-group-mode` / `option-group-required-p`, and
+`built-in-option-specs` exposes the synthesized `--help` / `--version` specs —
+between them a custom help renderer can reproduce everything the built-in one
+prints.
 
-**Conditions** — usage errors subclass `cli-usage-error`; specification errors
-signal `cli-invalid-specification`. Concrete conditions include
-`cli-unknown-option`, `cli-unknown-command`, `cli-missing-option-value`,
-`cli-missing-dependent-option`, `cli-missing-any-of-options`,
-`cli-conflicting-options`, `cli-missing-positional`, `cli-invalid-option-value`,
+**Conditions** — everything cl-cli signals descends from `cli-error`, which
+splits into `cli-usage-error` (the user typed something wrong — print usage,
+exit non-zero) and `cli-invalid-specification` (the *programmer* declared
+something wrong). The second is deliberately not under the first, so the
+idiomatic `(handler-case (run-app …) (cli-usage-error (e) …))` cannot swallow
+your own spec bug and answer it with a usage message. Concrete usage
+conditions include `cli-unknown-option`, `cli-unknown-command`,
+`cli-missing-option-value` (with the narrower `cli-missing-required-option`
+under it), `cli-response-file-error`, `cli-missing-dependent-option`,
+`cli-missing-any-of-options`, `cli-conflicting-options`,
+`cli-missing-positional`, `cli-invalid-option-value`,
 `cli-invalid-positional-value`, and `cli-unexpected-argument`, each with
 readers such as `cli-error-message` for structured handling.
 

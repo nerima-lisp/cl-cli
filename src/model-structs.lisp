@@ -38,7 +38,7 @@
 
 (defstruct (positional-spec
             (:constructor %make-positional-spec)
-            (:conc-name "POSITIONAL-SPEC-"))
+            (:conc-name "POSITIONAL-"))
   key
   description
   value-type

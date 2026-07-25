@@ -27,12 +27,12 @@
 
   (it "accepts :completion-candidates on a positional"
     (let ((p (make-positional :key :x :completion-candidates '(("a" . "First")))))
-      (expect (equal (cl-cli::positional-spec-completion-candidates p)
+      (expect (equal (cl-cli::positional-completion-candidates p)
                      '(("a" . "First"))))))
 
   (it "accepts a (value description) proper-list candidate, not just a dotted pair"
     (let ((p (make-positional :key :x :completion-candidates '(("a" "First")))))
-      (expect (equal (cl-cli::positional-spec-completion-candidates p)
+      (expect (equal (cl-cli::positional-completion-candidates p)
                      '(("a" . "First"))))))
 
   (it "rejects a completion candidate list with more than one description element"

@@ -12,7 +12,7 @@
   (it "stores the hint on options and positionals"
     (let ((app (value-hint-app)))
       (expect (eq (option-value-hint (first (app-global-options app))) :file))
-      (expect (eq (cl-cli::positional-spec-value-hint (first (app-positionals app))) :dir))))
+      (expect (eq (cl-cli::positional-value-hint (first (app-positionals app))) :dir))))
 
   (it "emits file/directory completion in bash"
     (let ((text (render-completion (value-hint-app) "bash")))
