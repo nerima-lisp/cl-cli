@@ -21,8 +21,18 @@ hand-written post-parse checks required.
 
 Relation targets may be written either as option keys such as `:profile` or
 as names such as `"profile"` / `"--profile"`. They are evaluated after CLI
-values, environment defaults, and literal defaults are resolved — so a
-`:default` can satisfy a `:requires` target without the user typing it.
+values, environment defaults, `:config` values, and literal defaults are
+resolved — so a `:default` can satisfy a `:requires` target without the user
+typing it.
+
+An unsatisfied `:requires` signals `cli-missing-dependent-option`; a violated
+`:conflicts-with` signals `cli-conflicting-options`. `:requires` is transitive
+— if `--a` requires `--b` and `--b` requires `--c`, supplying `--a` demands
+both. `:conflicts-with` is symmetric: declaring it on one side is enough.
+Contradictory specs are rejected by `make-app` itself with
+`cli-invalid-specification` — a `:requires` cycle, a requirement closure that
+contains two conflicting options, an unknown or self-referential target, and a
+`:requires-any-of` whose every alternative also conflicts with the option.
 
 When a relation target points at a hidden option, parsing still honors the
 relation, but generated help omits that hidden target from public metadata
@@ -75,18 +85,21 @@ exclusivity reuses the same validation and hidden-target-safe error messages:
 ```
 
 Conflicts an option already declares are preserved, so a group member can
-still conflict with options outside the group.
+still conflict with options outside the group. Help annotates each member with
+an `at most one of: ...` line naming the whole group, rather than repeating
+every pairwise conflict.
 
 When the choice is mandatory, use `cl-cli:required-exclusive-group` instead:
-exclusivity is enforced as above, and parsing additionally fails with
-`Exactly one of ...` when none of the members is supplied — expressing an
-"exactly one of" obligation that pairwise `:conflicts-with` cannot.
+exclusivity is enforced as above, and parsing additionally signals
+`cli-missing-option-value` (`Exactly one of ...`) when none of the members is
+supplied — expressing an "exactly one of" obligation that pairwise
+`:conflicts-with` cannot. Help renders those members as `exactly one of: ...`.
 
 For the opposite relationship — options meant to be used *together*, such as
 a paired `--host` and `--port` — splice them through `cl-cli:inclusive-group`.
 If any member is supplied, all must be (supplying none is fine); a partial
 set signals `cli-missing-dependent-option` and help renders the members as
-"all or none of":
+`all or none of: ...`:
 
 ```lisp
 :global-options (cl-cli:inclusive-group

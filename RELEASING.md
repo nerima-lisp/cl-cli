@@ -19,24 +19,31 @@ ecl --norc --load tests/run-tests.lisp --eval '(cl-cli/tests:run-tests)'
 nix flake check
 ```
 
-SBCL is the release-blocking target and must be green. ECL is currently
-expected to fail: `cl-log-kit` (a transitive test dependency via
-`cl-process-kit`) hard-codes `sb-thread:*` with no portability guard, so
-it cannot compile under any non-SBCL implementation --
-[nerima-lisp/cl-log-kit#1](https://github.com/nerima-lisp/cl-log-kit/issues/1),
-open upstream. `nix flake check`'s `ecl` output — and any local ECL run —
-will fail until that's fixed; do not treat it as a release-blocking
-regression to chase, and do not skip the SBCL check to compensate.
+SBCL and ECL are both release-blocking and must be green, as must the docs
+build that `nix flake check` also runs. Confirm the runner's own line about
+which half of the suite it loaded: a release verified only by the portable
+core has not exercised the generated completion scripts.
+
+CI runs `nix flake check` on every push and pull request to `main`, on both
+`x86_64-linux` and `aarch64-darwin`. `nix flake check` only evaluates outputs
+for the system it runs on, so a local run verifies your machine's system and
+nothing else.
 
 If a release changes parser semantics, help output, or completion rendering,
 add or update focused tests before tagging.
 
 ## Publish
 
-1. Update `CHANGELOG.md`.
-2. Confirm `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`, and `SECURITY.md` are consistent.
-3. Tag the release from the verified commit.
-4. Publish release notes that summarize breaking changes, new APIs, and migration work for downstream CLIs.
+1. Bump `:version` in `cl-cli.asd`. It appears twice — once in the `cl-cli`
+   system and once in `cl-cli/tests` — and both must match. `flake.nix` reads
+   the first `:version` line as the docs package version.
+2. Update `CHANGELOG.md`: cut `[Unreleased]` into a dated section for the new
+   version, add that version's link reference at the bottom of the file, and
+   repoint the `[Unreleased]` compare link at the new tag.
+3. Confirm `README.md`, `CONTRIBUTING.md`, `SUPPORT.md`, and `SECURITY.md` are
+   consistent, and mirror any change into the matching page under `docs/src/`.
+4. Tag the release from the verified commit, using a `vX.Y.Z` tag name.
+5. Publish release notes that summarize breaking changes, new APIs, and migration work for downstream CLIs.
 
 ## Post-release
 

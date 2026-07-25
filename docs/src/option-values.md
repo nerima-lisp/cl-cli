@@ -2,7 +2,8 @@
 
 ## Option kinds
 
-Every option declares a `:kind`:
+Every option has a `:kind`, defaulting to `:flag` (or to `:value` when
+`:multiple-p` is supplied):
 
 | Kind | Shape | Example |
 | --- | --- | --- |
@@ -33,7 +34,11 @@ Boolean options accept positive and auto-generated negated long forms: a
 a CLI must also accept a separated non-option value such as `--coverage true`.
 
 The built-in help/version flags are `--help`, `-h`, `--version`, and `-V`.
-`--version` / `-V` are available only when the app declares a version string.
+`--version` / `-V` are available only when the app declares a version string,
+and `--help` / `-h` can be suppressed with `:auto-help nil` — see [CLI
+Behavior](cli-behavior.md). Their `:help` / `:version` keys are reserved: a
+user option may not reuse them.
+
 Value-bearing short options also accept attached forms out of the box, so
 `-Lmain` or `-S/tmp/tmux.sock` parse without special-case handling.
 
@@ -60,18 +65,22 @@ add inclusive bounds for numeric types. Both `make-option` and
 ```
 
 A `:type` and an explicit `:parser` are mutually exclusive, `:min`/`:max`
-require a numeric `:type`, and `:min` may not exceed `:max`; all three are
-checked at `make-*` time. The resolved type and range appear in help metadata
-(for example `type: integer; range: 1..64`). Type failures and out-of-range
-values are reported as `cl-cli:cli-invalid-option-value` /
+require a numeric `:type` (`:integer`, `:number`, or `:float`), and `:min` may
+not exceed `:max`; all three are checked at `make-*` time. On an option they
+apply only to `:value` — an `:optional-value` stores `t` for its bare form,
+which a typed parser could never accept. The resolved type and range appear in
+help metadata (for example `type: integer; range: 1..64`). Type failures and
+out-of-range values are reported as `cl-cli:cli-invalid-option-value` /
 `cl-cli:cli-invalid-positional-value` — see
 [Validation and Exit Codes](validation.md). Numeric parsing binds
 `*read-eval*` off, so a crafted value can never execute code.
 
 ## Repeatable, delimited, and multi-token values
 
-Value-bearing options can be made repeatable with `:multiple-p t`; repeated
-occurrences accumulate in input order and `option-value` returns a list:
+A `:value` or `:optional-value` option can be made repeatable with
+`:multiple-p t`; repeated occurrences accumulate in input order and
+`option-value` returns a list. (`:count` and `:key-value` already accumulate by
+construction, so they reject `:multiple-p`, as do `:flag` and `:boolean`.)
 
 ```lisp
 (cl-cli:make-option :name "include"
@@ -95,8 +104,10 @@ are split the same way:
 ```
 
 A `:value` option can consume a fixed number of separate tokens with
-`:value-count N`, returning a parsed list (`--point 1 2` ⇒ `(1 2)`); with
-`:multiple-p` each occurrence contributes its own N-element list:
+`:value-count N` (a positive integer), returning a parsed list
+(`--point 1 2` ⇒ `(1 2)`); with `:multiple-p` each occurrence contributes its
+own N-element list. Too few remaining tokens signal
+`cli-missing-option-value`:
 
 ```lisp
 (cl-cli:make-option :name "point" :kind :value :type :integer :value-count 2)
@@ -104,7 +115,8 @@ A `:value` option can consume a fixed number of separate tokens with
 
 `:value-count` may also be `:+` (one or more) or `:*` (zero or more), which
 greedily consume following tokens up to the next option-like token
-(`--files a b c`); help shows the value as `<NAME>...`:
+(`--files a b c`); help shows the value as `<NAME>...`. A multi-token
+`:value-count` cannot combine with `:value-delimiter`:
 
 ```lisp
 (cl-cli:make-option :name "files" :kind :value :value-count :+)
@@ -180,8 +192,8 @@ runtime to tell an explicit CLI value apart from a fallback — see
 ## Positionals and rest arguments
 
 `make-positional` mirrors most option facilities — `:type`, `:min`/`:max`,
-`:choices`, `:value-hint`, and a custom `:parser` — plus positional-specific
-shape:
+`:choices`, `:default`, `:value-hint`, `:completion-candidates`/`:complete`,
+and a custom `:parser` — plus positional-specific shape:
 
 ```lisp
 (cl-cli:make-positional :key :files :rest-p t :min-count 1 :max-count 8)

@@ -18,14 +18,16 @@
                                    (cl-cli:positional-value invocation :input)
                                    (cl-cli:option-value invocation :output)))))))
 
-(cl-cli:run-app *app* '("demo" "compile" "-o" "out.bin" "input.lisp"))
+(cl-cli:run-app *app* :argv '("demo" "compile" "-o" "out.bin" "input.lisp"))
 ```
 
 `make-app` builds an immutable spec — name, version, global options, and a
 list of commands. `run-app` parses an argv list against that spec and
 dispatches the matched command's `:handler`, returning a process exit code.
 Call `parse-argv` directly instead when you want the parsed invocation
-without running a handler (useful for tests).
+without running a handler (useful for tests); note that it takes argv as a
+required positional argument — `(cl-cli:parse-argv *app* '("demo" "compile"
+"input.lisp"))` — rather than as `:argv`.
 
 ## Root positional example
 
@@ -56,9 +58,10 @@ Usage: demo [global-options] <command> [args]
 ...
 ```
 
-If you want `help`, `version`, `completion`, and `docs` as real subcommands
-instead of (or in addition to) the built-in flags, splice in
-`cl-cli:make-standard-commands` — see
+If you want `help` and `version` as real subcommands instead of (or in
+addition to) the built-in flags, splice in `cl-cli:make-standard-commands`. It
+returns `help` and `version` by default; `completion` and `docs` are opt-in via
+`:include-completion-p t` / `:include-docs-p t` — see
 [Shell Completion](shell-completion.md) and
 [Documentation Generation](documentation-generation.md).
 

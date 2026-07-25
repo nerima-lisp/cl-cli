@@ -87,7 +87,7 @@ SHELL defaults to bash; bash, zsh, fish, powershell, nushell, and elvish are sup
 Returns a list of command specs suitable for APP :COMMANDS. By default this
 includes help and version commands. Set INCLUDE-COMPLETION-P to include a
 completion command, and INCLUDE-DOCS-P to include a `docs [FORMAT]` command that
-prints a generated man page or Markdown reference."
+prints a generated man page, Markdown, or JSON reference."
   (remove nil
           (list (when include-help-p
                   (make-help-command :name help-name

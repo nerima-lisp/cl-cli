@@ -2,9 +2,9 @@
 
 Beyond interactive `--help`, `cl-cli` can render offline reference
 documentation directly from an app spec, reusing the same option/command
-metadata so the docs never drift from the parser. Both renderers follow the
-completion renderers' stream contract (no stream returns a string; a stream
-is written to and returns no values):
+metadata so the docs never drift from the parser. All three renderers follow
+the completion renderers' stream contract (no stream returns a string; a
+stream is written to and returns no values):
 
 ```lisp
 (cl-cli:render-manpage *app*)   ; a section-1 man page (roff)
@@ -24,6 +24,14 @@ per-command sections, and examples.
 `render-json` emits the declared spec — options, positionals, commands, and
 their `:type`, range, delimiter, choices, and default metadata — as a
 minified JSON object that external tooling can consume.
+
+Its first member is always `schemaVersion`, the version of the output shape
+itself (not of `cl-cli`, and not of your app). Check it before reading the
+rest, so a future format change surfaces as a clear refusal rather than a
+misread key. The current value is also available in Lisp as
+`cl-cli:+json-schema-version+`. New members may appear in a minor release —
+a reader should ignore members it does not recognize — but a change that
+would break a reader of the previous shape bumps the number.
 
 Hidden options and commands are omitted from all three renderers.
 
@@ -47,8 +55,10 @@ demo docs markdown  > docs/demo.md
 demo docs json      > demo.schema.json
 ```
 
-`cl-cli:render-docs` dispatches to the two renderers by format name if you
-need the same routing without the command wrapper.
+`cl-cli:render-docs` dispatches to the three renderers by format name if you
+need the same routing without the command wrapper. It also accepts the aliases
+the `docs` command accepts: `manpage` / `roff` / `1` for `man`, and `md` for
+`markdown`.
 
 `cl-cli` uses its own renderers this way: this documentation site is written
 by hand, but any consumer CLI can wire `docs markdown` into its own release

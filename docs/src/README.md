@@ -87,6 +87,9 @@ the test suite documented in [Contributing](contributing.md):
 
 - strict, exact-match option and flag parsing, with optional GNU-style
   abbreviated-prefix matching
+- a functional spec API (`make-app` / `make-command` / `make-option` /
+  `make-positional`) plus the additive `define-app` / `define-command`
+  clause-based DSL that expands into it
 - `:flag`, `:boolean`, `:value`, `:optional-value`, `:count`, and `:key-value`
   option kinds
 - typed values (`:integer`, `:number`, `:float`, `:boolean`, `:string`) with
@@ -118,9 +121,15 @@ existing in-house parser onto `cl-cli`.
 
 ```bash
 sbcl --non-interactive --load tests/run-tests.lisp --eval '(cl-cli/tests:run-tests)' --quit
-ecl --norc --load tests/run-tests.lisp --eval '(cl-cli/tests:run-tests)'
 nix flake check
 ```
+
+SBCL is the target that must be green. `nix flake check` also builds an `ecl`
+check, which currently fails: `cl-log-kit` (a transitive test dependency via
+`cl-process-kit`) hard-codes `sb-thread:*` with no portability guard, so it
+cannot compile under any non-SBCL implementation —
+[nerima-lisp/cl-log-kit#1](https://github.com/nerima-lisp/cl-log-kit/issues/1),
+open upstream.
 
 ## Contributing
 

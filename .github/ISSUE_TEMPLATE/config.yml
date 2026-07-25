@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Usage question
-    url: https://github.com/nerima-lisp/cl-cli/discussions
-    about: Ask usage questions in Discussions; see SUPPORT.md for expectations.
+    url: https://github.com/nerima-lisp/cl-cli/issues
+    about: Discussions is not enabled; open a blank issue. See SUPPORT.md for expectations.
   - name: Security report
     url: https://github.com/nerima-lisp/cl-cli/security/policy
     about: Report vulnerabilities privately; do not open a public issue.

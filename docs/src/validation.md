@@ -23,8 +23,9 @@ to choose the process exit code.
 
 ## Exit codes
 
-`run-app` returns `0` on success, `64` (`EX_USAGE`) for a `cli-usage-error`,
-and `70` (`EX_SOFTWARE`) for any other unhandled error — the BSD `sysexits.h`
+`run-app` returns `0` on success — or the handler's own integer return value,
+when it returns one — `64` (`EX_USAGE`) for a `cli-usage-error`, and `70`
+(`EX_SOFTWARE`) for any other unhandled error — the BSD `sysexits.h`
 conventions. Pass `:usage-exit-code` and/or `:error-exit-code` to match a
 different policy (for example `:usage-exit-code 2` to mirror `argparse`):
 
@@ -64,9 +65,12 @@ rather than assuming `*standard-output*` / `*error-output*`:
 
 ## Conditions
 
-Usage errors subclass `cli-usage-error`; specification errors (invalid
-`make-app` / `make-command` / `make-option` / `make-positional` arguments)
-signal `cli-invalid-specification` immediately, before any parsing happens.
+Every condition below subclasses `cli-usage-error`, so `run-app` maps them all
+to `:usage-exit-code`. Specification errors (invalid `make-app` /
+`make-command` / `make-option` / `make-positional` arguments) signal
+`cli-invalid-specification` — also a `cli-usage-error` subclass — immediately,
+before any parsing happens.
+
 Concrete usage conditions include `cli-unknown-option`, `cli-unknown-command`,
 `cli-missing-option-value`, `cli-missing-dependent-option`,
 `cli-missing-any-of-options`, `cli-conflicting-options`,

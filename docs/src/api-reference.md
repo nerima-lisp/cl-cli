@@ -10,6 +10,15 @@ group.
 `exclusive-group`, `required-exclusive-group`, `inclusive-group` — see
 [Option Relations and Grouping](option-relations.md) for the group helpers.
 
+`define-app` and `define-command` are macros wrapping those constructors in a
+declarative, clause-based form: `:option`, `:positional`, and `:command`
+clauses replace the nested `:global-options (list ...)` / `:positionals
+(list ...)` / `:commands (list ...)` keywords, and `:commands-from` splices in
+an already-built command list. Each binds its spec with `defparameter`. The
+functional constructors are unchanged and remain usable on their own. See
+[Commands and Dispatch](commands.md#declarative-dsl) for the full clause
+vocabulary and a `:commands-from` splicing example.
+
 ## Built-in commands
 
 `make-standard-commands` builds the aggregate `help` / `version` /
@@ -46,6 +55,8 @@ Behavior](cli-behavior.md#colored-width-aware-help) for the `:color` /
 `render-manpage`, `render-markdown`, and `render-json` render offline
 reference docs and machine-readable schema; `render-docs` dispatches to them
 by format name (`"man"` / `"markdown"` / `"json"`).
+`+json-schema-version+` is the version of `render-json`'s output shape, also
+emitted as that document's first member.
 
 ## Runtime argv
 
@@ -68,9 +79,10 @@ command spec by name or alias.
 
 ## Spec accessors
 
-Every `make-app`, `make-command`, and `make-option` keyword has a matching
-reader. (Positionals have no accessor family — read positional data through
-`positional-value` on an invocation instead.)
+Every `make-app` and `make-option` keyword has a matching reader; `make-command`
+is the exception, in that its `:subcommands` and `:default-command` keywords
+have no exported reader. (Positionals have no accessor family — read positional
+data through `positional-value` on an invocation instead.)
 
 **App** — `app-name`, `app-version`, `app-summary`, `app-description`,
 `app-global-options`, `app-positionals`, `app-commands`,
@@ -107,7 +119,7 @@ involved.
 | --- | --- | --- |
 | `cli-unknown-option` | `cli-unknown-option-name` | an option token doesn't match any declared option |
 | `cli-unknown-command` | `cli-unknown-command-name` | a command token doesn't match any declared command (or `:require-command t` with none given) |
-| `cli-missing-option-value` | `cli-missing-option-value-name` | a required option, or one made required by `:required-if`/`:required-unless`, is absent |
+| `cli-missing-option-value` | `cli-missing-option-value-name` | an option that takes a value appears without one (including too few tokens for `:value-count`), or a required option — or one made required by `:required-if`/`:required-unless` — is absent |
 | `cli-missing-dependent-option` | `cli-missing-dependent-option-name`, `cli-missing-dependent-option-dependency` | an `inclusive-group` member is set without its partners |
 | `cli-missing-any-of-options` | `cli-missing-any-of-options-name`, `cli-missing-any-of-options-alternatives` | none of a `:requires-any-of` set is present |
 | `cli-conflicting-options` | `cli-conflicting-options-left-option`, `cli-conflicting-options-right-option` | two options declared via `:conflicts-with` / `exclusive-group` are both present |

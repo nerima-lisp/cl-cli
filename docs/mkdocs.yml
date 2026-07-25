@@ -131,6 +131,7 @@ nav:
       - Documentation Generation: documentation-generation.md
   - Reference:
       - API Reference: api-reference.md
+      - Compatibility: compatibility.md
       - Migration Guide: migration-guide.md
       - Scope and Non-Goals: scope.md
   - Governance:

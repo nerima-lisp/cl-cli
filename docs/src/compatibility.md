@@ -43,8 +43,10 @@ without changing the documented contract.
   formatting details. These are improved in minor releases. Assert on the
   semantics of the output, not on a byte-for-byte snapshot of it — the test
   suite in `tests/` does exactly that, and is a reasonable model to copy.
-  `render-json`'s *keys* are covered by the promise above; its whitespace and
-  key ordering are not.
+  `render-json`'s *keys* are covered by the promise above; its whitespace is
+  not. `render-json` additionally carries its own `schemaVersion` — see
+  [Documentation Generation](documentation-generation.md) — so its shape is
+  versioned independently of the library.
 - **Performance.** The benchmark suite guards against gross regressions, but
   no specific timing is promised.
 - **The test systems.** `cl-cli/tests` and `cl-cli/tests/shell-verification`,

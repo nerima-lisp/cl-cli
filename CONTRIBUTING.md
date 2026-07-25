@@ -38,11 +38,27 @@ ecl --norc --load tests/run-tests.lisp --eval '(cl-cli/tests:run-tests)'
 nix flake check
 ```
 
+All three must be green. The test suite is split into a portable core
+(`cl-cli/tests`) and a shell-verification half
+(`cl-cli/tests/shell-verification`) that shells out to the real completion
+consumers; `tests/run-tests.lisp` prints which one it loaded, so a run that
+silently covers less than you expected is visible rather than mistakable for a
+pass. Under ECL the shell-verification half is excluded, because its
+`cl-process-kit` dependency pulls in `cl-log-kit`, which hard-codes
+`sb-thread:*` --
+[nerima-lisp/cl-log-kit#1](https://github.com/nerima-lisp/cl-log-kit/issues/1),
+open upstream.
+
+If a test cannot run on a given implementation, gate it on the capability that
+is actually missing and let it report as a skip with a reason. Do not widen a
+threshold or delete an assertion so that a red run turns green.
+
 When adding or changing parser behavior:
 
 - add or update a focused test in `tests/run-tests.lisp`
 - cover both the success path and the expected failure mode when relevant
-- update `README.md` if the user-visible surface changed
+- update `README.md` and the matching page under `docs/src/` if the
+  user-visible surface changed
 
 ## Change guidelines
 

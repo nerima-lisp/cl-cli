@@ -62,8 +62,8 @@ Current built-in support is `bash`, `zsh`, `fish`, `powershell` (alias
 command names, their options, and positional values from a positional's
 `:choices` or `:completion-candidates`. The bash, zsh, and fish completers
 descend the full nested-subcommand tree (`app remote add`, with each level's
-accumulated option scope); the remaining shells complete the top command
-level. Hidden commands and hidden options are omitted from the generated
+accumulated option scope); the remaining shells complete the top command level
+(PowerShell additionally narrows options to a top-level subcommand, as below). Hidden commands and hidden options are omitted from the generated
 script. Aliases are included in generated completion candidates. Options
 declared with `:choices` also feed shell value completion candidates.
 
@@ -100,9 +100,9 @@ and Kinds](option-values.md#choices)).
 ## Dynamic completion
 
 For candidates that are only known at runtime (branch names, hostnames,
-records in a database), attach a `:complete` function to an option or
-positional and add the hidden callback command with
-`make-standard-commands :include-dynamic-p t` (or `make-complete-command`):
+records in a database), attach a `:complete` function to an option and add the
+hidden callback command with `make-standard-commands :include-dynamic-p t` (or
+`make-complete-command`):
 
 ```lisp
 (cl-cli:make-app
@@ -121,15 +121,21 @@ All six generated completions — bash, zsh, fish, PowerShell, nushell, and
 elvish — then call `demo __complete branch <partial>` at completion time and
 offer whatever the function prints:
 
-- bash, zsh, fish, and elvish shell out from the completion function
-- PowerShell inspects the token before the cursor
+- bash, zsh, PowerShell, and elvish match the token before the cursor against
+  the app's dynamic options, then shell out
+- fish attaches the callback per option, as a `complete -a '(command ...)'`
+  expression
 - nushell attaches a per-flag custom completer
 
 Because the shell already knows which slot it is completing, the callback
-only receives the option/positional key and the partial word — the full
-command line is never re-parsed. A candidate may be a plain string or a
-`(value . description)` cons; descriptions are emitted tab-separated and
-shown by shells that support them.
+only receives the option key and the partial word — the full command line is
+never re-parsed. A candidate may be a plain string or a `(value . description)`
+cons; descriptions are emitted tab-separated and shown by shells that support
+them.
+
+A positional may also declare `:complete`, and `__complete` resolves positional
+keys, but no generated script wires a positional slot to the callback — only
+options are.
 
 `cl-cli:render-complete-reply` performs the same lookup directly if you wire
 the callback yourself instead of using `make-complete-command`.

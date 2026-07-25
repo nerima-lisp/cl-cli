@@ -44,16 +44,19 @@ test-only, not needed to use `cl-cli` itself:
 
 ```bash
 nix develop        # drop into a shell with all dependencies available
-nix flake check    # run the test suite across sbcl and ecl
+nix flake check    # run the sbcl and ecl test suites and build the docs
 ```
+
+Both commands work on `x86_64-linux`, `aarch64-linux`, `x86_64-darwin`, and
+`aarch64-darwin`.
 
 ### Running the test suite without Nix
 
-Clone `cl-prolog`, `cl-weave`, `cl-process-kit`, `cl-boundary-kit`,
-`cl-log-kit`, and `cl-json-kit` where ASDF can find them, the same way as
-`cl-cli` above, then load `tests/run-tests.lisp`. The repository includes Nix
-checks for both `sbcl` and `ecl`, so `nix flake check` verifies the current
-test suite across multiple Common Lisp implementations.
+Clone `cl-prolog`, `cl-weave`, and `cl-json-kit` where ASDF can find them, the
+same way as `cl-cli` above, then load `tests/run-tests.lisp`. Adding
+`cl-process-kit`, `cl-boundary-kit`, and `cl-log-kit` alongside them enables
+the extra suite that runs generated scripts through the real shells. See
+[Test](#test) below for the exact commands.
 
 ## Quick example
 
@@ -773,8 +776,9 @@ Current built-in support is `bash`, `zsh`, `fish`, `powershell` (alias `pwsh`),
 their options, and positional values from a positional's `:choices` or
 `:completion-candidates`. The bash, zsh, and fish completers descend the
 full nested-subcommand tree (`app remote add`, with each level's accumulated
-option scope); the remaining shells complete the top command level. Hidden
-commands and hidden options are omitted from the generated script. Aliases are included in generated completion candidates.
+option scope); the remaining shells complete the top command level
+(PowerShell additionally narrows options to a top-level subcommand, as
+below). Hidden commands and hidden options are omitted from the generated script. Aliases are included in generated completion candidates.
 Options declared with `:choices` also feed shell value completion candidates.
 Use `:completion-candidates` when shell suggestions should be broader or
 differently documented than parser validation. The PowerShell renderer emits a
@@ -824,9 +828,9 @@ callback yourself.
 
 Beyond interactive `--help`, `cl-cli` can render offline reference documentation
 directly from an app spec, reusing the same option/command metadata so the docs
-never drift from the parser. Both renderers follow the completion renderers'
-stream contract (no stream returns a string; a stream is written to and returns
-no values):
+never drift from the parser. All three renderers follow the completion
+renderers' stream contract (no stream returns a string; a stream is written to
+and returns no values):
 
 ```lisp
 (cl-cli:render-manpage *app*)   ; a section-1 man page (roff)
@@ -842,8 +846,11 @@ output produces a title, a usage block,
 option/argument tables, per-command sections, and examples. `render-json` emits
 the declared spec — options, positionals, commands, and their `:type`, range,
 delimiter, choices, and default metadata — as a minified JSON object that
-external tooling can consume. Hidden options and commands are omitted from all
-three.
+external tooling can consume. Its first member is always `schemaVersion` (the
+version of the output shape itself, exposed in Lisp as
+`cl-cli:+json-schema-version+`), so a consumer can refuse a document it does
+not understand instead of misreading it. Hidden options and commands are
+omitted from all three.
 
 To let users generate these themselves, add the built-in `docs [FORMAT]` command
 (the documentation counterpart to `completion [SHELL]`). It defaults to `man`
@@ -863,8 +870,8 @@ demo docs markdown  > docs/demo.md
 demo docs json      > demo.schema.json
 ```
 
-`cl-cli:render-docs` dispatches to the two renderers by format name if you need
-the same routing without the command wrapper.
+`cl-cli:render-docs` dispatches to the three renderers by format name if you
+need the same routing without the command wrapper.
 
 ## Command shapes
 
@@ -1020,10 +1027,11 @@ values; `option-value-source` reports where an option value came from
 `invocation-stdout`, and `invocation-stderr` expose the rest of the parsed
 invocation. `command-by-name` resolves a command spec by name or alias.
 
-**Spec accessors** — every `make-app` / `make-command` / `make-option` /
-`make-positional` keyword has a matching reader in the `app-*`, `command-*`,
-and `option-*` families (for example `app-commands`, `command-options`,
-`option-required-p`).
+**Spec accessors** — every `make-app` / `make-command` / `make-option` keyword
+has a matching reader in the `app-*`, `command-*`, and `option-*` families (for
+example `app-commands`, `command-options`, `option-required-p`). Positional
+specs are reached through `app-positionals` / `command-positionals`; their
+per-slot readers are internal and not exported.
 
 **Conditions** — usage errors subclass `cli-usage-error`; specification errors
 signal `cli-invalid-specification`. Concrete conditions include
@@ -1067,6 +1075,26 @@ sbcl --non-interactive --load tests/run-tests.lisp --eval '(cl-cli/tests:run-tes
 ecl --norc --load tests/run-tests.lisp --eval '(cl-cli/tests:run-tests)'
 nix flake check
 ```
+
+Both implementations must be green; `nix flake check` runs each of them and
+builds the documentation site. The runner prints which half of the suite it
+loaded, because the suite is split:
+
+- **`cl-cli/tests`** is the portable core, and runs everywhere.
+- **`cl-cli/tests/shell-verification`** additionally pipes every generated
+  completion script and man page through the real `bash`, `zsh`, `fish`,
+  `nushell`, `pwsh`, `elvish`, and `mandoc` that will consume them. It depends
+  on `cl-process-kit` for subprocess timeouts, whose own `cl-log-kit`
+  dependency is SBCL-only
+  ([nerima-lisp/cl-log-kit#1](https://github.com/nerima-lisp/cl-log-kit/issues/1)),
+  so this half runs under SBCL today.
+
+Two suites are gated rather than run everywhere: the fuzz suite needs a
+harness timeout capability `cl-weave` does not offer on every implementation,
+and the benchmark budgets are absolute millisecond thresholds calibrated
+against SBCL. Both report as skipped, with a reason, rather than as failures.
+See [`docs/src/compatibility.md`](docs/src/compatibility.md) for the supported
+implementation matrix.
 
 ## Contributing
 

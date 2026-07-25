@@ -44,19 +44,72 @@ help renders a path-qualified usage line (`Usage: git remote add ...`) and
 lists a command's subcommands, and the man/Markdown/JSON renderers recurse
 through the tree.
 
-When a parent command has subcommands but no handler, running it with no
-subcommand token prints that command's help listing its subcommands. A
-mistyped subcommand of a command that takes no positionals signals
+A parent command keeps its own `:handler` and `:positionals`: with no
+subcommand token they still run, and when it has no handler either, running it
+bare prints that command's help listing its subcommands. A mistyped
+subcommand of a command that takes no positionals signals
 `cli-unknown-command` with a spelling suggestion. A command may also declare
 a `:default-command` naming one of its own subcommands to dispatch when no
 subcommand token is present, mirroring the app-level `:default-command`.
 
+## Declarative DSL
+
+`define-app` and `define-command` are additive sugar over `make-app` /
+`make-command` / `make-option` / `make-positional` — everything above this
+section still applies; the macros just expand into those same functional
+calls, expressing a spec as a flat list of clauses instead of nested
+`:global-options (list ...)` / `:positionals (list ...)` / `:commands (list
+...)` keyword arguments:
+
+```lisp
+(cl-cli:define-app *app*
+    (:name "demo" :version "0.1.0")
+  (:option "verbose" :short #\v :kind :flag)
+  (:command "compile"
+      (:aliases '("build")
+       :handler (lambda (invocation)
+                  (format t "compile ~A -> ~A~%"
+                          (cl-cli:positional-value invocation :input)
+                          (cl-cli:option-value invocation :output))))
+    (:option "output" :short #\o :kind :value)
+    (:positional :input :required-p t)))
+
+(cl-cli:run-app *app* :argv '("demo" "compile" "-o" "out.bin" "input.lisp"))
+```
+
+Each clause is headed by `:option`, `:positional`, `:command`, or
+`:commands-from`. A `:command` clause nests the same clause vocabulary for
+that command's own options, positionals, and (recursively) subcommands.
+Everything besides `:option` / `:positional` / `:command` — `:name`,
+`:aliases`, `:handler`, `:description`, and so on — is passed straight
+through to the underlying constructor as ordinary keyword arguments; the
+macro only owns the `:global-options` / `:positionals` / `:commands` (or
+`:options` / `:positionals` / `:subcommands` for `define-command`) keys, so a
+clause list must not repeat them.
+
+`define-command` binds a reusable command spec with the same clause
+vocabulary, so it can be shared across more than one app. Splice in a list of
+already-built commands — `make-standard-commands`, or a command shared via
+`define-command` — with `:commands-from`:
+
+```lisp
+(cl-cli:define-command *status-command*
+    (:name "status" :description "Show status.")
+  (:option "json" :kind :flag))
+
+(cl-cli:define-app *ops-app*
+    (:name "ops")
+  (:commands-from (cl-cli:make-standard-commands))
+  (:commands-from (list *status-command*)))
+```
+
 ## Aliases
 
 `cl-cli:command-by-name` resolves both primary command names and aliases
-case-insensitively, which is useful when custom commands need to reuse the
-same lookup semantics as the built-in `help` command. Command aliases are
-shown in the command list and included in generated completion candidates.
+case-insensitively among the app's top-level commands, which is useful when
+custom commands need to reuse the same lookup semantics as the built-in `help`
+command. Command aliases are shown in the command list and included in
+generated completion candidates.
 
 ```lisp
 (cl-cli:make-command :name "remove" :aliases '("rm" "delete") ...)

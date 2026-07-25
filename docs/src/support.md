@@ -39,5 +39,8 @@ Do not use public issues for suspected vulnerabilities. Follow
 ## Maintenance expectations
 
 This repository currently treats the default branch as the supported line.
-Compatibility guarantees are documented per release in
+What the version number promises — which symbols are covered, which are not,
+and which Lisp implementations are tested — is documented in
+[Compatibility](compatibility.md); what changed in each release is documented
+in
 [CHANGELOG.md](https://github.com/nerima-lisp/cl-cli/blob/main/CHANGELOG.md).

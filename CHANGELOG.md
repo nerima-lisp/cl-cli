@@ -7,6 +7,78 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`render-json` now emits a `schemaVersion` member first**, and exports
+  `+json-schema-version+` (currently `1`). A machine-readable format with no
+  version marker gives a consumer nothing to branch on; a tool written against
+  today's shape would silently misread a future one. Adding it now, at the
+  1.0 boundary, is the last point where it costs nothing. New members may
+  still appear in a minor release -- readers should ignore unknown members --
+  but a change that would break a reader of the previous shape bumps the
+  number. **This changes `render-json` output**; a consumer that parses the
+  0.3.0 document and rejects unknown keys needs updating.
+- **`docs/src/compatibility.md`**, stating what the version number promises
+  now that the project is on Semantic Versioning for real: the exported
+  symbols of the `CL-CLI` package are covered, `cl-cli::` internals and the
+  byte-for-byte text of rendered help/completion/man output are not, plus a
+  supported-implementation matrix and a deprecation policy.
+- Dedicated unit tests for the PowerShell, Nushell, and Elvish completion
+  renderers (`tests/cases-completion-powershell.lisp`, `-nushell.lisp`,
+  `-elvish.lisp`). Three of the six shipped renderers previously had no
+  assertions on what they emit at all -- only a performance benchmark and a
+  "does it parse" smoke check.
+- An Elvish leg in `tests/cases-shell-verification.lisp`: the generated script
+  is compiled by real `elvish -compileonly`. Because `elvish` only exposes its
+  `edit:` module interactively, the check binds `edit:` to a stub namespace so
+  the generated code itself is what gets compiled; a negative-control case
+  asserts that a deliberately broken completer still fails, so the check
+  cannot pass vacuously.
+
+### Changed
+
+- **The test suite is split into two ASDF systems.** `cl-cli/tests` is the
+  portable core; `cl-cli/tests/shell-verification` adds the checks that shell
+  out to real tools and is the only half that needs `cl-process-kit`. The
+  transitive `cl-log-kit` dependency hard-codes `sb-thread:*`
+  ([upstream #1](https://github.com/nerima-lisp/cl-log-kit/issues/1)), which
+  previously made the *entire* suite fail to compile on any non-SBCL
+  implementation. **ECL now runs 601 tests green** instead of not building.
+  `tests/run-tests.lisp` prints which half it loaded, so a run covering less
+  than expected cannot be mistaken for a pass.
+- The fuzz suite and the benchmark budgets are now gated on the capability
+  each actually needs, rather than failing where it is absent: the fuzz suite
+  needs `cl-weave`'s `:timeout` platform capability, and the benchmark
+  thresholds are absolute milliseconds calibrated against SBCL. Both report as
+  skips with a reason. No threshold was widened and no assertion was removed.
+- `nix flake check` is green again, and now means something it did not before.
+  The `ecl` check was previously guaranteed to fail, so CI on `main` was
+  permanently red. Alongside the split above:
+  - the flake defines outputs for `aarch64-linux`, `x86_64-darwin`, and
+    `aarch64-darwin` as well as `x86_64-linux`, so `nix develop` and
+    `nix flake check` work on a macOS machine instead of silently checking
+    nothing;
+  - the checks put `bash`, `zsh`, `fish`, `nushell`, `pwsh`, `elvish`, and
+    `mandoc` on `PATH`. The shell-verification cases skip themselves when a
+    tool is missing, so in CI they had been skipping almost entirely -- the
+    generated scripts were never actually run by the shells that consume
+    them. The SBCL suite is now 628 passed, **0 skipped**;
+  - the documentation build is a check too, so a broken docs link fails CI
+    rather than the Pages deploy.
+- CI runs the flake check on `aarch64-darwin` as well as `x86_64-linux`, so
+  the macOS support the project claims is verified rather than assumed.
+- `consume-value-option` (`src/parser-option-consumption.lisp`) had a
+  provably unreachable `:flag`-kind guard clause -- its sole call site is
+  the `(:value :optional-value :key-value)` case arm of
+  `consume-long-option-token`, so `(option-kind spec)` can never be `:flag`
+  inside its body. Removed as dead code; no observable behavior changed.
+- Bumped `cl-weave`, `cl-process-kit`, `cl-boundary-kit`, `cl-log-kit`, and
+  `cl-json-kit` to their latest upstream revisions (`cl-prolog` was already
+  current). Verified `cl-boundary-kit`'s new default 60-second process
+  timeout (previously unbounded when `:timeout` was omitted) doesn't affect
+  `cl-cli`: every `process-kit:run` call site in the test suite already
+  passes an explicit `:timeout`.
+
 ### Security
 
 - `expand-response-files` (`:expand-response-files t`) had no bound on the
@@ -19,23 +91,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   argument list) as a total-size budget checked after every file read;
   exceeding it signals `cli-usage-error` the same way exceeding the depth
   limit already did.
-
-### Fixed
-
-- `consume-value-option` (`src/parser-option-consumption.lisp`) had a
-  provably unreachable `:flag`-kind guard clause -- its sole call site is
-  the `(:value :optional-value :key-value)` case arm of
-  `consume-long-option-token`, so `(option-kind spec)` can never be `:flag`
-  inside its body. Removed as dead code.
-
-### Changed
-
-- Bumped `cl-weave`, `cl-process-kit`, `cl-boundary-kit`, `cl-log-kit`, and
-  `cl-json-kit` to their latest upstream revisions (`cl-prolog` was already
-  current). Verified `cl-boundary-kit`'s new default 60-second process
-  timeout (previously unbounded when `:timeout` was omitted) doesn't affect
-  `cl-cli`: every `process-kit:run` call site in the test suite already
-  passes an explicit `:timeout`.
 
 ## [0.3.0] - 2026-07-25
 
@@ -150,10 +205,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rendering is roughly 1.5x faster and zsh rendering roughly 1.5x faster
   than before this round of changes. No public API or observable script
   output changed; see `tests/cases-parser-benchmark.lisp`.
-  Measured on the same 330-option benchmark app: bash completion rendering
-  is roughly twice as fast as before this round of changes (and faster
-  still relative to the pre-caching baseline). No public API or observable
-  script output changed; see `tests/cases-parser-benchmark.lisp`.
 - `PARSE-ARGV` is dramatically faster, especially across repeated calls
   against the same `APP` (a REPL, a long-running server, or simply a hot
   loop). `MAKE-APP` now precomputes and caches, once per app/command scope,

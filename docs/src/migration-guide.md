@@ -8,7 +8,7 @@ local parser forks?".
 Representative specs for all four migration targets below live in
 [examples/consumer-migrations.lisp](https://github.com/nerima-lisp/cl-cli/blob/main/examples/consumer-migrations.lisp).
 
-### `cl-cc`
+## `cl-cc`
 
 `cl-cc` needs a mix of ordinary subcommands and script-style execution:
 
@@ -34,7 +34,7 @@ stop parsing short attached value", and "stop parsing script mode can
 normalize opaque tail" in
 [tests/cases-options.lisp](https://github.com/nerima-lisp/cl-cli/blob/main/tests/cases-options.lisp).
 
-### `cl-tmux`
+## `cl-tmux`
 
 `cl-tmux` needs launcher-aware argv handling and tmux-style attached short
 values:
@@ -59,7 +59,7 @@ Kinds](option-values.md#option-kinds); root/default dispatch is exercised by
 "dispatches default command without command token" in
 [tests/cases-options.lisp](https://github.com/nerima-lisp/cl-cli/blob/main/tests/cases-options.lisp).
 
-### `private-trade-fx`
+## `private-trade-fx`
 
 `private-trade-fx` needs a stricter "single binary" interface:
 
@@ -85,7 +85,7 @@ separator-normalizing flows are covered by "extracts application argv after
 separator" and "strip-argv-separators removes literal sentinels" in
 [tests/cases-parse.lisp](https://github.com/nerima-lisp/cl-cli/blob/main/tests/cases-parse.lisp).
 
-### `nshell`
+## `nshell`
 
 `nshell` needs a shell-like root entry point with a few special launch modes:
 
@@ -108,7 +108,7 @@ root/default dispatch behavior is covered by "supports root positionals and
 rest" and "dispatches root handler" in
 [tests/cases-parse.lisp](https://github.com/nerima-lisp/cl-cli/blob/main/tests/cases-parse.lisp).
 
-### Verification path
+## Verification path
 
 For the four target CLIs above, the remaining migration work is
 consumer-side spec translation, not new parser primitives in `cl-cli`.

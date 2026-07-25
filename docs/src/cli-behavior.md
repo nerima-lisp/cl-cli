@@ -47,6 +47,12 @@ usage error:
                 :argv '("tool" "@args.txt"))
 ```
 
+Expansion is bounded twice over, and exceeding either bound signals a usage
+error: nesting may not exceed 32 levels, and one expansion may not read more
+than 8 MiB in total across every file it touches. The byte budget is what
+bounds fan-out (many files referenced at the same depth) and a single huge
+file, neither of which the depth limit constrains.
+
 ## Abbreviated options
 
 Pass `:allow-abbreviated-options t` to `make-app` for GNU-style prefix
