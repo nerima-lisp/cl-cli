@@ -175,3 +175,19 @@ treating it as \"looks like another option, stop here\"."
                          ,message-form
                          ,@initargs
                          :cause condition))))
+
+(defmacro ensure-output-stream (stream-var self-name app-var)
+  "Give every render-X function its `(app &optional stream)' contract in one line.
+
+When STREAM-VAR is NIL, returns the rendered output as a string: recurses
+into SELF-NAME with a fresh string-output-stream bound to STREAM-VAR and
+captures what it writes. Otherwise falls through so the caller's own body
+writes straight to the caller-supplied stream. Every completion and
+documentation renderer (render-bash-completion, render-json, etc.) opened
+with the same four-line `(unless stream (return-from NAME (with-output-to-string
+(s) (NAME app s))))' guard, differing only in NAME -- this macro is that
+guard, parameterized once."
+  `(unless ,stream-var
+     (return-from ,self-name
+       (with-output-to-string (,stream-var)
+         (,self-name ,app-var ,stream-var)))))

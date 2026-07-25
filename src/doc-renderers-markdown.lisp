@@ -210,10 +210,7 @@ With no STREAM, return the document as a string. With a STREAM, write to it and
 return no values. Output is GitHub-flavored Markdown with a title, usage block,
 option/argument tables, per-command sections, and examples, all drawn from the
 same spec as `--help`. Hidden options and commands are omitted."
-  (unless stream
-    (return-from render-markdown
-      (with-output-to-string (string-stream)
-        (render-markdown app string-stream))))
+  (ensure-output-stream stream render-markdown app)
   (%md-title-section app stream)
   (%md-usage-section app stream)
   (%md-options-section app stream)

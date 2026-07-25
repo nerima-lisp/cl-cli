@@ -104,10 +104,7 @@ to it and return no values. The script registers a native argument completer
 that suggests subcommands and global option tokens, and switches to a
 subcommand's own options once that subcommand is present on the command line.
 Hidden commands and options are omitted."
-  (unless stream
-    (return-from render-powershell-completion
-      (with-output-to-string (string-stream)
-        (render-powershell-completion app string-stream))))
+  (ensure-output-stream stream render-powershell-completion app)
   (let ((app-name (%completion-control-safe-string (app-name app))))
     (format stream "# PowerShell completion for ~A~%" app-name)
     (format stream "Register-ArgumentCompleter -Native -CommandName ~A -ScriptBlock {~%"

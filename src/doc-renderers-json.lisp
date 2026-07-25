@@ -199,10 +199,7 @@ return no values. The object captures the author-declared surface (name,
 version, summary, description, global options, positionals, and per-command
 options/positionals); hidden entities and the help/version built-ins are
 omitted. Output is minified single-line JSON."
-  (unless stream
-    (return-from render-json
-      (with-output-to-string (string-stream)
-        (render-json app string-stream))))
+  (ensure-output-stream stream render-json app)
   (write-string (%app->json app) stream)
   (terpri stream)
   (values))

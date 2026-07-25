@@ -118,10 +118,7 @@ With no STREAM, return the completion script as a string. With a STREAM, write
 to it and return no values. The module defines a completer for the leading
 subcommand and an `export extern` listing subcommands and global option flags.
 Hidden commands and options are omitted."
-  (unless stream
-    (return-from render-nushell-completion
-      (with-output-to-string (string-stream)
-        (render-nushell-completion app string-stream))))
+  (ensure-output-stream stream render-nushell-completion app)
   (let ((app-name (%completion-control-safe-string (app-name app))))
     (format stream "# Nushell completion for ~A~%" app-name)
     (%completion-nushell-dynamic-completers app stream)

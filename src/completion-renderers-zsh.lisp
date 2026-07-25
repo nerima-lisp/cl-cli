@@ -114,10 +114,7 @@ candidates/hints but at different nesting depths."
 
 With no STREAM, return the completion script as a string. With a STREAM,
 write the script to it and return no values."
-  (unless stream
-    (return-from render-zsh-completion
-      (with-output-to-string (string-stream)
-        (render-zsh-completion app string-stream))))
+  (ensure-output-stream stream render-zsh-completion app)
   (let ((function-name (%completion-function-name app))
         (app-name (%completion-control-safe-string (app-name app))))
     (format stream "#compdef ~A~%" app-name)

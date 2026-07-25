@@ -226,10 +226,7 @@ per ancestor on the way back up the tree."
 
 With no STREAM, return the completion script as a string. With a STREAM,
 write the script to it and return no values."
-  (unless stream
-    (return-from render-bash-completion
-      (with-output-to-string (string-stream)
-        (render-bash-completion app string-stream))))
+  (ensure-output-stream stream render-bash-completion app)
   (let ((function-name (%completion-function-name app))
         (app-name (%completion-control-safe-string (app-name app))))
       (format stream "#!/usr/bin/env bash~%")

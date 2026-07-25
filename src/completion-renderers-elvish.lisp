@@ -59,10 +59,7 @@ nested inside a dynamic-completion `else` block."
 With no STREAM, return the completion script as a string. With a STREAM, write
 to it and return no values. The script installs an arg-completer that offers
 subcommands and global option tokens. Hidden commands and options are omitted."
-  (unless stream
-    (return-from render-elvish-completion
-      (with-output-to-string (string-stream)
-        (render-elvish-completion app string-stream))))
+  (ensure-output-stream stream render-elvish-completion app)
   (let* ((app-name (%completion-control-safe-string (app-name app)))
          (commands (%completion-visible-command-tokens app))
          (options (%completion-command-option-tokens app nil))

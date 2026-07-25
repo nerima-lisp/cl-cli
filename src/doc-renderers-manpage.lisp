@@ -253,10 +253,7 @@ With no STREAM, return the man page as a string. With a STREAM, write the page
 to it and return no values. The generated page draws NAME, SYNOPSIS,
 DESCRIPTION, OPTIONS, ARGUMENTS, COMMANDS, and EXAMPLES from the same spec the
 interactive help printer uses, and honors hidden options and commands."
-  (unless stream
-    (return-from render-manpage
-      (with-output-to-string (string-stream)
-        (render-manpage app string-stream))))
+  (ensure-output-stream stream render-manpage app)
   (%manpage-header app stream)
   (%manpage-name-section app stream)
   (%manpage-synopsis-section app stream)

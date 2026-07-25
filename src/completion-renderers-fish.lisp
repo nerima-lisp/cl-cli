@@ -90,10 +90,7 @@ With no STREAM, return the completion script as a string. With a STREAM,
 write the script to it and return no values. Subcommand names complete at every
 level of a nested command tree, and options/positionals complete once their
 command is on the line."
-  (unless stream
-    (return-from render-fish-completion
-      (with-output-to-string (string-stream)
-        (render-fish-completion app string-stream))))
+  (ensure-output-stream stream render-fish-completion app)
   (let* ((app-name (app-name app))
          (quoted-app-name (%completion-shell-quote app-name)))
     (format stream "complete -c ~A -f~%" quoted-app-name)
