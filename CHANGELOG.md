@@ -7,8 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-26
+
+The API is now covered by Semantic Versioning. What that promise does and does
+not cover is written down in
+[docs/src/compatibility.md](https://github.com/nerima-lisp/cl-cli/blob/main/docs/src/compatibility.md),
+along with the supported-implementation matrix and the deprecation policy.
+
+This release is mostly about earning that promise rather than adding features.
+The breaking changes below are deliberately concentrated here, because 1.0 is
+the last point at which they are free: an accessor family that could not be
+read, a condition taxonomy that made a programmer's bug look like a user's,
+and a machine-readable format with no version marker would all otherwise have
+been permanent. Verification was rebuilt to match: `nix flake check` was
+previously guaranteed to fail, the checks that run generated scripts through
+real shells were almost entirely skipping, and no non-SBCL implementation could
+compile the suite at all.
+
 ### Added
 
+- **The positional accessor family is exported.** `app-positionals`,
+  `command-positionals`, and `make-positional` were all public, so callers
+  legitimately received `positional-spec` structs -- but not one of its slot
+  readers was exported, leaving them opaque unless you reached through
+  `cl-cli::`. All sixteen are public now, renamed from the `positional-spec-`
+  conc-name to `positional-` to match the `option-` / `command-` / `app-`
+  families they sit beside. Also newly exported: `command-subcommands` and
+  `command-default-command` (nested subcommands are a documented feature and
+  `app-default-command` was already public), `option-group` plus
+  `option-group-members` / `-mode` / `-required-p` (so a custom help renderer
+  can render "exactly one of ..." instead of degrading to pairwise
+  conflicts), and `built-in-option-specs` (so it can see the synthesized
+  `--help` / `--version`). Between them, a third-party renderer can now
+  reproduce everything the built-in one prints.
+- **`cli-missing-required-option`**, a subtype of `cli-missing-option-value`
+  for the single most common CLI mistake there is: a required option never
+  supplied. It was previously indistinguishable from "`--output` typed with
+  nothing after it". Being a subtype, a handler that does not need the
+  distinction is unaffected.
+- **`cli-response-file-error`** (with a `cli-response-file-error-path`
+  reader), for the three `@file` expansion failures that previously signaled
+  a bare `cli-usage-error` -- "your `@args.txt` is missing" deserves a
+  different message from "you mistyped a flag".
+- **Docstrings on every exported condition class and slot reader.** The
+  condition hierarchy is the primary integration point for a consumer CLI and
+  had no prose at all; `cli-invalid-option-value-cause` in particular was
+  unguessable.
+- `tests/cases-public-api.lisp`, which pins the exported symbol set in both
+  directions. `:export` fails silently in the direction that matters -- a
+  misspelled name interns a dead symbol rather than signaling -- and no other
+  test would notice, since they all call these symbols from a package that
+  `:use`s `cl-cli`. It also asserts that every exported condition is reachable
+  from `cli-error` and that `cli-invalid-specification` stays out of the
+  `cli-usage-error` branch.
 - **`render-json` now emits a `schemaVersion` member first**, and exports
   `+json-schema-version+` (currently `1`). A machine-readable format with no
   version marker gives a consumer nothing to branch on; a tool written against
@@ -37,13 +88,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **`cli-invalid-specification` is no longer a `cli-usage-error`.** A new
+  `cli-error` root splits the hierarchy in two: `cli-usage-error` for what the
+  *user* typed, `cli-invalid-specification` for what the *programmer*
+  declared. The idiomatic
+  `(handler-case (run-app ...) (cli-usage-error (e) (print-usage) (exit 2)))`
+  previously swallowed the developer's own malformed spec and answered it with
+  a usage message shown to the end user. If such an error does reach
+  `run-app`, it now exits with `:error-exit-code` (`70`, `EX_SOFTWARE`)
+  instead of `:usage-exit-code` (`64`, `EX_USAGE`) -- which is what a bug in
+  the program actually is. In practice the condition is raised while the spec
+  is being built, before parsing.
+  `cli-error-app` / `cli-error-command` are the new names for the context
+  readers; `cli-usage-error-app` / `-command` still read the same slots.
 - **The test suite is split into two ASDF systems.** `cl-cli/tests` is the
   portable core; `cl-cli/tests/shell-verification` adds the checks that shell
   out to real tools and is the only half that needs `cl-process-kit`. The
   transitive `cl-log-kit` dependency hard-codes `sb-thread:*`
   ([upstream #1](https://github.com/nerima-lisp/cl-log-kit/issues/1)), which
   previously made the *entire* suite fail to compile on any non-SBCL
-  implementation. **ECL now runs 601 tests green** instead of not building.
+  implementation. **ECL now runs 637 tests green** instead of not building.
   `tests/run-tests.lisp` prints which half it loaded, so a run covering less
   than expected cannot be mistaken for a pass.
 - The fuzz suite and the benchmark budgets are now gated on the capability
@@ -62,7 +126,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `mandoc` on `PATH`. The shell-verification cases skip themselves when a
     tool is missing, so in CI they had been skipping almost entirely -- the
     generated scripts were never actually run by the shells that consume
-    them. The SBCL suite is now 628 passed, **0 skipped**;
+    them. The SBCL suite is now 664 passed, **0 skipped**;
   - the documentation build is a check too, so a broken docs link fails CI
     rather than the Pages deploy.
 - CI runs the flake check on `aarch64-darwin` as well as `x86_64-linux`, so
@@ -583,6 +647,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   escape or other terminal control sequences into a user's terminal. Spec
   construction additionally rejects control characters in option value names.
 
-[Unreleased]: https://github.com/nerima-lisp/cl-cli/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/nerima-lisp/cl-cli/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/nerima-lisp/cl-cli/releases/tag/v1.0.0
 [0.3.0]: https://github.com/nerima-lisp/cl-cli/releases/tag/v0.3.0
 [0.2.0]: https://github.com/nerima-lisp/cl-cli/releases/tag/v0.2.0
