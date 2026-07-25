@@ -7,10 +7,15 @@ on:
       - "docs/**"
       - "flake.nix"
       - "flake.lock"
+      # packages.docs takes its version from the .asd, and docs/src/changelog.md
+      # snippet-includes CHANGELOG.md, so both change the rendered site.
       - "cl-cli.asd"
+      - "CHANGELOG.md"
       - ".github/workflows/docs.yml"
+      - ".github/actions/nix-setup/action.yml"
   workflow_dispatch:
 
+# No token by default; each job opts into exactly the scopes it needs.
 permissions: {}
 
 concurrency:
@@ -22,57 +27,37 @@ jobs:
     name: Build documentation
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      CACHIX_CACHE: ${{ vars.CACHIX_CACHE }}
-      CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
     permissions:
       contents: read
-      pages: write # configure-pages needs it to honor enablement below.
+      pages: write # configure-pages needs it to honor `enablement` below.
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
+      - uses: ./.github/actions/nix-setup
         with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-          extra_nix_config: |
-            experimental-features = nix-command flakes
+          cachix-cache: ${{ vars.CACHIX_CACHE }}
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
-      - name: Configure Cachix (pull-only)
-        if: ${{ env.CACHIX_CACHE != '' && env.CACHIX_AUTH_TOKEN == '' }}
-        uses: cachix/cachix-action@v17
-        with:
-          name: ${{ env.CACHIX_CACHE }}
-          extraPullNames: nix-community
-          skipPush: true
-
-      - name: Configure Cachix (push-enabled)
-        if: ${{ env.CACHIX_CACHE != '' && env.CACHIX_AUTH_TOKEN != '' }}
-        uses: cachix/cachix-action@v17
-        with:
-          name: ${{ env.CACHIX_CACHE }}
-          authToken: ${{ env.CACHIX_AUTH_TOKEN }}
-          extraPullNames: nix-community
-
+      # `packages.docs` runs `mkdocs build --strict`, so a broken link or a page
+      # missing from the nav fails here. `cp -rL` dereferences the store
+      # symlink, and the chmod makes the copy writable for the upload action.
       - name: Build documentation
-        timeout-minutes: 10
         run: |
           set -euo pipefail
-          timeout 540s nix build .#docs --print-build-logs
+          nix build .#docs --print-build-logs
           cp -rL result public
           chmod -R u+w public
 
-      # enablement: true so a fork -- or this repository after a settings
-      # reset -- turns Pages on itself rather than failing the deploy with
+      # enablement: true so a fork — or this repository after a settings
+      # reset — turns Pages on itself rather than failing the deploy with
       # "Get Pages site failed", which is how the site advertised in README.md
       # came to 404 while every docs build was passing.
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
         with:
           enablement: true
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
         with:
           path: public
 
@@ -89,4 +74,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4

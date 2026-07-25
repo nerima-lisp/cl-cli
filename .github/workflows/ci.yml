@@ -4,24 +4,37 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
   workflow_dispatch:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 permissions:
   contents: read
 
+# Supersede in-flight runs for the same PR; never cancel a push to the default
+# branch.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  nix:
-    # cl-cli claims Linux and macOS support, so both are checked here rather
-    # than inferred from one. `nix flake check` only evaluates the outputs for
-    # the system it runs on, so each runner covers its own.
-    name: nix (${{ matrix.system }})
+  # One job on purpose. Granularity belongs in the flake's `checks.*`
+  # attributes, which `nix flake check` evaluates in parallel with build
+  # caching. Splitting these into separate GitHub jobs would duplicate that
+  # scheduling and lose cache sharing between them.
+  #
+  # Add a second job ONLY for work the Nix sandbox cannot do: network access,
+  # a real PTY/TTY, artifact upload, or a different runner OS.
+  #
+  # The macOS entry in the matrix below is exactly that exception. cl-cli
+  # declares aarch64-darwin in `systems`, and `nix flake check` only evaluates
+  # the outputs for the system it happens to run on, so the Linux runner can
+  # never verify the Darwin outputs. This stays one job definition: the
+  # granularity is still `checks.*`, the matrix only supplies the second OS.
+  check:
+    name: nix flake check (${{ matrix.system }})
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
     strategy:
+      # Never let a Linux failure hide a Darwin-only one, or the reverse.
       fail-fast: false
       matrix:
         include:
@@ -29,39 +42,33 @@ jobs:
             system: x86_64-linux
           - runner: macos-latest
             system: aarch64-darwin
-    timeout-minutes: 45
-    env:
-      CACHIX_CACHE: ${{ vars.CACHIX_CACHE }}
-      CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Install Nix
-        uses: cachix/install-nix-action@v31
+      # persist-credentials: false — this job runs untrusted PR code via
+      # `nix flake check`, and never needs the token, so don't leave it in
+      # .git/config for that code to read.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          github_access_token: ${{ secrets.GITHUB_TOKEN }}
-          extra_nix_config: |
-            experimental-features = nix-command flakes
+          persist-credentials: false
 
-      - name: Configure Cachix (pull-only)
-        if: ${{ env.CACHIX_CACHE != '' && env.CACHIX_AUTH_TOKEN == '' }}
-        uses: cachix/cachix-action@v17
+      - uses: ./.github/actions/nix-setup
         with:
-          name: ${{ env.CACHIX_CACHE }}
-          extraPullNames: nix-community
-          skipPush: true
+          cachix-cache: ${{ vars.CACHIX_CACHE }}
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
-      - name: Configure Cachix (push-enabled)
-        if: ${{ env.CACHIX_CACHE != '' && env.CACHIX_AUTH_TOKEN != '' }}
-        uses: cachix/cachix-action@v17
-        with:
-          name: ${{ env.CACHIX_CACHE }}
-          authToken: ${{ env.CACHIX_AUTH_TOKEN }}
-          extraPullNames: nix-community
-
-      - name: Run Nix flake check
+      # Runs the SBCL test suite (checks.default), the ECL suite (checks.ecl),
+      # the treefmt formatting gate (checks.formatting), and the mkdocs
+      # --strict build (checks.docs).
+      #
+      # No `--all-systems`: the flake declares two systems, but the outputs of
+      # the other one cannot be *built* from here, only evaluated. The matrix
+      # runner covers it for real instead.
+      #
+      # The outer alarm is the one that survives a hung builder holding the
+      # step open; `timeout-minutes` alone can leave the job wedged.
+      - name: Check flake
         timeout-minutes: 40
-        # The outer alarm is the one that survives a hung builder holding the
-        # step open; `timeout-minutes` alone can leave the job wedged.
         run: perl -e 'alarm 2280; exec @ARGV' -- nix flake check --print-build-logs
+
+      # Catches stray conflict markers and whitespace errors that compile fine.
+      - name: Check diff hygiene
+        run: git diff --check
