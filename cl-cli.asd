@@ -78,6 +78,7 @@
                (:file "tests/test-support")
                (:file "tests/cases-parse")
                (:file "tests/cases-property-parse")
+               (:file "tests/cases-mutation-testing")
                (:file "tests/cases-parser-fuzz")
                (:file "tests/cases-parser-benchmark")
                (:file "tests/cases-define-dsl")

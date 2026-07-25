@@ -7,6 +7,7 @@
   (:import-from :cl-prolog/weave
                 :deftest-queries)
   (:import-from :cl-weave
+                :assert-mutation-score
                 :benchmark
                 :describe-sequential
                 :expect
@@ -20,6 +21,7 @@
                 :it-run-if
                 :median-ms
                 :run-all
+                :run-mutations
                 :signals)
   (:export :run-tests))
 
