@@ -10,19 +10,28 @@
   (string-downcase (ensure-string thing)))
 
 (defun canonical-option-name (thing)
+  "Strip a leading -/-- and downcase the rest, in one pass.
+
+This is the hot path for every long-option token during parsing: a manual
+copy loop (rather than SUBSEQ followed by STRING-DOWNCASE) allocates the
+result string once instead of twice. A single-character result is left
+case-sensitive, unchanged (short option names like -x vs -X are distinct)."
   (let* ((raw (ensure-string thing))
-         (stripped (cond
-                     ((and (>= (length raw) 2)
-                           (char= (char raw 0) #\-)
-                           (char= (char raw 1) #\-))
-                      (subseq raw 2))
-                     ((and (> (length raw) 0)
-                           (char= (char raw 0) #\-))
-                      (subseq raw 1))
-                     (t raw))))
-    (if (= (length stripped) 1)
-        stripped
-        (string-downcase stripped))))
+         (start (cond
+                  ((and (>= (length raw) 2)
+                        (char= (char raw 0) #\-)
+                        (char= (char raw 1) #\-))
+                   2)
+                  ((and (> (length raw) 0)
+                        (char= (char raw 0) #\-))
+                   1)
+                  (t 0)))
+         (length (- (length raw) start)))
+    (if (= length 1)
+        (if (zerop start) raw (subseq raw start))
+        (let ((result (make-string length)))
+          (dotimes (i length result)
+            (setf (char result i) (char-downcase (char raw (+ start i)))))))))
 
 (defun option-token-display-name (name)
   (if (= (length name) 1)

@@ -55,6 +55,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   way, so generating help text or a shell-completion script no longer
   reruns `MAKE-OPTION` for the built-ins either. No public API or
   observable behavior changed; see `tests/cases-parser-benchmark.lisp`.
+- `CANONICAL-OPTION-NAME` (the hot path for every long-option token during
+  parsing) now strips a leading `-`/`--` and downcases the remainder in one
+  pass instead of two separate allocations (`SUBSEQ` then
+  `STRING-DOWNCASE`). Shell-completion rendering is also faster on apps
+  with many options: `%COMPLETION-SHELL-QUOTE` (used by the bash/zsh/fish
+  renderers) now strips control characters and quote-escapes in a single
+  pass rather than two nested string streams, and three
+  `REMOVE-DUPLICATES` call sites switched from `:TEST #'STRING=` to
+  `:TEST #'EQUAL` -- semantically identical for strings, but lets SBCL use
+  its hash-table-based dedup instead of an O(n^2) pairwise scan. Measured
+  on a 330-option benchmark app: shell-completion rendering is noticeably
+  faster; no observable behavior changed.
 - `cl-cli` no longer depends on `cl-prolog` at runtime. Option-relation
   validation (`:requires`, `:requires-any-of`, `:conflicts-with`) is now a
   plain in-memory adjacency graph (`src/option-relations.lisp`) with the same

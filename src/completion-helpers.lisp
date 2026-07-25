@@ -55,7 +55,7 @@
 (defun %completion-recognized-option-names (option)
   (remove-duplicates
    (%completion-all-option-names option)
-   :test #'string=))
+   :test #'equal))
 
 (defun %completion-visible-command-tokens (app)
   (let (tokens)
@@ -89,22 +89,49 @@
           do (write-char (if (char= char #\:) #\Space char) out))))
 
 (defun %completion-shell-quote (string)
-  (with-output-to-string (out)
-    (write-char #\' out)
-    (loop for char across (%completion-control-safe-string string)
-          do (if (char= char #\')
-                 (write-string "'\"'\"'" out)
-                 (write-char char out)))
-    (write-char #\' out)))
+  "Single-quote STRING for a POSIX shell (bash/zsh/fish).
+
+Strips control characters and escapes embedded single quotes in one pass
+over STRING, rather than through %COMPLETION-CONTROL-SAFE-STRING (a second,
+separately-allocated WITH-OUTPUT-TO-STRING pass) -- this is render-
+completion's hottest single allocation on an app with many options, since
+every option/command name and description is shell-quoted at least once.
+Quote-escaping and control-stripping act on disjoint character sets (a
+quote is never itself a control code), so folding both into one COND
+preserves %COMPLETION-CONTROL-SAFE-STRING's exact behavior for this caller
+without changing its other 12+ call sites, which still use it standalone."
+  (let ((value (if string (princ-to-string string) "")))
+    (with-output-to-string (out)
+      (write-char #\' out)
+      (loop for char across value
+            for code = (char-code char)
+            do (cond
+                 ((char= char #\')
+                  (write-string "'\"'\"'" out))
+                 ((or (char= char #\Newline)
+                      (char= char #\Return)
+                      (char= char #\Tab))
+                  (write-char #\Space out))
+                 ((or (< code 32)
+                      (= code 127)
+                      (and (>= code 128) (< code 160)))
+                  nil)
+                 (t
+                  (write-char char out))))
+      (write-char #\' out))))
 
 (defun %completion-space-joined (strings)
+  ;; :TEST #'EQUAL (not #'STRING=) is semantically identical for strings --
+  ;; EQUAL compares strings with STRING= itself -- but lets SBCL dispatch to
+  ;; its hash-table-based dedup instead of an O(n^2) pairwise scan; matters
+  ;; once an app has a large option/command count.
   (format nil "~{~A~^ ~}"
-          (remove-duplicates strings :test #'string=)))
+          (remove-duplicates strings :test #'equal)))
 
 (defun %completion-bash-array-literal (strings)
   (format nil "(~{~A~^ ~})"
           (mapcar #'%completion-shell-quote
-                  (remove-duplicates strings :test #'string=))))
+                  (remove-duplicates strings :test #'equal))))
 
 (defun %completion-case-labels (strings)
   (format nil "~{~A~^|~}"

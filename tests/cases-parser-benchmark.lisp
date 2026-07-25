@@ -85,4 +85,17 @@
                                                               :initial-element #\v))))
            (result (benchmark (:warmup 1 :samples 5)
                      (parse-argv *benchmark-count-app* argv))))
-      (expect (< (median-ms result) 2000)))))
+      (expect (< (median-ms result) 2000))))
+
+  (it "deduplicates a large candidate list in well under budget (guards against an O(n^2) regression)"
+    ;; %COMPLETION-SPACE-JOINED/%COMPLETION-BASH-ARRAY-LITERAL use
+    ;; :TEST #'EQUAL rather than #'STRING= -- semantically identical for
+    ;; strings, but lets SBCL dispatch REMOVE-DUPLICATES to a hash-table-based
+    ;; scan. On 10,000 strings (1,000 distinct, so real duplicates get
+    ;; removed), :TEST #'STRING= takes ~35ms on a fast machine; :TEST #'EQUAL
+    ;; is sub-millisecond. 50ms budget leaves generous room for a slow CI
+    ;; machine while still failing hard if this regresses to #'STRING=.
+    (let* ((strings (loop for i below 10000 collect (format nil "cmd-~D" (mod i 1000))))
+           (result (benchmark (:warmup 1 :samples 5)
+                     (cl-cli::%completion-space-joined strings))))
+      (expect (< (median-ms result) 50)))))
