@@ -52,6 +52,21 @@
       (signals cli-usage-error
         (parse-argv (response-file-app) '("tool" "@loop.txt")))))
 
+  (it "signals a usage error when a single response file exceeds the total size limit"
+    (with-response-files ("huge.txt" (make-string (1+ cl-cli::+response-file-max-total-bytes+)
+                                                    :initial-element #\a))
+      (signals cli-usage-error
+        (parse-argv (response-file-app) '("tool" "@huge.txt")))))
+
+  (it "signals a usage error when several small response files together exceed the total size limit"
+    (let* ((chunk-size (1+ (floor cl-cli::+response-file-max-total-bytes+ 3)))
+           (chunk (make-string chunk-size :initial-element #\a)))
+      (with-response-files ("a.txt" (format nil "@b.txt ~A" chunk)
+                             "b.txt" (format nil "@c.txt ~A" chunk)
+                             "c.txt" chunk)
+        (signals cli-usage-error
+          (parse-argv (response-file-app) '("tool" "@a.txt"))))))
+
   (it "parses negative numbers from response files like argv"
     (let ((app (make-app :name "calc"
                          :expand-response-files t

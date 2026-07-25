@@ -66,6 +66,17 @@ UIOP:READ-FILE-STRING.")
 (defparameter +response-file-max-depth+ 32
   "Guard against a response file that (transitively) includes itself.")
 
+(defparameter +response-file-max-total-bytes+ (* 8 1024 1024)
+  "Guard against unbounded memory growth from response-file expansion.
+
++RESPONSE-FILE-MAX-DEPTH+ alone only bounds nesting depth, not fan-out (a
+file that references many large files at the same depth) or a single
+huge file -- this caps the TOTAL bytes read across every file touched by
+one EXPAND-RESPONSE-FILES call. 8 MiB is generously larger than any
+legitimate argument list while still bounding worst-case memory use for
+an app that opts into :expand-response-files on a pipeline where the
+response-file path itself might be influenced by untrusted input.")
+
 (defun %read-response-file (path)
   (handler-case (funcall *response-file-reader* path)
     (cli-usage-error (condition) (error condition))
@@ -85,7 +96,8 @@ A token `@path` is replaced by the whitespace-separated tokens of the file at
 `path`, expanded recursively. `@@x` yields a literal `@x`, so a real argument
 that must start with `@` can still be passed. A bare `@` is left untouched."
   (let ((frames (list (list depth args)))
-        (expanded nil))
+        (expanded nil)
+        (total-bytes-read 0))
     (loop while frames
           do (destructuring-bind (current-depth current-args) (pop frames)
                (when (> current-depth +response-file-max-depth+)
@@ -105,10 +117,14 @@ that must start with `@` can still be passed. A bare `@` is left untouched."
                       (push (subseq arg 1) expanded))
                      ((and (> (length arg) 1)
                            (char= (char arg 0) #\@))
-                      (push (list (1+ current-depth)
-                                  (%split-response-file-contents
-                                   (%read-response-file (subseq arg 1))))
-                            frames))
+                      (let ((contents (%read-response-file (subseq arg 1))))
+                        (incf total-bytes-read (length contents))
+                        (when (> total-bytes-read +response-file-max-total-bytes+)
+                          (signal-cli-error 'cli-usage-error
+                                            "Response file inclusion exceeds the total size limit."))
+                        (push (list (1+ current-depth)
+                                    (%split-response-file-contents contents))
+                              frames)))
                      (t
                       (push arg expanded)))))))
     (nreverse expanded)))

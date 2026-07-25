@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- `expand-response-files` (`:expand-response-files t`) had no bound on the
+  total bytes read across a response-file expansion -- only
+  `+response-file-max-depth+` limited nesting depth, not fan-out (many
+  files referenced at one depth) or a single huge file. A caller piping a
+  response-file *path* derived from untrusted input into an app that
+  opted into response-file expansion could exhaust memory. Added
+  `+response-file-max-total-bytes+` (8 MiB, generous for any legitimate
+  argument list) as a total-size budget checked after every file read;
+  exceeding it signals `cli-usage-error` the same way exceeding the depth
+  limit already did.
+
 ### Fixed
 
 - `consume-value-option` (`src/parser-option-consumption.lisp`) had a
