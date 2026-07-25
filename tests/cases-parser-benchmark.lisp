@@ -104,6 +104,23 @@ app in this file (none of which declare any :requires/:conflicts-with)."
 ;; anything on the implementation those budgets were measured against -- see
 ;; PERFORMANCE-BUDGETS-CALIBRATED-P in tests/test-support.lisp. The two cache
 ;; identity checks above are ordinary correctness tests and stay portable.
+;;
+;; Calibration rule for every case here: size the workload so its median on an
+;; idle machine is around a tenth of its budget. A shared CI runner routinely
+;; costs 5x through contention alone -- measured, not assumed: the 100-option
+;; construction case below ran 520ms locally and 2534ms inside a concurrent
+;; `nix flake check` on the same machine -- while the regressions these exist
+;; to catch are asymptotic and cost far more than that. A tenth therefore
+;; absorbs the noise and still fails loudly on a real regression. A budget
+;; sitting a mere 2-4x above its idle measurement does neither: it goes
+;; intermittently red, and an intermittently red gate is read as noise, which
+;; is how a genuine regression gets waved through.
+;;
+;; When one of these starts failing, re-measure on an idle machine before
+;; touching anything. If the idle median moved, that is the regression. If it
+;; did not, the workload is mis-sized -- shrink the iteration count, which
+;; preserves both the 2000ms convention and the ratio. Raising a budget is the
+;; one response that destroys the signal.
 (describe-sequential-run-if (performance-budgets-calibrated-p)
     "parser benchmark budgets"
   (it "constructs a 100-option relation-heavy app in well under budget"
@@ -113,10 +130,13 @@ app in this file (none of which declare any :requires/:conflicts-with)."
     ;; independently again inside OPTION-REQUIREMENT-CYCLE-P and
     ;; MAKE-OPTION-RELATION-GRAPH -- an O(n^2)-ish construction cost for any
     ;; app that actually uses :requires/:conflicts-with, unlike every other
-    ;; benchmark app in this file. 200 iterations, same 2000ms budget
-    ;; convention as the parse/render benchmarks.
+    ;; benchmark app in this file. 50 iterations (~130ms idle) against the
+    ;; same 2000ms budget convention -- this is the most expensive case in the
+    ;; file, and at the original 200 it sat close enough to the budget to go
+    ;; red on a loaded runner. The regression it guards is asymptotic, so a
+    ;; quarter of the iterations loses none of the signal.
     (let ((result (benchmark (:warmup 1 :samples 5)
-                    (dotimes (i 200)
+                    (dotimes (i 50)
                       (make-app :name "reltool"
                                :global-options (%benchmark-relation-heavy-options 100))))))
       (expect (< (median-ms result) 2000))))
@@ -128,10 +148,10 @@ app in this file (none of which declare any :requires/:conflicts-with)."
     ;; MAKE-APP call, even for the overwhelmingly common case of an app that
     ;; declares no option relations at all -- wasted work the parse-time
     ;; sibling validator already knew to skip via an early-exit guard, just
-    ;; never applied at MAKE-APP time until now. 200 iterations, same 2000ms
+    ;; never applied at MAKE-APP time until now. 100 iterations, same 2000ms
     ;; budget convention.
     (let ((result (benchmark (:warmup 1 :samples 5)
-                    (dotimes (i 200)
+                    (dotimes (i 100)
                       (make-app
                        :name "bench-large"
                        :global-options (loop for i below 30
@@ -164,10 +184,11 @@ app in this file (none of which declare any :requires/:conflicts-with)."
     ;; -INCLUSIVE-GROUPS/-CONDITIONAL-REQUIREMENTS against regressing back to
     ;; rebuilding an %OPTION-KEY-TABLE/%OPTION-TARGET-TABLE from scratch on
     ;; every PARSE-ARGV call instead of reusing the app-level cache populated
-    ;; at MAKE-APP time. 200,000 calls (a tighter loop than the 100,000 above
-    ;; since this argv is shorter), same 2000ms budget convention.
+    ;; at MAKE-APP time. 50,000 calls, same 2000ms budget convention -- the
+    ;; original 200,000 left under 2x headroom on a loaded runner, and the
+    ;; cache-vs-no-cache difference this detects is far larger than that.
     (let ((result (benchmark (:warmup 1 :samples 5)
-                    (dotimes (i 200000)
+                    (dotimes (i 50000)
                       (parse-argv *benchmark-relation-heavy-parse-app*
                                  '("reltool" "--profile" "p" "--config" "c"
                                    "--output" "o" "-a"))))))
