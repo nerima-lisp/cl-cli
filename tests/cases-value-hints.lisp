@@ -57,6 +57,23 @@
     (let ((text (render-completion (value-hint-app) "fish")))
       (expect (search "__fish_complete_directories" text))))
 
+  (it "emits a directory completer in zsh for a directory positional"
+    (let* ((app (make-app :name "tool"
+                          :positionals (list (make-positional :key :d :value-hint :dir))))
+           (text (render-completion app "zsh")))
+      (expect (search "_files -/" text))))
+
+  (it-each ((:file "_files") (:dir "_files -/"))
+      "emits a subcommand's own ~(~A~) positional hint in zsh"
+      (hint needle)
+    (let* ((app (make-app :name "tool"
+                          :commands (list (make-command
+                                           :name "build"
+                                           :positionals (list (make-positional :key :target
+                                                                               :value-hint hint))))))
+           (text (render-completion app "zsh")))
+      (expect (search needle text))))
+
   (it "surfaces the hint in help"
     (with-app-help-text (text (value-hint-app))
       (assert-searches text "expects a file" "expects a directory")))
