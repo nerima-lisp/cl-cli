@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A full MkDocs (Material) documentation site under `docs/`, published to
+  GitHub Pages via `nix build .#docs` and `.github/workflows/docs.yml`.
+  Covers installation, a quick start, a per-topic guide (option values,
+  option relations, commands, validation, CLI behavior, shell completion,
+  documentation generation), an API reference, the migration guide, scope
+  and non-goals, and the project's governance documents.
+- `define-app` / `define-command` (`src/model-dsl.lisp`): a declarative,
+  clause-based DSL over `make-app` / `make-command` / `make-option` /
+  `make-positional`. `:option`, `:positional`, and `:command` clauses replace
+  the nested `:global-options (list ...)` / `:positionals (list ...)` /
+  `:commands (list ...)` keyword arguments; `:command` clauses nest the same
+  vocabulary for a command's own options, positionals, and subcommands, and
+  `:commands-from` splices in an already-built command list (e.g.
+  `make-standard-commands`, or another spec bound via `define-command`).
+  Purely additive -- the functional API is unchanged and remains
+  independently usable. See README's "Declarative DSL" section.
+
+### Fixed
+
+- Two README code examples called `run-app` with `argv` as a positional
+  argument instead of `:argv`, which signals `odd number of &KEY arguments`
+  if copy-pasted as-is.
+
+### Changed
+
+- `cl-cli` no longer depends on `cl-prolog` at runtime. Option-relation
+  validation (`:requires`, `:requires-any-of`, `:conflicts-with`) is now a
+  plain in-memory adjacency graph (`src/option-relations.lisp`) with the same
+  public behavior and error messages. `cl-cli`'s only dependency is now
+  `uiop`; `cl-prolog` remains a test-only dependency (used as an independent
+  validation oracle in the test suite).
+- The test suite's real-shell verification (`tests/cases-shell-verification.lisp`)
+  now launches every subprocess (`bash -n`, `zsh -n`, `fish --no-execute`,
+  `mandoc -T lint`, ...) through `cl-process-kit` with an explicit timeout
+  instead of an unbounded `uiop:run-program` call. A hung or misbehaving
+  tool is now terminated (SIGTERM escalating to SIGKILL, in its own process
+  group) rather than blocking the test run indefinitely; a regression test
+  proves the timeout actually fires. Test-only; does not affect `cl-cli`
+  itself, which never spawns subprocesses.
+
 ## [0.2.0] - 2026-07-20
 
 ### Added
@@ -296,5 +338,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   escape or other terminal control sequences into a user's terminal. Spec
   construction additionally rejects control characters in option value names.
 
-[Unreleased]: https://github.com/takeokunn/cl-cli/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/takeokunn/cl-cli/releases/tag/v0.2.0
+[Unreleased]: https://github.com/nerima-lisp/cl-cli/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/nerima-lisp/cl-cli/releases/tag/v0.2.0

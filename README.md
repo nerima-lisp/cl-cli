@@ -1,5 +1,7 @@
 # cl-cli
 
+[![Documentation](https://img.shields.io/badge/docs-MkDocs%20Material-2b5adb)](https://nerima-lisp.github.io/cl-cli/)
+
 `cl-cli` is a small, dependency-light Common Lisp CLI toolkit for building:
 
 - strict flag and option parsers
@@ -12,43 +14,45 @@
 It is intentionally conservative about dependencies so it works well in
 minimal Common Lisp and Nix environments.
 
+Full documentation, including the option/command guide, migration guide, API
+reference, and every governance document, is published at
+<https://nerima-lisp.github.io/cl-cli/>. The source for that site lives in
+[docs/src/](docs/src/README.md).
+
 ## Installation
 
-`cl-cli` depends on [`cl-prolog`](https://github.com/takeokunn/cl-prolog), which
-is **not in Quicklisp**, so a bare `(ql:quickload :cl-cli)` will not resolve on
-its own. Choose one of the paths below.
-
-### With Nix (recommended)
-
-The flake wires up `cl-prolog` and `cl-weave` for you:
+`cl-cli` itself depends only on `uiop`, which ships with every modern ASDF, so
+cloning it where ASDF can find it (for example under `~/common-lisp/` or
+`~/quicklisp/local-projects/`) is enough to load it:
 
 ```bash
-nix develop        # drop into a shell with all dependencies available
-nix flake check    # run the test suite across sbcl and ecl
-```
-
-### With ASDF / Quicklisp
-
-Clone `cl-cli` and its `cl-prolog` dependency where ASDF can find them (for
-example under `~/common-lisp/` or `~/quicklisp/local-projects/`), then load it.
-Once the dependency is registered, Quicklisp resolves the remaining `uiop`
-dependency automatically:
-
-```bash
-git clone https://github.com/takeokunn/cl-prolog  ~/common-lisp/cl-prolog
-git clone https://github.com/takeokunn/cl-cli     ~/common-lisp/cl-cli
+git clone https://github.com/nerima-lisp/cl-cli  ~/common-lisp/cl-cli
 ```
 
 ```lisp
 (ql:quickload :cl-cli)
 ```
 
-Running the test suite additionally requires
-[`cl-weave`](https://github.com/takeokunn/cl-weave) checked out the same way.
+### With Nix (recommended for development)
 
-The repository includes Nix checks for both `sbcl` and `ecl`, so
-`nix flake check` verifies the current test suite across multiple Common Lisp
-implementations.
+The flake wires up [`cl-prolog`](https://github.com/nerima-lisp/cl-prolog),
+[`cl-weave`](https://github.com/nerima-lisp/cl-weave), and
+[`cl-process-kit`](https://github.com/nerima-lisp/cl-process-kit) (plus its own
+`cl-boundary-kit` / `cl-log-kit` dependencies) for you -- all test-only, not
+needed to use `cl-cli` itself:
+
+```bash
+nix develop        # drop into a shell with all dependencies available
+nix flake check    # run the test suite across sbcl and ecl
+```
+
+### Running the test suite without Nix
+
+Clone `cl-prolog`, `cl-weave`, `cl-process-kit`, `cl-boundary-kit`, and
+`cl-log-kit` where ASDF can find them, the same way as `cl-cli` above, then
+load `tests/run-tests.lisp`. The repository includes Nix checks for both
+`sbcl` and `ecl`, so `nix flake check` verifies the current test suite across
+multiple Common Lisp implementations.
 
 ## Quick example
 
@@ -70,7 +74,7 @@ implementations.
                                    (cl-cli:positional-value invocation :input)
                                    (cl-cli:option-value invocation :output)))))))
 
-(cl-cli:run-app *app* '("demo" "compile" "-o" "out.bin" "input.lisp"))
+(cl-cli:run-app *app* :argv '("demo" "compile" "-o" "out.bin" "input.lisp"))
 ```
 
 ## Root positional example
@@ -472,6 +476,54 @@ runtime markers:
  :runtime-markers '("--no-userinit" "--end-toplevel-options"))
 ```
 
+## Declarative DSL
+
+`define-app` and `define-command` are purely additive sugar over `make-app` /
+`make-command` / `make-option` / `make-positional` -- they do not replace the
+functional API, which stays independently usable and is what these macros
+expand into. Each declares a spec with a flat list of clauses instead of
+nested `:global-options (list ...)` / `:positionals (list ...)` /
+`:commands (list ...)` keyword arguments:
+
+```lisp
+(cl-cli:define-app *app*
+    (:name "demo" :version "0.1.0")
+  (:option "verbose" :short #\v :kind :flag)
+  (:command "compile"
+      (:aliases '("build")
+       :handler (lambda (invocation)
+                  (format t "compile ~A -> ~A~%"
+                          (cl-cli:positional-value invocation :input)
+                          (cl-cli:option-value invocation :output))))
+    (:option "output" :short #\o :kind :value)
+    (:positional :input :required-p t)))
+
+(cl-cli:run-app *app* :argv '("demo" "compile" "-o" "out.bin" "input.lisp"))
+```
+
+A `:command` clause nests the same clause vocabulary for that command's own
+options, positionals, and (recursively) subcommands. Everything besides
+`:option` / `:positional` / `:command` -- `:name`, `:aliases`, `:handler`,
+`:description`, and so on -- is passed straight through to the underlying
+constructor as ordinary keyword arguments; the macro only owns the
+`:global-options` / `:positionals` / `:commands` (or `:options` /
+`:positionals` / `:subcommands` for `define-command`) keys, so a clause list
+must not repeat them.
+
+Splice in a list of already-built commands -- `make-standard-commands`, or a
+command shared across apps via `define-command` -- with `:commands-from`:
+
+```lisp
+(cl-cli:define-command *status-command*
+    (:name "status" :description "Show status.")
+  (:option "json" :kind :flag))
+
+(cl-cli:define-app *ops-app*
+    (:name "ops")
+  (:commands-from (cl-cli:make-standard-commands))
+  (:commands-from (list *status-command*)))
+```
+
 ## Migration guide
 
 `cl-cli` already covers the shared parser shapes used by the current in-house
@@ -497,7 +549,7 @@ Use these `cl-cli` features:
 
 Existing coverage:
 
-- script tail preservation and separator normalization are exercised in `stop-parsing-option-preserves-remaining-arguments`, `stop-parsing-short-attached-value`, and `stop-parsing-script-mode-can-normalize-opaque-tail` in [tests/run-tests.lisp](tests/run-tests.lisp)
+- script tail preservation and separator normalization are exercised by "stop parsing option preserves remaining arguments", "supports stop parsing short attached value", and "stop parsing script mode can normalize opaque tail" in [tests/cases-options.lisp](tests/cases-options.lisp)
 
 ### `cl-tmux`
 
@@ -519,7 +571,7 @@ Use these `cl-cli` features:
 Existing coverage:
 
 - attached short value parsing is shown in the `-S/tmp/tmux.sock` example above
-- root/default dispatch is exercised in `default-command-dispatches-without-command-token` in [tests/run-tests.lisp](tests/run-tests.lisp)
+- root/default dispatch is exercised by "dispatches default command without command token" in [tests/cases-options.lisp](tests/cases-options.lisp)
 
 ### `private-trade-fx`
 
@@ -542,7 +594,7 @@ Use these `cl-cli` features:
 Existing coverage:
 
 - parser-hook validation is demonstrated in the positive-integer example below
-- separator-preserving and separator-normalizing flows are covered in [tests/run-tests.lisp](tests/run-tests.lisp)
+- separator-preserving and separator-normalizing flows are covered by "extracts application argv after separator" and "strip-argv-separators removes literal sentinels" in [tests/cases-parse.lisp](tests/cases-parse.lisp)
 
 ### `nshell`
 
@@ -563,7 +615,7 @@ Use these `cl-cli` features:
 Existing coverage:
 
 - root positional parsing is shown in the `script-runner` example above
-- root/default dispatch behavior is covered in [tests/run-tests.lisp](tests/run-tests.lisp)
+- root/default dispatch behavior is covered by "supports root positionals and rest" and "dispatches root handler" in [tests/cases-parse.lisp](tests/cases-parse.lisp)
 
 ### Verification path
 
