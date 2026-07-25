@@ -132,23 +132,15 @@
     (signals-invalid-specification
       (make-option :name "x" :kind :value :type :integer :parser #'identity)))
 
-  (it "rejects an unknown :type"
+  (it-each (("rejects an unknown :type" (:kind :value :type :date))
+          ("rejects :min on a non-numeric type" (:kind :value :type :string :min 1))
+          ("rejects :type on a flag option" (:kind :flag :type :integer))
+          ("rejects :type on an optional-value option" (:kind :optional-value :type :integer)))
+      "~A"
+      (label plist)
+    (declare (ignore label))
     (signals-invalid-specification
-      (make-option :name "x" :kind :value :type :date)))
-
-  (it "rejects :min on a non-numeric type"
-    (signals-invalid-specification
-      (make-option :name "x" :kind :value :type :string :min 1)))
-
-  (it "rejects :type on a flag option"
-    (signals-invalid-specification
-      (make-option :name "x" :kind :flag :type :integer)))
-
-  (it "rejects :type on an optional-value option"
-    ;; The bare `--x` form of an optional-value stores T, which a typed parser
-    ;; cannot accept, so typed values are restricted to :value options.
-    (signals-invalid-specification
-      (make-option :name "x" :kind :optional-value :type :integer)))
+      (apply #'make-option :name "x" plist)))
 
   (it "applies the type to each occurrence of a repeatable option"
     (with-parsed-argv (inv (make-app
@@ -160,13 +152,13 @@
                           '("tool" "--port" "80" "--port" "443"))
       (expect (equal (option-value inv :port) '(80 443)))))
 
-  (it "rejects a non-real bound"
+  (it-each (("rejects a non-real bound" (:kind :value :type :integer :min "1"))
+          ("rejects an inverted min/max" (:kind :value :type :integer :min 10 :max 1)))
+      "~A"
+      (label plist)
+    (declare (ignore label))
     (signals-invalid-specification
-      (make-option :name "x" :kind :value :type :integer :min "1")))
-
-  (it "rejects an inverted min/max"
-    (signals-invalid-specification
-      (make-option :name "x" :kind :value :type :integer :min 10 :max 1)))
+      (apply #'make-option :name "x" plist)))
 
   (it "rejects :type combined with :parser on a positional"
     (signals-invalid-specification
