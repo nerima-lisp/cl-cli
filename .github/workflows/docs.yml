@@ -27,6 +27,7 @@ jobs:
       CACHIX_AUTH_TOKEN: ${{ secrets.CACHIX_AUTH_TOKEN }}
     permissions:
       contents: read
+      pages: write # configure-pages needs it to honor enablement below.
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -64,7 +65,13 @@ jobs:
           cp -rL result public
           chmod -R u+w public
 
+      # enablement: true so a fork -- or this repository after a settings
+      # reset -- turns Pages on itself rather than failing the deploy with
+      # "Get Pages site failed", which is how the site advertised in README.md
+      # came to 404 while every docs build was passing.
       - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/upload-pages-artifact@v4
         with:
           path: public
