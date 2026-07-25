@@ -11,16 +11,19 @@
 (asdf:defsystem "cl-cli"
   :description "Composable Common Lisp CLI parsing and dispatch primitives."
   :long-description +cl-cli-readme+
-  :author "takeokunn"
-  :maintainer "takeokunn"
+  :author "takeokunn <bararararatty@gmail.com>"
+  :maintainer "takeokunn <bararararatty@gmail.com>"
   :homepage +cl-cli-repository-url+
   :bug-tracker +cl-cli-issues-url+
   :source-control (:git +cl-cli-repository-url+)
   :license "MIT"
   :version "1.0.1"
   :depends-on ("uiop")
-  :in-order-to ((asdf:test-op (asdf:test-op "cl-cli/tests")))
+  :in-order-to ((asdf:test-op (asdf:test-op "cl-cli/test")))
   :serial t
+  ;; Component names carry their own directory rather than using :pathname,
+  ;; because the test system below has to reach one file in examples/ that a
+  ;; system-wide :pathname "t" would put out of reach.
   :components ((:file "src/package")
                (:file "src/conditions")
                (:file "src/core")
@@ -68,93 +71,101 @@
                (:file "src/completion-commands")))
 
 ;;; The test suite is split in two so that the portable half stays loadable on
-;;; every implementation. `cl-cli/tests' is the core suite; its dependencies
-;;; are all portable Common Lisp. `cl-cli/tests/shell-verification' adds the
+;;; every implementation. `cl-cli/test' is the core suite; its dependencies
+;;; are all portable Common Lisp. `cl-cli/test/shell-verification' adds the
 ;;; checks that shell out to bash/zsh/fish/mandoc, and only that half needs
 ;;; `cl-process-kit' (whose transitive `cl-log-kit' dependency is SBCL-only --
 ;;; https://github.com/nerima-lisp/cl-log-kit/issues/1). Keeping the split at
 ;;; the system boundary means a non-SBCL implementation runs the core suite for
 ;;; real instead of failing to compile the whole thing.
-(asdf:defsystem "cl-cli/tests"
+(asdf:defsystem "cl-cli/test"
   :description "Core test system for cl-cli."
-  :author "takeokunn"
+  :author "takeokunn <bararararatty@gmail.com>"
+  :maintainer "takeokunn <bararararatty@gmail.com>"
   :license "MIT"
   :version "1.0.1"
+  :homepage +cl-cli-repository-url+
+  :bug-tracker +cl-cli-issues-url+
+  :source-control (:git +cl-cli-repository-url+)
   :depends-on ("cl-cli" "cl-weave" "cl-prolog/weave" "cl-json-kit")
   :serial t
-  :components ((:file "tests/package")
-               (:file "tests/test-fixtures")
+  :components ((:file "t/package")
+               (:file "t/test-fixtures")
                (:file "examples/consumer-migrations")
-               (:file "tests/test-support")
-               (:file "tests/cases-public-api")
-               (:file "tests/cases-parse")
-               (:file "tests/cases-property-parse")
-               (:file "tests/cases-mutation-testing")
-               (:file "tests/cases-parser-fuzz")
-               (:file "tests/cases-parser-benchmark")
-               (:file "tests/cases-define-dsl")
-               (:file "tests/cases-options")
-               (:file "tests/cases-typed-values")
-               (:file "tests/cases-count")
-               (:file "tests/cases-delimited-values")
-               (:file "tests/cases-config")
-               (:file "tests/cases-value-source")
-               (:file "tests/cases-deprecated")
-               (:file "tests/cases-positional-choices")
-               (:file "tests/cases-abbreviated-options")
-               (:file "tests/cases-nested-subcommands")
-               (:file "tests/cases-option-groups")
-               (:file "tests/cases-response-files")
-               (:file "tests/cases-positional-arity")
-               (:file "tests/cases-nested-default")
-               (:file "tests/cases-colored-help")
-               (:file "tests/cases-terminal-detection")
-               (:file "tests/cases-help-wrap")
-               (:file "tests/cases-auto-help")
-               (:file "tests/cases-negative-numbers")
-               (:file "tests/cases-key-value")
-               (:file "tests/cases-multi-value")
-               (:file "tests/cases-variadic-options")
-               (:file "tests/cases-inclusive-group")
-               (:file "tests/cases-choice-suggestions")
-               (:file "tests/cases-require-command")
-               (:file "tests/cases-conditional-requirements")
-               (:file "tests/cases-validation-specification")
-               (:file "tests/cases-validation-values")
-               (:file "tests/cases-validation-boolean")
-               (:file "tests/cases-validation-relations")
-               (:file "tests/cases-help")
-               (:file "tests/cases-usage-synopsis")
-               (:file "tests/cases-exit-codes")
-               (:file "tests/cases-completion-bash")
-               (:file "tests/cases-completion-zsh")
-               (:file "tests/cases-completion-fish")
-               (:file "tests/cases-completion-powershell")
-               (:file "tests/cases-completion-nushell")
-               (:file "tests/cases-completion-elvish")
-               (:file "tests/cases-completion-commands")
-               (:file "tests/cases-positional-completion")
-               (:file "tests/cases-value-hints")
-               (:file "tests/cases-dynamic-completion")
-               (:file "tests/cases-flat-dynamic-completion")
-               (:file "tests/cases-builtin-arg-completion")
-               (:file "tests/cases-doc-manpage")
-               (:file "tests/cases-manpage-metadata")
-               (:file "tests/cases-doc-markdown")
-               (:file "tests/cases-doc-json")
-               (:file "tests/cases-doc-commands")
-               (:file "tests/cases-consumer-migrations"))
+               (:file "t/test-support")
+               (:file "t/cases-public-api")
+               (:file "t/cases-parse")
+               (:file "t/cases-property-parse")
+               (:file "t/cases-mutation-testing")
+               (:file "t/cases-parser-fuzz")
+               (:file "t/cases-parser-benchmark")
+               (:file "t/cases-define-dsl")
+               (:file "t/cases-options")
+               (:file "t/cases-typed-values")
+               (:file "t/cases-count")
+               (:file "t/cases-delimited-values")
+               (:file "t/cases-config")
+               (:file "t/cases-value-source")
+               (:file "t/cases-deprecated")
+               (:file "t/cases-positional-choices")
+               (:file "t/cases-abbreviated-options")
+               (:file "t/cases-nested-subcommands")
+               (:file "t/cases-option-groups")
+               (:file "t/cases-response-files")
+               (:file "t/cases-positional-arity")
+               (:file "t/cases-nested-default")
+               (:file "t/cases-colored-help")
+               (:file "t/cases-terminal-detection")
+               (:file "t/cases-help-wrap")
+               (:file "t/cases-auto-help")
+               (:file "t/cases-negative-numbers")
+               (:file "t/cases-key-value")
+               (:file "t/cases-multi-value")
+               (:file "t/cases-variadic-options")
+               (:file "t/cases-inclusive-group")
+               (:file "t/cases-choice-suggestions")
+               (:file "t/cases-require-command")
+               (:file "t/cases-conditional-requirements")
+               (:file "t/cases-validation-specification")
+               (:file "t/cases-validation-values")
+               (:file "t/cases-validation-boolean")
+               (:file "t/cases-validation-relations")
+               (:file "t/cases-help")
+               (:file "t/cases-usage-synopsis")
+               (:file "t/cases-exit-codes")
+               (:file "t/cases-completion-bash")
+               (:file "t/cases-completion-zsh")
+               (:file "t/cases-completion-fish")
+               (:file "t/cases-completion-powershell")
+               (:file "t/cases-completion-nushell")
+               (:file "t/cases-completion-elvish")
+               (:file "t/cases-completion-commands")
+               (:file "t/cases-positional-completion")
+               (:file "t/cases-value-hints")
+               (:file "t/cases-dynamic-completion")
+               (:file "t/cases-flat-dynamic-completion")
+               (:file "t/cases-builtin-arg-completion")
+               (:file "t/cases-doc-manpage")
+               (:file "t/cases-manpage-metadata")
+               (:file "t/cases-doc-markdown")
+               (:file "t/cases-doc-json")
+               (:file "t/cases-doc-commands")
+               (:file "t/cases-consumer-migrations"))
   :perform (asdf:test-op (op c)
-             (uiop:symbol-call :cl-cli/tests :run-tests)))
+             (uiop:symbol-call :cl-cli/test :run-tests)))
 
-(asdf:defsystem "cl-cli/tests/shell-verification"
+(asdf:defsystem "cl-cli/test/shell-verification"
   :description
   "Tests that run cl-cli's generated scripts through the real shells and mandoc."
-  :author "takeokunn"
+  :author "takeokunn <bararararatty@gmail.com>"
+  :maintainer "takeokunn <bararararatty@gmail.com>"
   :license "MIT"
   :version "1.0.1"
-  :depends-on ("cl-cli/tests" "cl-process-kit")
+  :homepage +cl-cli-repository-url+
+  :bug-tracker +cl-cli-issues-url+
+  :source-control (:git +cl-cli-repository-url+)
+  :depends-on ("cl-cli/test" "cl-process-kit")
   :serial t
-  :components ((:file "tests/cases-shell-verification"))
+  :components ((:file "t/cases-shell-verification"))
   :perform (asdf:test-op (op c)
-             (uiop:symbol-call :cl-cli/tests :run-tests)))
+             (uiop:symbol-call :cl-cli/test :run-tests)))

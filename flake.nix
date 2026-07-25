@@ -86,7 +86,7 @@
             license = pkgs.lib.licenses.mit;
           };
         };
-      # The suites in tests/cases-shell-verification.lisp pipe cl-cli's own
+      # The suites in t/cases-shell-verification.lisp pipe cl-cli's own
       # generated output through the real tools that will consume it. They
       # self-skip when a tool is missing, so the tools have to be on PATH
       # inside the sandbox or the checks silently verify nothing.
@@ -111,7 +111,7 @@
       # Sources for the shell-verification half. cl-process-kit pulls in
       # cl-log-kit, which hard-codes sb-thread and therefore only compiles on
       # SBCL (https://github.com/nerima-lisp/cl-log-kit/issues/1), so only the
-      # SBCL check gets them. tests/run-tests.lisp refuses to load that half
+      # SBCL check gets them. run-tests.lisp refuses to load that half
       # anywhere SB-THREAD is missing regardless; leaving these out keeps the
       # check's declared inputs honest about what it actually exercises.
       shellVerificationSources = {
@@ -170,8 +170,8 @@
             package = pkgs.sbcl;
             extraSources = shellVerificationSources;
             command = ''
-              sbcl --non-interactive --load tests/run-tests.lisp \
-                --eval '(cl-cli/tests:run-tests)' --quit
+              sbcl --non-interactive --load run-tests.lisp \
+                --eval '(cl-cli/test:run-tests)' --quit
             '';
           };
           # No ASDF preload here any more. It used to be required because
@@ -179,14 +179,14 @@
           # 3.1.8.11 -- but cl-log-kit is no longer on ECL's path at all now
           # that the shell-verification half is a separate system, and the
           # remaining test dependencies load fine against the bundled ASDF.
-          # This keeps the documented `ecl --norc --load tests/run-tests.lisp`
+          # This keeps the documented `ecl --norc --load run-tests.lisp`
           # invocation and the one CI runs identical.
           ecl-check = makeLispCheck {
             name = "ecl";
             package = pkgs.ecl;
             command = ''
-              ecl --norc --load tests/run-tests.lisp \
-                --eval '(cl-cli/tests:run-tests)'
+              ecl --norc --load run-tests.lisp \
+                --eval '(cl-cli/test:run-tests)'
             '';
           };
         in
