@@ -42,6 +42,7 @@
                (:file "src/parser-option-consumption")
                (:file "src/parser-consumption")
                (:file "src/parser-values")
+               (:file "src/parser-value-storage")
                (:file "src/parser-core")
                (:file "src/parser-dispatch")
                (:file "src/help-style")
