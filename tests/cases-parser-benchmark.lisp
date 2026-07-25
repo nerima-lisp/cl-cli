@@ -115,57 +115,18 @@
                      (cl-cli::%completion-space-joined strings))))
       (expect (< (median-ms result) 50))))
 
-  (it "renders a bash completion script for a 230-option/20-command app in well under budget"
-    ;; Guards the stream-threaded bash renderer (src/completion-renderers-bash.lisp):
-    ;; every recursive command node and every shell-quoted array-literal/case-label
-    ;; value now writes straight into one shared stream instead of consing its own
-    ;; string for a parent to copy again. 2000ms for 200 iterations leaves generous
-    ;; headroom over the ~0.4ms/call measured on a similarly-sized synthetic app on
-    ;; a fast machine, while still catching a regression back to the old
-    ;; string-per-node/string-per-value pattern.
+  ;; One `it-each` case per shell, all guarding the same property: rendering
+  ;; a 230-option/20-command app 200 times stays well under budget. This
+  ;; catches a regression back to a per-node/per-value string-consing
+  ;; pattern for ANY renderer, including the ones a stream-threading or
+  ;; single-pass-quoting fix hasn't touched yet -- elvish and nushell had no
+  ;; benchmark at all before this, despite getting the same double-pass-
+  ;; quoting fix as powershell and markdown in the same commit that added
+  ;; the bash/zsh/fish/powershell cases below.
+  (it-each (("bash") ("zsh") ("fish") ("powershell") ("nushell") ("elvish"))
+      "renders a ~A completion script for a 230-option/20-command app in well under budget"
+      (shell)
     (let ((result (benchmark (:warmup 1 :samples 5)
                     (dotimes (i 200)
-                      (render-completion *benchmark-large-completion-app* "bash")))))
-      (expect (< (median-ms result) 2000))))
-
-  (it "renders a zsh completion script for a 230-option/20-command app in well under budget"
-    ;; Guards the stream-threaded zsh renderer (src/completion-renderers-zsh.lisp,
-    ;; src/completion-renderer-helpers.lisp): the recursive command-node tree and
-    ;; the option-spec/command-spec/subcommand-spec assignment builders write
-    ;; straight into one shared stream, and %COMPLETION-ZSH-ARGUMENTS-FIELD folds
-    ;; control-stripping and bracket-blanking into a single pass instead of two
-    ;; nested WITH-OUTPUT-TO-STRING calls. 2000ms for 200 iterations leaves
-    ;; generous headroom over the ~1.3ms/call measured on a similarly-sized
-    ;; synthetic app on a fast machine.
-    (let ((result (benchmark (:warmup 1 :samples 5)
-                    (dotimes (i 200)
-                      (render-completion *benchmark-large-completion-app* "zsh")))))
-      (expect (< (median-ms result) 2000))))
-
-  (it "renders a fish completion script for a 230-option/20-command app in well under budget"
-    ;; Guards the fish renderer's loop-invariant shell-quoting
-    ;; (src/completion-renderers-fish.lisp, src/completion-renderer-helpers.lisp):
-    ;; APP-NAME, each command's DESCRIPTION, and each level's OFFER-CONDITION are
-    ;; quoted once and reused across every alias/candidate/option instead of being
-    ;; re-quoted on every iteration. 2000ms for 200 iterations leaves generous
-    ;; headroom over the ~0.34ms/call measured on a similarly-sized synthetic app
-    ;; on a fast machine.
-    (let ((result (benchmark (:warmup 1 :samples 5)
-                    (dotimes (i 200)
-                      (render-completion *benchmark-large-completion-app* "fish")))))
-      (expect (< (median-ms result) 2000))))
-
-  (it "renders a powershell completion script for a 230-option/20-command app in well under budget"
-    ;; Guards src/completion-renderers-powershell.lisp:
-    ;; %COMPLETION-POWERSHELL-QUOTE folds control-stripping and quote-doubling
-    ;; into one pass instead of two nested WITH-OUTPUT-TO-STRING calls (the same
-    ;; fix already applied to %COMPLETION-SHELL-QUOTE and
-    ;; %COMPLETION-ZSH-ARGUMENTS-FIELD), and %COMPLETION-POWERSHELL-COMMAND-OPTION-MAP
-    ;; builds each command's option array once and reuses it across aliases
-    ;; instead of rebuilding it per alias. 2000ms for 200 iterations leaves
-    ;; generous headroom over the ~0.11ms/call measured on a similarly-sized
-    ;; synthetic app on a fast machine.
-    (let ((result (benchmark (:warmup 1 :samples 5)
-                    (dotimes (i 200)
-                      (render-completion *benchmark-large-completion-app* "powershell")))))
+                      (render-completion *benchmark-large-completion-app* shell)))))
       (expect (< (median-ms result) 2000)))))
