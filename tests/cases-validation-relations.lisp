@@ -65,6 +65,37 @@
       (:eq cli-missing-dependent-option-dependency :profile)
       (:searches cli-error-message "Option --config requires --profile.")))
 
+  (it "requires the full transitive closure, not just a direct dependency"
+    ;; --deploy requires --build, which itself requires --profile. Supplying
+    ;; --deploy and --build but omitting --profile must still fail, naming
+    ;; the transitively (not just directly) missing option -- this is what
+    ;; OPTION-RELATION-GRAPH's precomputed TRANSITIVE-REQUIRES closure exists
+    ;; for; every other requires test in this file is a single hop deep.
+    (with-caught-signal-from-argv
+        ((cli-missing-dependent-option condition)
+         (app (demo-app
+               :global-options (list (make-option :name "profile" :kind :value)
+                                     (make-option :name "build" :kind :flag
+                                                 :requires '(:profile))
+                                     (make-option :name "deploy" :kind :flag
+                                                 :requires '(:build))))
+              '("demo" "--deploy" "--build")))
+      (:eq cli-missing-dependent-option-name :deploy)
+      (:eq cli-missing-dependent-option-dependency :profile)
+      (:searches cli-error-message "Option --deploy requires --profile.")))
+
+  (it "accepts a fully-satisfied transitive requires chain"
+    (with-parsed-argv (inv (demo-app
+                            :global-options (list (make-option :name "profile" :kind :value)
+                                                  (make-option :name "build" :kind :flag
+                                                              :requires '(:profile))
+                                                  (make-option :name "deploy" :kind :flag
+                                                              :requires '(:build))))
+                            '("demo" "--deploy" "--build" "--profile" "prod"))
+      (expect (option-value inv :deploy))
+      (expect (option-value inv :build))
+      (expect (string= (option-value inv :profile) "prod"))))
+
   (it "requires respect environment defaults"
     (with-parsed-argv-with-environment-variable-reader
         (inv (demo-app
