@@ -37,11 +37,11 @@
   (member (option-key spec) '(:help :version)))
 
 (defun %compute-built-in-option-specs (app)
-  (let ((specs (when (app-auto-help app)
-                 (list (make-built-in-help-option)))))
+  (collecting
+    (when (app-auto-help app)
+      (collect (make-built-in-help-option)))
     (when (app-supports-version-p app)
-      (push (make-built-in-version-option) specs))
-    (nreverse specs)))
+      (collect (make-built-in-version-option)))))
 
 (defun built-in-option-specs (app)
   "Return APP's built-in --help/--version specs, cached at MAKE-APP time.

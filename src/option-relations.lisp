@@ -17,16 +17,15 @@ instead of a graph walk on every PARSE-ARGV."
   (transitive-requires (make-hash-table :test #'eq)))
 
 (defun %relation-graph-transitive-requires (graph root)
-  (let ((seen (make-hash-table :test #'eq))
-        (result '()))
-    (labels ((visit (key)
-               (dolist (dependency (gethash key (option-relation-graph-requires graph)))
-                 (unless (gethash dependency seen)
-                   (setf (gethash dependency seen) t)
-                   (push dependency result)
-                   (visit dependency)))))
-      (visit root))
-    (nreverse result)))
+  (let ((seen (make-hash-table :test #'eq)))
+    (collecting
+      (labels ((visit (key)
+                 (dolist (dependency (gethash key (option-relation-graph-requires graph)))
+                   (unless (gethash dependency seen)
+                     (setf (gethash dependency seen) t)
+                     (collect dependency)
+                     (visit dependency)))))
+        (visit root)))))
 
 (defun make-option-relation-graph (specs &optional (spec-by-target (%option-target-table specs)))
   "Build the requires/requires-any/conflicts adjacency for SPECS.
