@@ -67,10 +67,30 @@
            (text (json-text app)))
       (assert-searches text "a\\\"b\\\\c")))
 
-  (it "produces balanced brackets and braces"
-    (let ((text (json-text (manpage-demo-app))))
-      (expect (= (count #\{ text) (count #\} text)))
-      (expect (= (count #\[ text) (count #\] text)))))
+  (it "round-trips escaped strings through an independent JSON reader"
+    ;; Substring-searching for the escaped form (above) only proves the
+    ;; writer emitted *an* escape sequence, not that it's the *correct* one
+    ;; -- json-kit:parse is a real, independently-implemented JSON reader
+    ;; (nerima-lisp/cl-json-kit, a test-only dependency), so decoding the
+    ;; writer's own output back and comparing to the original string proves
+    ;; genuine round-trip correctness.
+    (let* ((original "a\"b\\c \t\n \"quoted\" \\backslash\\")
+           (app (make-app :name "tool"
+                          :global-options (list (make-option :name "note"
+                                                             :kind :value
+                                                             :description original))))
+           (document (json-kit:parse (json-text app))))
+      (expect (string= (gethash "description"
+                                (first (coerce (gethash "options" document) 'list)))
+                       original))))
+
+  (it "produces a document a real JSON parser accepts, not just balanced brackets"
+    ;; json-kit:parse signals on any structural defect (missing comma, bad
+    ;; nesting, etc.) that naive brace/bracket counting can't catch.
+    (let ((document (json-kit:parse (json-text (manpage-demo-app)))))
+      (expect (string= (gethash "name" document) "demo"))
+      (expect (string= (gethash "version" document) "1.2.0"))
+      (expect (plusp (length (gethash "commands" document))))))
 
   (it "routes through the docs command as the json format"
     (let* ((app (demo-app

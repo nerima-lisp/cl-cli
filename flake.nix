@@ -23,9 +23,13 @@
       url = "github:nerima-lisp/cl-log-kit";
       flake = false;
     };
+    cl-json-kit = {
+      url = "github:nerima-lisp/cl-json-kit";
+      flake = false;
+    };
   };
 
-  outputs = { self, nixpkgs, cl-weave, cl-prolog, cl-process-kit, cl-boundary-kit, cl-log-kit }:
+  outputs = { self, nixpkgs, cl-weave, cl-prolog, cl-process-kit, cl-boundary-kit, cl-log-kit, cl-json-kit }:
     let
       systems = [ "x86_64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
@@ -34,6 +38,7 @@
       clProcessKitSourceDir = cl-process-kit.outPath;
       clBoundaryKitSourceDir = cl-boundary-kit.outPath;
       clLogKitSourceDir = cl-log-kit.outPath;
+      clJsonKitSourceDir = cl-json-kit.outPath;
 
       # Single source of truth for the docs package version: the `:version`
       # form in cl-cli.asd. Nix regexes are whole-string anchored and `.`
@@ -101,6 +106,7 @@
             CL_PROCESS_KIT_SOURCE_DIR = clProcessKitSourceDir;
             CL_BOUNDARY_KIT_SOURCE_DIR = clBoundaryKitSourceDir;
             CL_LOG_KIT_SOURCE_DIR = clLogKitSourceDir;
+            CL_JSON_KIT_SOURCE_DIR = clJsonKitSourceDir;
           };
         });
 
@@ -117,6 +123,7 @@
                 CL_PROCESS_KIT_SOURCE_DIR = clProcessKitSourceDir;
                 CL_BOUNDARY_KIT_SOURCE_DIR = clBoundaryKitSourceDir;
                 CL_LOG_KIT_SOURCE_DIR = clLogKitSourceDir;
+                CL_JSON_KIT_SOURCE_DIR = clJsonKitSourceDir;
               }
               ''
                 cp -R "$src" source
@@ -137,6 +144,7 @@
               CL_PROCESS_KIT_SOURCE_DIR = clProcessKitSourceDir;
               CL_BOUNDARY_KIT_SOURCE_DIR = clBoundaryKitSourceDir;
               CL_LOG_KIT_SOURCE_DIR = clLogKitSourceDir;
+              CL_JSON_KIT_SOURCE_DIR = clJsonKitSourceDir;
             }
             ''
               cp -R "$src" source

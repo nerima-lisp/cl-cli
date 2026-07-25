@@ -70,7 +70,7 @@
   :author "takeokunn"
   :license "MIT"
   :version "0.2.0"
-  :depends-on ("cl-cli" "cl-weave" "cl-prolog/weave" "cl-process-kit")
+  :depends-on ("cl-cli" "cl-weave" "cl-prolog/weave" "cl-process-kit" "cl-json-kit")
   :serial t
   :components ((:file "tests/package")
                (:file "tests/test-fixtures")

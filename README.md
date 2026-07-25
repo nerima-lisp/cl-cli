@@ -36,10 +36,11 @@ git clone https://github.com/nerima-lisp/cl-cli  ~/common-lisp/cl-cli
 ### With Nix (recommended for development)
 
 The flake wires up [`cl-prolog`](https://github.com/nerima-lisp/cl-prolog),
-[`cl-weave`](https://github.com/nerima-lisp/cl-weave), and
+[`cl-weave`](https://github.com/nerima-lisp/cl-weave),
 [`cl-process-kit`](https://github.com/nerima-lisp/cl-process-kit) (plus its own
-`cl-boundary-kit` / `cl-log-kit` dependencies) for you -- all test-only, not
-needed to use `cl-cli` itself:
+`cl-boundary-kit` / `cl-log-kit` dependencies), and
+[`cl-json-kit`](https://github.com/nerima-lisp/cl-json-kit) for you -- all
+test-only, not needed to use `cl-cli` itself:
 
 ```bash
 nix develop        # drop into a shell with all dependencies available
@@ -48,11 +49,11 @@ nix flake check    # run the test suite across sbcl and ecl
 
 ### Running the test suite without Nix
 
-Clone `cl-prolog`, `cl-weave`, `cl-process-kit`, `cl-boundary-kit`, and
-`cl-log-kit` where ASDF can find them, the same way as `cl-cli` above, then
-load `tests/run-tests.lisp`. The repository includes Nix checks for both
-`sbcl` and `ecl`, so `nix flake check` verifies the current test suite across
-multiple Common Lisp implementations.
+Clone `cl-prolog`, `cl-weave`, `cl-process-kit`, `cl-boundary-kit`,
+`cl-log-kit`, and `cl-json-kit` where ASDF can find them, the same way as
+`cl-cli` above, then load `tests/run-tests.lisp`. The repository includes Nix
+checks for both `sbcl` and `ecl`, so `nix flake check` verifies the current
+test suite across multiple Common Lisp implementations.
 
 ## Quick example
 

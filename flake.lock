@@ -16,6 +16,22 @@
         "type": "github"
       }
     },
+    "cl-json-kit": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784951832,
+        "narHash": "sha256-22NDaazfq1GWfmWdi20dwpkBnzd0hRlIPSX+wqRZnwc=",
+        "owner": "nerima-lisp",
+        "repo": "cl-json-kit",
+        "rev": "a666449395bd72950fd9438e464a0d1390d43232",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nerima-lisp",
+        "repo": "cl-json-kit",
+        "type": "github"
+      }
+    },
     "cl-log-kit": {
       "flake": false,
       "locked": {
@@ -99,6 +115,7 @@
     "root": {
       "inputs": {
         "cl-boundary-kit": "cl-boundary-kit",
+        "cl-json-kit": "cl-json-kit",
         "cl-log-kit": "cl-log-kit",
         "cl-process-kit": "cl-process-kit",
         "cl-prolog": "cl-prolog",

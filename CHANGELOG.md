@@ -25,6 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `make-standard-commands`, or another spec bound via `define-command`).
   Purely additive -- the functional API is unchanged and remains
   independently usable. See README's "Declarative DSL" section.
+- Adopted [`cl-json-kit`](https://github.com/nerima-lisp/cl-json-kit) as a
+  test-only dependency (mirroring `cl-process-kit`'s test-only role): the
+  `json renderer` test suite now parses `render-json`'s own output back
+  through `cl-json-kit`'s independent reader as an additional correctness
+  oracle, catching structural/escaping defects that substring-matching the
+  writer's output can't. Not needed to use `cl-cli` itself.
 
 ### Fixed
 
