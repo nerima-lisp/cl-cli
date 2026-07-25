@@ -14,7 +14,7 @@
       ((name (gen-string :min-length 2 :max-length 6 :alphabet "abcdef"))
        (value (gen-string :min-length 1 :max-length 8 :alphabet "abcXYZ0139")))
     (let* ((option (make-option :name name :kind :value))
-           (app (make-app :name "demo" :global-options (list option)))
+           (app (demo-app :global-options (list option)))
            (invocation (parse-argv app (list "demo"
                                              (format nil "--~A" name)
                                              value))))
@@ -24,7 +24,7 @@
   (it-property "records flags when present and leaves them null otherwise"
       ((name (gen-string :min-length 2 :max-length 6 :alphabet "abcdef")))
     (let* ((option (make-option :name name :kind :flag))
-           (app (make-app :name "demo" :global-options (list option)))
+           (app (demo-app :global-options (list option)))
            (key (property-option-keyword name)))
       (expect (option-value (parse-argv app (list "demo" (format nil "--~A" name)))
                             key)
@@ -35,17 +35,17 @@
   (it-property "forwards tokens after -- verbatim to a rest positional"
       ((tokens (gen-list (gen-string :min-length 1 :max-length 5 :alphabet "ab-Z9")
                          :min-length 0 :max-length 5)))
-    (let* ((app (make-app :name "demo"
-                          :positionals (list (make-positional :key :rest
-                                                              :rest-p t))))
+    (let* ((app (demo-app
+                 :positionals (list (make-positional :key :rest
+                                                     :rest-p t))))
            (invocation (parse-argv app (append (list "demo" "--") tokens))))
       (expect (positional-value invocation :rest) :to-equal tokens)))
 
   (it-property "treats --opt=value and --opt value equivalently"
       ((name (gen-string :min-length 2 :max-length 6 :alphabet "abcdef"))
        (value (gen-string :min-length 1 :max-length 8 :alphabet "abcXYZ019")))
-    (let* ((app (make-app :name "demo"
-                          :global-options (list (make-option :name name :kind :value))))
+    (let* ((app (demo-app
+                 :global-options (list (make-option :name name :kind :value))))
            (key (property-option-keyword name))
            (attached (parse-argv app (list "demo" (format nil "--~A=~A" name value))))
            (separated (parse-argv app (list "demo" (format nil "--~A" name) value))))
@@ -55,9 +55,9 @@
   (it-property "accumulates multiple-p values in argv order"
       ((values (gen-list (gen-string :min-length 1 :max-length 5 :alphabet "abcXYZ019")
                          :min-length 1 :max-length 5)))
-    (let* ((app (make-app :name "demo"
-                          :global-options (list (make-option :name "tag" :kind :value
-                                                            :multiple-p t))))
+    (let* ((app (demo-app
+                 :global-options (list (make-option :name "tag" :kind :value
+                                                   :multiple-p t))))
            (argv (cons "demo" (loop for value in values append (list "--tag" value))))
            (invocation (parse-argv app argv)))
       (expect (option-value invocation :tag) :to-equal values)))

@@ -36,12 +36,12 @@
   (it "requires dependent options"
     (with-caught-signal-from-argv
         ((cli-missing-dependent-option condition)
-         (app (make-app :name "demo"
-                        :global-options (list (make-option :name "profile"
-                                                           :kind :value)
-                                              (make-option :name "config"
-                                                           :kind :value
-                                                           :requires '(:profile))))
+         (app (demo-app
+               :global-options (list (make-option :name "profile"
+                                                  :kind :value)
+                                     (make-option :name "config"
+                                                  :kind :value
+                                                  :requires '(:profile))))
               '("demo" "--config" "dev.toml")))
       (:eq cli-missing-dependent-option-name :config)
       (:eq cli-missing-dependent-option-dependency :profile)
@@ -49,13 +49,13 @@
 
   (it "requires respect environment defaults"
     (with-parsed-argv-with-environment-variable-reader
-        (inv (make-app :name "demo"
-                       :global-options (list (make-option :name "profile"
-                                                          :kind :value
-                                                          :env-var "APP_PROFILE")
-                                             (make-option :name "config"
-                                                          :kind :value
-                                                          :requires '("profile"))))
+        (inv (demo-app
+              :global-options (list (make-option :name "profile"
+                                                 :kind :value
+                                                 :env-var "APP_PROFILE")
+                                    (make-option :name "config"
+                                                 :kind :value
+                                                 :requires '("profile"))))
              '("demo" "--config" "dev.toml")
              (lambda (name)
                (if (string= name "APP_PROFILE")
@@ -65,12 +65,12 @@
       (expect (string= (option-value inv :config) "dev.toml"))))
 
   (it "requires at least one of the declared requires-any-of alternatives"
-    (let ((app (make-app :name "demo"
-                         :global-options (list (make-option :name "token" :kind :value)
-                                               (make-option :name "username" :kind :value)
-                                               (make-option :name "password" :kind :value)
-                                               (make-option :name "login" :kind :flag
-                                                           :requires-any-of '(:token :username))))))
+    (let ((app (demo-app
+                :global-options (list (make-option :name "token" :kind :value)
+                                      (make-option :name "username" :kind :value)
+                                      (make-option :name "password" :kind :value)
+                                      (make-option :name "login" :kind :flag
+                                                  :requires-any-of '(:token :username))))))
       (with-parsed-argv (inv app '("demo" "--login" "--token" "abc"))
         (expect (option-value inv :login)))
       (with-parsed-argv (inv app '("demo" "--login" "--username" "bob" "--password" "x"))
@@ -81,11 +81,11 @@
   (it "signals when none of the requires-any-of alternatives are present"
     (with-caught-signal-from-argv
         ((cli-missing-any-of-options condition)
-         (app (make-app :name "demo"
-                        :global-options (list (make-option :name "token" :kind :value)
-                                              (make-option :name "username" :kind :value)
-                                              (make-option :name "login" :kind :flag
-                                                          :requires-any-of '(:token :username))))
+         (app (demo-app
+               :global-options (list (make-option :name "token" :kind :value)
+                                     (make-option :name "username" :kind :value)
+                                     (make-option :name "login" :kind :flag
+                                                 :requires-any-of '(:token :username))))
               '("demo" "--login")))
       (:eq cli-missing-any-of-options-name :login)
       (:equal cli-missing-any-of-options-alternatives '(:token :username))
@@ -94,55 +94,55 @@
   (it "requires-any-of hidden targets without leaking their names"
     (with-caught-signal-from-argv
         ((cli-missing-any-of-options condition)
-         (app (make-app :name "demo"
-                        :global-options (list (make-option :name "internal-token"
-                                                           :kind :value
-                                                           :hidden-p t)
-                                              (make-option :name "login" :kind :flag
-                                                          :requires-any-of '(:internal-token))))
+         (app (demo-app
+               :global-options (list (make-option :name "internal-token"
+                                                  :kind :value
+                                                  :hidden-p t)
+                                     (make-option :name "login" :kind :flag
+                                                 :requires-any-of '(:internal-token))))
               '("demo" "--login")))
       (:searches cli-error-message "Option --login requires one of: a hidden option.")
       (:not-searches cli-error-message "--internal-token")))
 
   (it "rejects unknown requires-any-of targets"
     (signals-invalid-specification
-      (make-app :name "demo"
-                :global-options (list (make-option :name "login" :kind :flag
-                                                   :requires-any-of '(:token))))))
+      (demo-app
+       :global-options (list (make-option :name "login" :kind :flag
+                                          :requires-any-of '(:token))))))
 
   (it "rejects requires-any-of self references"
     (signals-invalid-specification
-      (make-app :name "demo"
-                :global-options (list (make-option :name "login" :kind :flag
-                                                   :requires-any-of '(:login))))))
+      (demo-app
+       :global-options (list (make-option :name "login" :kind :flag
+                                          :requires-any-of '(:login))))))
 
   (it "rejects requires-any-of alternatives that all conflict with the option"
     ;; If every alternative conflicts with the option itself, the option can
     ;; never be validly supplied: alone it fails the any-of requirement, and
     ;; together with an alternative it fails the conflict check.
     (signals-invalid-specification
-      (make-app :name "demo"
-                :global-options (list (make-option :name "b" :kind :flag)
-                                      (make-option :name "a" :kind :flag
-                                                  :requires-any-of '(:b)
-                                                  :conflicts-with '(:b)))))
+      (demo-app
+       :global-options (list (make-option :name "b" :kind :flag)
+                             (make-option :name "a" :kind :flag
+                                         :requires-any-of '(:b)
+                                         :conflicts-with '(:b)))))
     (signals-invalid-specification
-      (make-app :name "demo"
-                :global-options (exclusive-group
-                                 (make-option :name "a" :kind :flag
-                                             :requires-any-of '(:b))
-                                 (make-option :name "b" :kind :flag)))))
+      (demo-app
+       :global-options (exclusive-group
+                        (make-option :name "a" :kind :flag
+                                    :requires-any-of '(:b))
+                        (make-option :name "b" :kind :flag)))))
 
   (it "requires hidden target without leaking its name"
     (with-caught-signal-from-argv
         ((cli-missing-dependent-option condition)
-         (app (make-app :name "demo"
-                        :global-options (list (make-option :name "internal-token"
-                                                           :kind :value
-                                                           :hidden-p t)
-                                              (make-option :name "config"
-                                                           :kind :value
-                                                           :requires '(:internal-token))))
+         (app (demo-app
+               :global-options (list (make-option :name "internal-token"
+                                                  :kind :value
+                                                  :hidden-p t)
+                                     (make-option :name "config"
+                                                  :kind :value
+                                                  :requires '(:internal-token))))
               '("demo" "--config" "dev.toml")))
       (:eq cli-missing-dependent-option-name :config)
       (:eq cli-missing-dependent-option-dependency :internal-token)
@@ -152,12 +152,12 @@
   (it "detects conflicting options"
     (with-caught-signal-from-argv
         ((cli-conflicting-options condition)
-         (app (make-app :name "demo"
-                        :global-options (list (make-option :name "token"
-                                                           :kind :value)
-                                              (make-option :name "password"
-                                                           :kind :value
-                                                           :conflicts-with '(:token))))
+         (app (demo-app
+               :global-options (list (make-option :name "token"
+                                                  :kind :value)
+                                     (make-option :name "password"
+                                                  :kind :value
+                                                  :conflicts-with '(:token))))
               '("demo" "--token" "abc" "--password" "secret")))
       (:eq cli-conflicting-options-left-option :password)
       (:eq cli-conflicting-options-right-option :token)
@@ -166,13 +166,13 @@
   (it "detects conflicts with hidden target without leaking its name"
     (with-caught-signal-from-argv
         ((cli-conflicting-options condition)
-         (app (make-app :name "demo"
-                        :global-options (list (make-option :name "internal-token"
-                                                           :kind :value
-                                                           :hidden-p t)
-                                              (make-option :name "config"
-                                                           :kind :value
-                                                           :conflicts-with '(:internal-token))))
+         (app (demo-app
+               :global-options (list (make-option :name "internal-token"
+                                                  :kind :value
+                                                  :hidden-p t)
+                                     (make-option :name "config"
+                                                  :kind :value
+                                                  :conflicts-with '(:internal-token))))
               '("demo" "--config" "dev.toml" "--internal-token" "secret")))
       (:eq cli-conflicting-options-left-option :config)
       (:eq cli-conflicting-options-right-option :internal-token)
@@ -184,20 +184,20 @@
                                 :kind :value
                                 :requires '(:profile))))
       (signals-invalid-specification
-        (make-app :name "demo"
-                  :global-options (list config)))))
+        (demo-app
+         :global-options (list config)))))
 
   (it "rejects self references"
     (signals-invalid-specification
-      (make-app :name "demo"
-                :global-options (list (make-option :name "config"
-                                                   :kind :value
-                                                   :requires '(:config)))))
+      (demo-app
+       :global-options (list (make-option :name "config"
+                                          :kind :value
+                                          :requires '(:config)))))
     (signals-invalid-specification
-      (make-app :name "demo"
-                :global-options (list (make-option :name "token"
-                                                   :kind :value
-                                                   :conflicts-with '("token"))))))
+      (demo-app
+       :global-options (list (make-option :name "token"
+                                          :kind :value
+                                          :conflicts-with '("token"))))))
 
   (it "keeps each app's cached relation rulebase independent when a command is reused across apps"
     ;; COMMAND-SPEC is documented as a reusable, composable object -- the same
@@ -225,13 +225,13 @@
         (expect (option-value inv :go)))))
 
   (it "resolves alias targets"
-    (with-parsed-argv (inv (make-app :name "demo"
-                                     :global-options (list (make-option :name "profile"
-                                                                        :aliases '("p")
-                                                                        :kind :value)
-                                                           (make-option :name "config"
-                                                                        :kind :value
-                                                                        :requires '("p"))))
+    (with-parsed-argv (inv (demo-app
+                            :global-options (list (make-option :name "profile"
+                                                               :aliases '("p")
+                                                               :kind :value)
+                                                  (make-option :name "config"
+                                                               :kind :value
+                                                               :requires '("p"))))
                            '("demo" "--config" "dev.toml" "--p" "dev"))
       (expect (string= (option-value inv :profile) "dev"))
       (expect (string= (option-value inv :config) "dev.toml"))))
@@ -252,13 +252,13 @@
         (parse-argv app '("fmt" "--table" "--json")))))
 
   (it "keeps conflicts declared outside an exclusive group"
-    (let ((app (make-app :name "demo"
-                         :global-options
-                         (cons (make-option :name "quiet" :kind :flag
-                                            :conflicts-with '(:verbose))
-                               (exclusive-group
-                                (make-option :name "verbose" :kind :flag)
-                                (make-option :name "silent" :kind :flag))))))
+    (let ((app (demo-app
+                :global-options
+                (cons (make-option :name "quiet" :kind :flag
+                                   :conflicts-with '(:verbose))
+                      (exclusive-group
+                       (make-option :name "verbose" :kind :flag)
+                       (make-option :name "silent" :kind :flag))))))
       (signals cli-conflicting-options
         (parse-argv app '("demo" "--verbose" "--silent")))
       (signals cli-conflicting-options

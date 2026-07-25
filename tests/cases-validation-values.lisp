@@ -6,7 +6,7 @@
                                :env-var "COUNT"
                                :default "1")))
       (with-parsed-argv-with-environment-variable-reader
-          (inv (make-app :name "demo" :global-options (list count))
+          (inv (demo-app :global-options (list count))
                '("demo")
                (lambda (name)
                  (declare (ignore name))
@@ -18,7 +18,7 @@
                                :env-var "COUNT"
                                :default "1")))
       (with-parsed-argv-with-environment-variable-reader
-          (inv (make-app :name "demo" :global-options (list count))
+          (inv (demo-app :global-options (list count))
                '("demo" "--count" "9")
                (lambda (name)
                  (declare (ignore name))
@@ -30,7 +30,7 @@
                                :env-vars '("PRIMARY_COUNT" "FALLBACK_COUNT")
                                :parser #'parse-integer)))
       (with-parsed-argv-with-environment-variable-reader
-          (inv (make-app :name "demo" :global-options (list count))
+          (inv (demo-app :global-options (list count))
                '("demo")
                (lambda (name)
                  (cond
@@ -43,7 +43,7 @@
     (let ((count (value-option "count"
                                :default "42"
                                :parser #'parse-integer)))
-      (with-parsed-argv (inv (make-app :name "demo" :global-options (list count))
+      (with-parsed-argv (inv (demo-app :global-options (list count))
                              '("demo"))
         (expect (= (option-value inv :count) 42)))))
 
@@ -52,7 +52,7 @@
                               :choices '("dev" "prod")
                               :default "staging")))
       (signals cli-invalid-option-value
-        (parse-argv (make-app :name "demo" :global-options (list mode))
+        (parse-argv (demo-app :global-options (list mode))
                     '("demo")))))
 
   (it "uses the option parser for repeated string defaults"
@@ -60,7 +60,7 @@
                                :multiple-p t
                                :default '("8080" "9090")
                                :parser #'parse-integer)))
-      (with-parsed-argv (inv (make-app :name "demo" :global-options (list ports))
+      (with-parsed-argv (inv (demo-app :global-options (list ports))
                              '("demo"))
         (expect (equal (option-value inv :port) '(8080 9090))))))
 
@@ -68,8 +68,8 @@
     (let ((include (value-option "include"
                                  :short #\I
                                  :multiple-p t)))
-      (with-parsed-argv (inv (make-app :name "demo"
-                                       :global-options (list include))
+      (with-parsed-argv (inv (demo-app
+                              :global-options (list include))
                              '("demo" "-I" "src" "--include=tests" "-Ilib"))
         (expect (equal (option-value inv :include)
                        '("src" "tests" "lib"))))))
@@ -78,8 +78,8 @@
     (let ((include (value-option "include"
                                  :multiple-p t
                                  :default '("src" "tests"))))
-      (with-parsed-argv (inv (make-app :name "demo"
-                                       :global-options (list include))
+      (with-parsed-argv (inv (demo-app
+                              :global-options (list include))
                              '("demo"))
         (expect (equal (option-value inv :include)
                        '("src" "tests"))))))
@@ -97,6 +97,6 @@
     (let ((mode (value-option "mode"
                               :choices '("dev" "prod"))))
       (signals cli-invalid-option-value
-        (with-parsed-argv (inv (make-app :name "demo" :global-options (list mode))
+        (with-parsed-argv (inv (demo-app :global-options (list mode))
                                '("demo" "--mode" "staging"))
           inv)))))

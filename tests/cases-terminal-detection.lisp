@@ -57,6 +57,17 @@ is a usage error -- the reliable trigger for run-app's stderr help path."
   (it "never treats a string-output-stream as a terminal"
     (expect (eq nil (cl-cli::%stream-tty-p (make-string-output-stream)))))
 
+  (it "unwraps a synonym-stream to its underlying target"
+    (let* ((target (make-string-output-stream))
+           (*standard-output* target))
+      (expect (eq (cl-cli::%resolve-output-stream (make-synonym-stream '*standard-output*))
+                 target))))
+
+  (it "unwraps a two-way-stream to its output component"
+    (let* ((output (make-string-output-stream))
+           (two-way (make-two-way-stream (make-string-input-stream "") output)))
+      (expect (eq (cl-cli::%resolve-output-stream two-way) output))))
+
   (it "passes an explicit :width integer and NIL through unchanged"
     (with-env (("COLUMNS" "40"))
       (expect (eql 100 (cl-cli::%resolve-help-width 100 (make-string-output-stream))))

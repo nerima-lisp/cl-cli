@@ -73,8 +73,8 @@
       (expect (= (count #\[ text) (count #\] text)))))
 
   (it "routes through the docs command as the json format"
-    (let* ((app (make-app :name "demo"
-                          :commands (list (make-docs-command))))
+    (let* ((app (demo-app
+                 :commands (list (make-docs-command))))
            (text (with-string-output (stdout)
                    (run-app app :argv '("demo" "docs" "json") :stdout stdout))))
       (assert-searches text "\"name\":\"demo\"")))

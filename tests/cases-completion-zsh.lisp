@@ -2,13 +2,13 @@
 
 (describe-sequential "completion zsh"
   (it "completes nested subcommands with accumulated option scope"
-    (let* ((app (make-app :name "demo"
-                          :global-options (list (make-option :name "verbose" :kind :flag))
-                          :commands (list (make-command
-                                           :name "remote"
-                                           :options (list (make-option :name "porcelain" :kind :flag))
-                                           :subcommands (list (make-command :name "add")
-                                                              (make-command :name "remove"))))))
+    (let* ((app (demo-app
+                 :global-options (list (make-option :name "verbose" :kind :flag))
+                 :commands (list (make-command
+                                  :name "remote"
+                                  :options (list (make-option :name "porcelain" :kind :flag))
+                                  :subcommands (list (make-command :name "add")
+                                                     (make-command :name "remove"))))))
            (text (render-completion app "zsh")))
       (assert-searches text
                        "case \"${words[3]}\" in"

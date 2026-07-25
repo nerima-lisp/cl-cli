@@ -1,9 +1,9 @@
 (in-package :cl-cli/tests)
 
 (defun builtin-arg-app ()
-  (make-app :name "demo"
-            :commands (make-standard-commands :include-completion-p t
-                                              :include-docs-p t)))
+  (demo-app
+   :commands (make-standard-commands :include-completion-p t
+                                     :include-docs-p t)))
 
 (describe-sequential "built-in command arg completion"
   (it "offers shell names after the completion command in bash"

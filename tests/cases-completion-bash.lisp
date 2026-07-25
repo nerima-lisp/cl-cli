@@ -4,9 +4,9 @@
   (it "consumes a pending expect_value into candidate completion"
     ;; Regression: the `case "$prev"` scan set expect_value / value_source but
     ;; nothing turned them into COMPREPLY, so `--opt <TAB>` completed nothing.
-    (let* ((app (make-app :name "demo"
-                          :global-options (list (make-option :name "mode" :kind :value
-                                                             :choices '("dev" "prod")))))
+    (let* ((app (demo-app
+                 :global-options (list (make-option :name "mode" :kind :value
+                                                    :choices '("dev" "prod")))))
            (text (render-completion app "bash")))
       (assert-searches text
                        "_init_completion -s"
@@ -16,13 +16,13 @@
                        "for comp_value in \"${value_source[@]}\"; do")))
 
   (it "completes nested subcommands and their option scope"
-    (let* ((app (make-app :name "demo"
-                          :global-options (list (make-option :name "verbose" :kind :flag))
-                          :commands (list (make-command
-                                           :name "remote"
-                                           :options (list (make-option :name "porcelain" :kind :flag))
-                                           :subcommands (list (make-command :name "add")
-                                                              (make-command :name "remove"))))))
+    (let* ((app (demo-app
+                 :global-options (list (make-option :name "verbose" :kind :flag))
+                 :commands (list (make-command
+                                  :name "remote"
+                                  :options (list (make-option :name "porcelain" :kind :flag))
+                                  :subcommands (list (make-command :name "add")
+                                                     (make-command :name "remove"))))))
            (text (render-completion app "bash")))
       (assert-searches text
                        ;; nested subcommand names offered at the next word
@@ -98,16 +98,16 @@
         "'compile:--profile=*'")))
 
   (it "preserves spaces in static option and positional candidates"
-    (let* ((app (make-app :name "demo"
-                          :global-options
-                          (list (make-option :name "mode"
-                                             :kind :value
-                                             :choices '("dark mode" "light")))
-                          :positionals
-                          (list (make-positional
-                                 :key :target
-                                 :completion-candidates
-                                 '(("src dir" . nil) ("dist" . nil))))))
+    (let* ((app (demo-app
+                 :global-options
+                 (list (make-option :name "mode"
+                                    :kind :value
+                                    :choices '("dark mode" "light")))
+                 :positionals
+                 (list (make-positional
+                        :key :target
+                        :completion-candidates
+                        '(("src dir" . nil) ("dist" . nil))))))
            (text (render-completion app "bash")))
       (assert-searches text
                        "value_source=('dark mode' 'light')"

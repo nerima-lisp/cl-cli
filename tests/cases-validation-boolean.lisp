@@ -5,8 +5,8 @@
     (let* ((threads (make-option :name "threads"
                                  :short #\t
                                  :kind :boolean))
-           (app (make-app :name "demo"
-                          :global-options (list threads))))
+           (app (demo-app
+                 :global-options (list threads))))
       (expect (eq (option-value (parse-argv app '("demo" "--threads")) :threads) t))
       (expect (eq (option-value (parse-argv app '("demo" "--no-threads")) :threads) nil))
       (expect (eq (option-value (parse-argv app '("demo" "-t")) :threads) t))))
@@ -14,8 +14,8 @@
   (it "rejects attached values"
     (let* ((threads (make-option :name "threads"
                                  :kind :boolean))
-           (app (make-app :name "demo"
-                          :global-options (list threads))))
+           (app (demo-app
+                 :global-options (list threads))))
       (signals cli-usage-error
         (parse-argv app '("demo" "--threads=false")))))
 
@@ -32,8 +32,8 @@
                                 :kind :boolean
                                 :env-var "CC_THREADS")))
       (with-parsed-argv-with-environment-variable-reader
-          (inv (make-app :name "demo"
-                         :global-options (list threads))
+          (inv (demo-app
+                :global-options (list threads))
                '("demo")
                (lambda (name)
                  (if (string= name "CC_THREADS")
@@ -45,8 +45,8 @@
     (let* ((threads (make-option :name "threads"
                                  :kind :boolean
                                  :env-var "CC_THREADS"))
-           (app (make-app :name "demo"
-                          :global-options (list threads))))
+           (app (demo-app
+                 :global-options (list threads))))
       (with-environment-variable-reader
           ((lambda (name)
              (if (string= name "CC_THREADS")

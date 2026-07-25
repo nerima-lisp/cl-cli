@@ -90,9 +90,9 @@
 
   (it "help command respects run-app stdout"
     (let* ((help-command (make-help-command))
-           (app (make-app :name "demo"
-                          :summary "Demo app."
-                          :commands (list help-command)))
+           (app (demo-app
+                 :summary "Demo app."
+                 :commands (list help-command)))
            (exit-code nil)
            (text (with-string-output (stdout)
                    (setf exit-code (run-app app :argv '("demo" "help") :stdout stdout)))))
@@ -105,8 +105,8 @@
                      :options (list (make-option :name "config"
                                                  :kind :value
                                                  :required-p t))))
-           (app (make-app :name "demo"
-                          :commands (list command))))
+           (app (demo-app
+                 :commands (list command))))
       (caught-signal= (cli-missing-option-value condition)
           (parse-argv app '("demo" "run"))
         (:eq cli-usage-error-app app)
@@ -118,7 +118,7 @@
                      :options (list (make-option :name "config"
                                                  :kind :value
                                                  :required-p t))))
-           (app (make-app :name "demo" :commands (list command)))
+           (app (demo-app :commands (list command)))
            (exit-code nil)
            (text (with-string-output (stderr)
                    (setf exit-code (run-app app
@@ -145,10 +145,10 @@
       (expect (string= text ""))))
 
   (it "run-app returns 70 for unhandled handler errors"
-    (let* ((app (make-app :name "demo"
-                          :handler (lambda (invocation)
-                                     (declare (ignore invocation))
-                                     (error "boom"))))
+    (let* ((app (demo-app
+                 :handler (lambda (invocation)
+                            (declare (ignore invocation))
+                            (error "boom"))))
            (exit-code nil)
            (text (with-string-output (stderr)
                    (setf exit-code (run-app app
@@ -160,7 +160,7 @@
 
   (it "run-app strips terminal controls from usage errors"
     (let* ((arg (format nil "~C[31mboom" #\Escape))
-           (app (make-app :name "demo"))
+           (app (demo-app))
            (exit-code nil)
            (text (with-string-output (stderr)
                    (setf exit-code (run-app app
@@ -181,11 +181,11 @@
       (expect (null (position #\Escape text)))))
 
   (it "run-app strips terminal controls from internal error diagnostics"
-    (let* ((app (make-app :name "demo"
-                          :handler (lambda (invocation)
-                                     (declare (ignore invocation))
-                                     (error (format nil "bad~C[31mred~C[0m~%next"
-                                                    #\Escape #\Escape)))))
+    (let* ((app (demo-app
+                 :handler (lambda (invocation)
+                            (declare (ignore invocation))
+                            (error (format nil "bad~C[31mred~C[0m~%next"
+                                           #\Escape #\Escape)))))
            (exit-code nil)
            (text (with-string-output (stderr)
                    (setf exit-code (run-app app
@@ -198,7 +198,7 @@
 
   (it "run-app strips terminal controls from version output"
     (let* ((version (format nil "1.0~C[31mred~%next" #\Escape))
-           (app (make-app :name "demo" :version version))
+           (app (demo-app :version version))
            (stderr (make-string-output-stream))
            (exit-code nil)
            (stdout
@@ -214,13 +214,13 @@
       (expect (null (position #\Escape stdout)))))
 
   (it "app help hides version when app version is missing"
-    (let ((app (make-app :name "demo")))
+    (let ((app (demo-app)))
       (with-app-help-text (text app)
         (assert-searches text "Global Options:" "-h, --help")
         (assert-not-searches text "-V, --version"))))
 
   (it "app help hides version for whitespace version string"
-    (let ((app (make-app :name "demo" :version "   ")))
+    (let ((app (demo-app :version "   ")))
       (with-app-help-text (text app)
         (assert-not-searches text "-V, --version"))))
 
@@ -228,9 +228,9 @@
     (let* ((command (make-command :name "compile"
                                   :aliases '("build" "c")
                                   :description "Compile sources."))
-           (app (make-app :name "demo"
-                          :version "1.0.0"
-                          :commands (list command))))
+           (app (demo-app
+                 :version "1.0.0"
+                 :commands (list command))))
       (with-app-help-text (text app)
         (assert-searches text "compile (build, c)" "-V, --version"))))
 
@@ -247,16 +247,16 @@
                                  :description "Inspect the environment."))
            (help (make-command :name "help"
                                :description "Show help."))
-           (app (make-app :name "demo"
-                          :commands (list compile test doctor help))))
+           (app (demo-app
+                 :commands (list compile test doctor help))))
       (with-app-help-text (text app)
         (assert-searches text "Commands:" "Build:" "Diagnostics:" "compile" "doctor (diag)")
         (assert-search-order text "  help" "Build:" "Diagnostics:"))))
 
   (it "app help renders examples section"
-    (let ((app (make-app :name "demo"
-                         :examples '("demo compile src/main.lisp"
-                                     "demo test --filter smoke"))))
+    (let ((app (demo-app
+                :examples '("demo compile src/main.lisp"
+                            "demo test --filter smoke"))))
       (with-app-help-text (text app)
         (assert-searches text "Examples:" "  demo compile src/main.lisp" "  demo test --filter smoke"))))
 
@@ -265,13 +265,13 @@
                      :name "run"
                      :examples '("demo run target.lisp"
                                  "demo run target.lisp --verbose")))
-           (app (make-app :name "demo"
-                          :commands (list command))))
+           (app (demo-app
+                 :commands (list command))))
       (with-command-help-text (text app command)
         (assert-searches text "Examples:" "  demo run target.lisp" "  demo run target.lisp --verbose"))))
 
   (it "accepts app help keyword options without an explicit stream"
-    (let* ((app (make-app :name "demo" :summary "Summary."))
+    (let* ((app (demo-app :summary "Summary."))
            (stream (make-string-output-stream)))
       (let ((*standard-output* stream))
         (print-app-help app :width 40))
@@ -282,7 +282,7 @@
 
   (it "accepts command help keyword options without an explicit stream"
     (let* ((command (make-command :name "run" :description "Run target."))
-           (app (make-app :name "demo" :commands (list command)))
+           (app (demo-app :commands (list command)))
            (stream (make-string-output-stream)))
       (let ((*standard-output* stream))
         (print-command-help app command :width 40))
@@ -293,12 +293,12 @@
 
   (it "strips terminal control characters from free-form help text"
     (let* ((escape (string #\Escape))
-           (app (make-app :name "demo"
-                          :summary (format nil "safe~A[2Jtext" escape)
-                          :global-options (list (make-option
-                                                 :name "message"
-                                                 :description (format nil "hello~A[Hworld" escape)))
-                          :examples (list (format nil "demo run~A[31m" escape))))
+           (app (demo-app
+                 :summary (format nil "safe~A[2Jtext" escape)
+                 :global-options (list (make-option
+                                        :name "message"
+                                        :description (format nil "hello~A[Hworld" escape)))
+                 :examples (list (format nil "demo run~A[31m" escape))))
            (text (with-string-output (stream)
                    (print-app-help app stream))))
       (assert-searches text
@@ -313,25 +313,47 @@
                      :options (list (make-option :name "config"
                                                  :kind :value))
                      :positionals (list (make-positional :key :target :required-p t))))
-           (app (make-app :name "demo"
-                          :global-options (list (make-option :name "verbose" :short #\v))
-                          :commands (list command))))
+           (app (demo-app
+                 :global-options (list (make-option :name "verbose" :short #\v))
+                 :commands (list command))))
       (with-command-help-text (text app command)
         (assert-searches text "Usage: demo run [options] TARGET"))))
 
   (it "help command construction"
     (let* ((help-command (make-help-command))
-           (app (make-app :name "demo" :commands (list help-command)))
+           (app (demo-app :commands (list help-command)))
            (inv (parse-argv app '("demo" "help"))))
       (expect (string= (command-name (invocation-command inv)) "help"))))
+
+  (it "help <command> prints that command's own help"
+    (let* ((help-command (make-help-command))
+           (run-command (make-command :name "run" :description "Run target."))
+           (app (demo-app :commands (list help-command run-command)))
+           (exit-code nil)
+           (text (with-string-output (stdout)
+                   (setf exit-code (run-app app :argv '("demo" "help" "run")
+                                            :stdout stdout)))))
+      (expect (zerop exit-code))
+      (assert-searches text "Run target.")))
+
+  (it "help <unknown-command> reports an unknown-command usage error"
+    (let* ((help-command (make-help-command))
+           (app (demo-app :commands (list help-command)))
+           (exit-code nil)
+           (text (with-string-output (stderr)
+                   (setf exit-code (run-app app :argv '("demo" "help" "nope")
+                                            :stderr stderr
+                                            :stdout (make-string-output-stream))))))
+      (expect (= exit-code 64))
+      (assert-searches text "Unknown command: nope")))
 
   (it "command-by-name resolves primary names and aliases"
     (let* ((build (make-command :name "build"
                                 :aliases '("compile" "C")))
            (doctor (make-command :name "doctor"
                                  :hidden-p t))
-           (app (make-app :name "demo"
-                          :commands (list build doctor))))
+           (app (demo-app
+                 :commands (list build doctor))))
       (expect (eq (command-by-name app "build") build))
       (expect (eq (command-by-name app "COMPILE") build))
       (expect (eq (command-by-name app "c") build))

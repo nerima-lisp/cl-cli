@@ -13,7 +13,7 @@
   (it "parses command and positionals"
     (let* ((option-specs (list (value-option "output" :short #\o)))
            (positional-specs (list (make-positional :key :input :required-p t)))
-           (app (make-app :name "demo")))
+           (app (demo-app)))
       (multiple-value-bind (option-values positional-values action)
           (cl-cli::parse-mixed-arguments app
                                          '("-o" "out.bin" "input.lisp")
@@ -111,7 +111,7 @@
                      :options (list (make-option :name "config"
                                                  :kind :value
                                                  :required-p t))))
-           (app (make-app :name "demo" :commands (list command))))
+           (app (demo-app :commands (list command))))
       (signals cli-missing-option-value
         (parse-argv app '("demo" "run")))))
 
@@ -122,7 +122,7 @@
                                                  :kind :value
                                                  :required-p t))
                      :positionals (list (make-positional :key :input :required-p t))))
-           (app (make-app :name "demo" :commands (list command))))
+           (app (demo-app :commands (list command))))
       (with-parsed-argv (inv app '("demo" "compile" "--help"))
         (expect (eq (invocation-action inv) :help))
         (expect (string= (command-name (invocation-command inv)) "compile")))))
@@ -130,7 +130,7 @@
   (it "suggests nearest match for unknown commands"
     (let* ((command (make-command :name "compile"
                                   :aliases '("build")))
-           (app (make-app :name "demo" :commands (list command))))
+           (app (demo-app :commands (list command))))
       (caught-signal= (cli-unknown-command condition)
           (parse-argv app '("demo" "compiel"))
         (:searches cli-error-message "Did you mean: compile?"))))
@@ -140,8 +140,8 @@
            (hidden-command (make-command :name "internal-rebuild"
                                          :aliases '("irebuild")
                                          :hidden-p t))
-           (app (make-app :name "demo"
-                          :commands (list public-command hidden-command))))
+           (app (demo-app
+                 :commands (list public-command hidden-command))))
       (catching-signal (cli-unknown-command condition)
         (parse-argv app '("demo" "internal-rebiuld"))
         (assert-searches (cli-error-message condition)
@@ -159,14 +159,14 @@
       (make-positional)))
 
   (it "parses option aliases"
-    (with-parsed-argv (inv (make-app :name "demo"
-                                     :global-options
-                                     (list (make-option :name "verbose"
-                                                        :aliases '("chatty")
-                                                        :kind :flag)
-                                           (make-option :name "threads"
-                                                        :aliases '("parallel")
-                                                        :kind :boolean)))
+    (with-parsed-argv (inv (demo-app
+                            :global-options
+                            (list (make-option :name "verbose"
+                                               :aliases '("chatty")
+                                               :kind :flag)
+                                  (make-option :name "threads"
+                                               :aliases '("parallel")
+                                               :kind :boolean)))
                            '("demo" "--chatty" "--no-parallel"))
       (option-values= inv :verbose t :threads nil)))
 
@@ -174,7 +174,7 @@
     (let* ((command (make-command :name "compile"
                                   :aliases '("build")
                                   :description "Compile sources."))
-           (app (make-app :name "demo" :commands (list command))))
+           (app (demo-app :commands (list command))))
       (with-parsed-argv (inv app '("demo" "build"))
         (expect (string= (command-name (invocation-command inv)) "compile")))))
 

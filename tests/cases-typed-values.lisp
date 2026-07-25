@@ -11,10 +11,15 @@
                           '("tool" "--count" "42"))
       (expect (eql (option-value inv :count) 42))))
 
-  (it "rejects non-integer values"
+  (it-each (("rejects a non-integer value" (:type :integer) "4x")
+            ("rejects a value below the inclusive minimum" (:type :integer :min 1) "0")
+            ("rejects a value above the inclusive maximum" (:type :integer :max 10) "11"))
+      "~A"
+      (label option-args input)
+    (declare (ignore label))
     (signals cli-invalid-option-value
-      (parse-argv (typed-option-app :type :integer)
-                  '("tool" "--count" "4x"))))
+      (parse-argv (apply #'typed-option-app option-args)
+                  (list "tool" "--count" input))))
 
   (it "reports the failing option in the invalid-value condition"
     (caught-signal= (cli-invalid-option-value condition)
@@ -22,16 +27,6 @@
                     '("tool" "--count" "nope"))
       (:eq cli-invalid-option-value-name :count)
       (:equal cli-invalid-option-value-value "nope")))
-
-  (it "enforces an inclusive minimum bound"
-    (signals cli-invalid-option-value
-      (parse-argv (typed-option-app :type :integer :min 1)
-                  '("tool" "--count" "0"))))
-
-  (it "enforces an inclusive maximum bound"
-    (signals cli-invalid-option-value
-      (parse-argv (typed-option-app :type :integer :max 10)
-                  '("tool" "--count" "11"))))
 
   (it "accepts a value inside the range"
     (with-parsed-argv (inv (typed-option-app :type :integer :min 1 :max 10)

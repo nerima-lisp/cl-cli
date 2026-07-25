@@ -4,10 +4,6 @@
   (with-string-output (stream)
     (render-completion app shell stream)))
 
-(defmacro with-completion-fixture ((app &rest initargs) &body body)
-  `(let ((,app (make-completion-fixture ,@initargs)))
-     ,@body))
-
 (defmacro assert-completion-searches ((app &optional (shell "bash")) &rest needles)
   `(assert-searches (completion-text ,app ,shell)
      ,@needles))

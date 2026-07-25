@@ -3,8 +3,8 @@
 (describe-sequential "completion commands"
   (it "prints completion scripts"
     (let* ((command (make-completion-command))
-           (app (make-app :name "demo"
-                          :commands (list command))))
+           (app (demo-app
+                 :commands (list command))))
       (assert-completion-searches-for-shells (app)
         ("bash"
          "#!/usr/bin/env bash"
@@ -32,8 +32,8 @@
          "set edit:completion:arg-completer['demo'] ="))))
 
   (it "rejects unsupported shells"
-    (let ((app (make-app :name "demo"
-                         :commands (list (make-completion-command)))))
+    (let ((app (demo-app
+                :commands (list (make-completion-command)))))
       (signals cli-invalid-positional-value
         (parse-argv app '("demo" "completion" "tcsh")))))
 
@@ -56,11 +56,11 @@
       (expect (string= "completion" (command-name (first commands))))))
 
   (it "standard commands support app dispatch"
-    (let* ((app (make-app :name "demo"
-                          :version "1.2.3"
-                          :commands (append
-                                     (make-standard-commands :include-completion-p t)
-                                     (list (make-command :name "serve")))))
+    (let* ((app (demo-app
+                 :version "1.2.3"
+                 :commands (append
+                            (make-standard-commands :include-completion-p t)
+                            (list (make-command :name "serve")))))
            (version-exit-code nil)
            (version-text (with-string-output (stdout)
                            (setf version-exit-code (run-app app
@@ -73,8 +73,8 @@
       (assert-searches completion-text "completion")))
 
   (it "version without app version prints only the app name"
-    (let* ((app (make-app :name "demo"
-                          :commands (list (make-version-command))))
+    (let* ((app (demo-app
+                 :commands (list (make-version-command))))
            (exit-code nil)
            (text (with-string-output (stdout)
                    (setf exit-code (run-app app
@@ -85,19 +85,19 @@
 
   (it "render-completion rejects unsupported shells"
     (signals cli-invalid-positional-value
-      (render-completion (make-app :name "demo") "tcsh")))
+      (render-completion (demo-app) "tcsh")))
 
   (it "renders a PowerShell native argument completer"
-    (let* ((app (make-app :name "demo"
-                          :global-options (list (make-option :name "verbose"
-                                                             :short #\v
-                                                             :kind :count))
-                          :commands (list (make-command
-                                           :name "compile"
-                                           :aliases '("build")
-                                           :options (list (make-option :name "output"
-                                                                       :short #\o
-                                                                       :kind :value))))))
+    (let* ((app (demo-app
+                 :global-options (list (make-option :name "verbose"
+                                                    :short #\v
+                                                    :kind :count))
+                 :commands (list (make-command
+                                  :name "compile"
+                                  :aliases '("build")
+                                  :options (list (make-option :name "output"
+                                                              :short #\o
+                                                              :kind :value))))))
            (text (render-powershell-completion app)))
       (assert-searches text
                        "Register-ArgumentCompleter -Native -CommandName 'demo'"
@@ -110,28 +110,28 @@
                        "CompletionResult")))
 
   (it "does not treat PowerShell completion prefixes as wildcard patterns"
-    (let ((text (render-powershell-completion (make-app :name "demo"))))
+    (let ((text (render-powershell-completion (demo-app))))
       (assert-searches text "$_.StartsWith($wordToComplete, [System.StringComparison]::Ordinal)")
       (assert-not-searches text "-like \"$wordToComplete*\"")))
 
   (it "omits hidden entities from the PowerShell completer"
-    (let* ((app (make-app :name "demo"
-                          :global-options (list (flag-option "secret" :hidden-p t))
-                          :commands (list (make-command :name "ghost" :hidden-p t))))
+    (let* ((app (demo-app
+                 :global-options (list (flag-option "secret" :hidden-p t))
+                 :commands (list (make-command :name "ghost" :hidden-p t))))
            (text (render-powershell-completion app)))
       (assert-not-searches text "secret" "ghost")))
 
   (it "renders a Nushell extern with commands and global flags"
-    (let* ((app (make-app :name "demo"
-                          :global-options (list (make-option :name "verbose"
-                                                             :short #\v
-                                                             :kind :flag
-                                                             :description "Be loud.")
-                                                (make-option :name "output"
-                                                             :short #\o
-                                                             :kind :value))
-                          :commands (list (make-command :name "compile")
-                                          (make-command :name "test"))))
+    (let* ((app (demo-app
+                 :global-options (list (make-option :name "verbose"
+                                                    :short #\v
+                                                    :kind :flag
+                                                    :description "Be loud.")
+                                       (make-option :name "output"
+                                                    :short #\o
+                                                    :kind :value))
+                 :commands (list (make-command :name "compile")
+                                 (make-command :name "test"))))
            (text (render-nushell-completion app)))
       (assert-searches text
                        "def \"nu-complete demo command\" []"
@@ -143,19 +143,19 @@
                        "--help(-h)")))
 
   (it "omits hidden entities from the Nushell completer"
-    (let* ((app (make-app :name "demo"
-                          :global-options (list (flag-option "secret" :hidden-p t))
-                          :commands (list (make-command :name "ghost" :hidden-p t))))
+    (let* ((app (demo-app
+                 :global-options (list (flag-option "secret" :hidden-p t))
+                 :commands (list (make-command :name "ghost" :hidden-p t))))
            (text (render-nushell-completion app)))
       (assert-not-searches text "secret" "ghost")))
 
   (it "renders an Elvish arg-completer with commands and options"
-    (let* ((app (make-app :name "demo"
-                          :global-options (list (make-option :name "verbose"
-                                                             :short #\v
-                                                             :kind :flag))
-                          :commands (list (make-command :name "compile")
-                                          (make-command :name "test"))))
+    (let* ((app (demo-app
+                 :global-options (list (make-option :name "verbose"
+                                                    :short #\v
+                                                    :kind :flag))
+                 :commands (list (make-command :name "compile")
+                                 (make-command :name "test"))))
            (text (render-elvish-completion app)))
       (assert-searches text
                        "set edit:completion:arg-completer['demo'] = {|@words|"
@@ -165,25 +165,25 @@
                        "put $@options")))
 
   (it "omits hidden entities from the Elvish completer"
-    (let* ((app (make-app :name "demo"
-                          :global-options (list (flag-option "secret" :hidden-p t))
-                          :commands (list (make-command :name "ghost" :hidden-p t))))
+    (let* ((app (demo-app
+                 :global-options (list (flag-option "secret" :hidden-p t))
+                 :commands (list (make-command :name "ghost" :hidden-p t))))
            (text (render-elvish-completion app)))
       (assert-not-searches text "secret" "ghost")))
 
   (it "strips controls from flat shell completion static fields"
     (let* ((bad-candidate (format nil "bad~Cvalue" #\Newline))
            (bad-description (format nil "first~Csecond~Cdone" #\Tab #\Esc))
-           (app (make-app :name "demo"
-                          :global-options
-                          (list (make-option :name "verbose"
-                                             :kind :flag
-                                             :description bad-description))
-                          :positionals
-                          (list (make-positional :key :target
-                                                 :completion-candidates
-                                                 (list bad-candidate)))
-                          :commands (list (make-command :name "run"))))
+           (app (demo-app
+                 :global-options
+                 (list (make-option :name "verbose"
+                                    :kind :flag
+                                    :description bad-description))
+                 :positionals
+                 (list (make-positional :key :target
+                                        :completion-candidates
+                                        (list bad-candidate)))
+                 :commands (list (make-command :name "run"))))
            (powershell (render-powershell-completion app))
            (nushell (render-nushell-completion app))
            (elvish (render-elvish-completion app)))
@@ -194,9 +194,9 @@
       (assert-searches elvish "'bad value'")))
 
   (it "renderers return the script as a string when no stream is given"
-    (let ((app (make-app :name "demo"
-                         :global-options (list (make-option :name "verbose" :kind :flag))
-                         :commands (list (make-command :name "serve")))))
+    (let ((app (demo-app
+                :global-options (list (make-option :name "verbose" :kind :flag))
+                :commands (list (make-command :name "serve")))))
       ;; With no stream, each renderer returns exactly what the stream form
       ;; writes, so the documented `(write-string (render-completion ...))`
       ;; pattern works instead of returning no values.
