@@ -30,6 +30,15 @@
       (expect (equal (cl-cli::positional-spec-completion-candidates p)
                      '(("a" . "First"))))))
 
+  (it "accepts a (value description) proper-list candidate, not just a dotted pair"
+    (let ((p (make-positional :key :x :completion-candidates '(("a" "First")))))
+      (expect (equal (cl-cli::positional-spec-completion-candidates p)
+                     '(("a" . "First"))))))
+
+  (it "rejects a completion candidate list with more than one description element"
+    (signals-invalid-specification
+      (make-positional :key :x :completion-candidates '(("a" "First" "extra")))))
+
   (it "exposes positional candidates and choices in json"
     (let ((text (with-string-output (s) (render-json (positional-completion-app) s))))
       (assert-searches text "\"choices\":[\"dev\",\"prod\"]"
