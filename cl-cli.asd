@@ -45,6 +45,7 @@
                (:file "src/parser-core")
                (:file "src/parser-dispatch")
                (:file "src/help-style")
+               (:file "src/help-metadata")
                (:file "src/help-renderers")
                (:file "src/help-printers")
                (:file "src/help-commands")
