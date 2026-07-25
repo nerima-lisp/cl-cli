@@ -93,6 +93,22 @@ same fix applied to the bash renderer."
 (defun %completion-zsh-write-command-case-source (stream app command)
   (%completion-zsh-write-command-node stream app command (app-global-options app) 2))
 
+(defun %completion-zsh-write-positional-fallback (app stream indent)
+  "Write INDENT-prefixed compadd/_files fallback lines for APP's own
+positionals. Shared by RENDER-ZSH-COMPLETION's two tail branches -- the
+`case \"$command_word\"` default arm (6-space INDENT) and the no-commands
+top-level body (2-space INDENT) -- which offer the same positional
+candidates/hints but at different nesting depths."
+  (let ((positional-values (%completion-app-positional-values app)))
+    (when positional-values
+      (format stream "~Acompadd -- " indent)
+      (%completion-write-space-joined-quoted stream positional-values)
+      (format stream "~%")))
+  (when (%completion-app-positional-hint-p app :file)
+    (format stream "~A_files~%" indent))
+  (when (%completion-app-positional-hint-p app :dir)
+    (format stream "~A_files -/~%" indent)))
+
 (defun render-zsh-completion (app &optional stream)
   "Render a zsh completion script.
 
@@ -132,15 +148,7 @@ write the script to it and return no values."
           (format stream "        _describe 'options' option_specs~%")
           (format stream "        return 0~%")
           (format stream "      fi~%")
-          (let ((positional-values (%completion-app-positional-values app)))
-            (when positional-values
-              (format stream "      compadd -- ")
-              (%completion-write-space-joined-quoted stream positional-values)
-              (format stream "~%")))
-          (when (%completion-app-positional-hint-p app :file)
-            (format stream "      _files~%"))
-          (when (%completion-app-positional-hint-p app :dir)
-            (format stream "      _files -/~%"))
+          (%completion-zsh-write-positional-fallback app stream "      ")
           (format stream "      _describe 'commands' command_specs~%")
           (format stream "      return 0~%")
           (format stream "      ;;~%")
@@ -150,15 +158,7 @@ write the script to it and return no values."
           (format stream "    _describe 'options' option_specs~%")
           (format stream "    return 0~%")
           (format stream "  fi~%")
-          (let ((positional-values (%completion-app-positional-values app)))
-            (when positional-values
-              (format stream "  compadd -- ")
-              (%completion-write-space-joined-quoted stream positional-values)
-              (format stream "~%")))
-          (when (%completion-app-positional-hint-p app :file)
-            (format stream "  _files~%"))
-          (when (%completion-app-positional-hint-p app :dir)
-            (format stream "  _files -/~%"))))
+          (%completion-zsh-write-positional-fallback app stream "  ")))
     (format stream "}~%")
     (format stream "compdef ~A " function-name)
     (%completion-write-shell-quoted stream app-name)
