@@ -1,10 +1,22 @@
 (in-package :cl-cli)
 
+(defparameter +completion-shells+
+  (list (cons "bash" #'render-bash-completion)
+        (cons "zsh" #'render-zsh-completion)
+        (cons "fish" #'render-fish-completion)
+        (cons "powershell" #'render-powershell-completion)
+        (cons "nushell" #'render-nushell-completion)
+        (cons "elvish" #'render-elvish-completion))
+  "Canonical (NAME . RENDERER-FUNCTION) pairs for every supported completion
+shell -- the single source of truth for shell-name validation, dispatch, and
+completion candidates. This file loads after every completion-renderers-*.lisp
+file (see cl-cli.asd), so the renderer functions already exist when this list
+is built.")
+
 (defun %parse-supported-shell (value)
   (let ((shell (canonical-name value)))
     (cond
-      ((member shell '("bash" "zsh" "fish" "powershell" "nushell" "elvish")
-               :test #'string=)
+      ((assoc shell +completion-shells+ :test #'string=)
        shell)
       ;; `pwsh` is the executable name for PowerShell Core; accept it as an
       ;; alias so `completion pwsh` works the way a PowerShell user expects.
@@ -20,25 +32,14 @@
 
 (defun render-completion (app shell &optional stream)
   "Render a completion script for SHELL."
-  (let ((resolved-shell (%parse-supported-shell shell)))
-    (cond
-      ((string= resolved-shell "bash")
-       (render-bash-completion app stream))
-      ((string= resolved-shell "zsh")
-       (render-zsh-completion app stream))
-      ((string= resolved-shell "fish")
-       (render-fish-completion app stream))
-      ((string= resolved-shell "powershell")
-       (render-powershell-completion app stream))
-      ((string= resolved-shell "nushell")
-       (render-nushell-completion app stream))
-      ((string= resolved-shell "elvish")
-       (render-elvish-completion app stream))
-      (t
-       (signal-cli-error 'cli-invalid-positional-value
-                         (format nil "Unsupported completion shell: ~A" shell)
-                         :name :shell
-                         :value shell)))))
+  (let* ((resolved-shell (%parse-supported-shell shell))
+         (entry (assoc resolved-shell +completion-shells+ :test #'string=)))
+    (if entry
+        (funcall (cdr entry) app stream)
+        (signal-cli-error 'cli-invalid-positional-value
+                          (format nil "Unsupported completion shell: ~A" shell)
+                          :name :shell
+                          :value shell))))
 
 (defun make-completion-command (&key (name "completion")
                                      (description "Print shell completion script."))
@@ -57,7 +58,7 @@ SHELL defaults to bash; bash, zsh, fish, powershell, nushell, and elvish are sup
                                        ;; the parser still accepts aliases such
                                        ;; as pwsh / nu.
                                        :completion-candidates
-                                       '("bash" "zsh" "fish" "powershell" "nushell" "elvish")
+                                       (mapcar #'car +completion-shells+)
                                        :required-p nil))
    :handler (lambda (invocation)
               (let ((shell (positional-value invocation :shell)))
