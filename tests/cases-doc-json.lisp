@@ -102,6 +102,21 @@
       (assert-searches text "\"valueCount\":\"*\"")
       (assert-searches text "\"valueCount\":2")))
 
+  (it "declares its own schema version as the first member of every document"
+    ;; A machine-readable format needs a version a consumer can branch on
+    ;; before it trusts any other key. Asserting it comes first is not
+    ;; cosmetic: a reader that streams the document can then decide whether
+    ;; to keep parsing without buffering the whole object. The value is read
+    ;; from the exported constant rather than hard-coded, so a deliberate
+    ;; bump does not have to be re-typed here -- but the position and the
+    ;; type do get pinned.
+    (let* ((text (json-text (manpage-demo-app)))
+           (document (json-kit:parse text)))
+      (expect (eql (gethash "schemaVersion" document) +json-schema-version+))
+      (expect (integerp (gethash "schemaVersion" document)))
+      (expect (eql 0 (search (format nil "{\"schemaVersion\":~D," +json-schema-version+)
+                            text)))))
+
   (it "round-trips escaped strings through an independent JSON reader"
     ;; Substring-searching for the escaped form (above) only proves the
     ;; writer emitted *an* escape sequence, not that it's the *correct* one

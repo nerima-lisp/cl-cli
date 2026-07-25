@@ -209,8 +209,21 @@ existing style of computing its own value expression inline."
       (json-member stream "subcommands" subcommands
                    (lambda () (%json-write-array stream subcommands #'%write-command-json))))))
 
+(defparameter +json-schema-version+ 1
+  "Version of the object shape RENDER-JSON emits, written as its first member.
+
+This is the format's own version, independent of both the cl-cli release and
+the app's `:version'. It gives a consumer something to branch on: a tool
+written against schema 1 can refuse a document it does not understand instead
+of silently misreading a renamed key. Bump it only when the shape changes in a
+way that would break a reader of the previous version -- adding a new
+member is not such a change, since JSON readers ignore members they do not
+know.")
+
 (defun %write-app-json (stream app)
   (with-json-object (stream)
+    (json-member stream "schemaVersion" t
+                 (lambda () (%json-write-number stream +json-schema-version+)))
     (json-member stream "name" t
                  (lambda () (%json-write-escaped-string stream (app-name app))))
     (json-member stream "version" (app-version-string app)
@@ -243,7 +256,11 @@ With no STREAM, return the JSON as a string. With a STREAM, write to it and
 return no values. The object captures the author-declared surface (name,
 version, summary, description, global options, positionals, and per-command
 options/positionals); hidden entities and the help/version built-ins are
-omitted. Output is minified single-line JSON."
+omitted. Output is minified single-line JSON.
+
+The first member is always `schemaVersion', the version of this output shape
+itself -- see +JSON-SCHEMA-VERSION+. Consumers should check it before reading
+the rest."
   (ensure-output-stream stream render-json app)
   (%write-app-json stream app)
   (terpri stream)

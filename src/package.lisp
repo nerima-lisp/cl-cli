@@ -30,6 +30,7 @@
    :render-manpage
    :render-markdown
    :render-json
+   :+json-schema-version+
    :current-process-argv
    :default-runtime-markers
    :extract-application-argv
