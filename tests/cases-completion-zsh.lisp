@@ -56,6 +56,17 @@
         "'--profile=*')"
         "compadd -Q -S '' -- 'dev' 'prod'")))
 
+  (it "excludes a hidden option's own value case from the zsh value cases"
+    (let* ((app (demo-app
+                 :global-options (list (make-option :name "profile" :kind :value
+                                                    :choices '("dev" "prod"))
+                                       (make-option :name "internal-token" :kind :value
+                                                    :hidden-p t
+                                                    :choices '("a" "b")))))
+           (text (render-completion app "zsh")))
+      (assert-searches text "'--profile')" "'dev'" "'prod'")
+      (assert-not-searches text "'--internal-token')" "'a'" "'b'")))
+
   (it "renders candidate descriptions"
     (let ((app (completion-candidate-descriptions-fixture)))
       (assert-completion-searches (app "zsh")
