@@ -113,6 +113,12 @@
       checks = forAllSystems (system:
         let
           pkgs = import nixpkgs { inherit system; };
+          # cl-log-kit (a transitive test dependency, via cl-process-kit)
+          # requires ASDF >= 3.3.1, but every non-SBCL implementation here
+          # bundles an older ASDF baked into its runtime image (ECL 26.5.5
+          # ships 3.1.8.11). ASDF supports reloading a newer version over an
+          # older one in place, so pkgs.asdf's single-file bundle is loaded
+          # before the test system gets a chance to require the old one.
           makeLispCheck = implementation: package:
             pkgs.runCommand "cl-cli-tests-${implementation}"
               {
@@ -132,7 +138,9 @@
                 export HOME="$TMPDIR/home"
                 export XDG_CACHE_HOME="$TMPDIR/cache"
                 mkdir -p "$HOME" "$XDG_CACHE_HOME"
-                ${implementation} --norc --load tests/run-tests.lisp --eval '(cl-cli/tests:run-tests)'
+                ${implementation} --norc \
+                  --load ${pkgs.asdf}/lib/common-lisp/asdf/build/asdf.lisp \
+                  --load tests/run-tests.lisp --eval '(cl-cli/tests:run-tests)'
                 touch "$out"
               '';
           sbcl-check = pkgs.runCommand "cl-cli-tests-sbcl"
