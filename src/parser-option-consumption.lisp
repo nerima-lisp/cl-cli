@@ -103,8 +103,6 @@ leading token up to the next option-like token; :+ requires at least one."
                 (consume-separated-optional-p (first tokens))
                 ((eq (option-kind spec) :optional-value) t)
                 (t (first tokens)))))
-    (when (and (eq (option-kind spec) :flag) raw)
-      (signal-option-does-not-take-value token-name))
     (multiple-value-setq (values action)
       (store-parsed-option-value values spec action raw))
     (when (and (member (option-kind spec) '(:value :key-value))

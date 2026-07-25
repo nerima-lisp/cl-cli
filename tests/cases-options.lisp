@@ -262,4 +262,12 @@
         (expect (equal command-tail '("--json")))
         (positional-values= script-inv
           (:script "build.ns")
-          (:script-argv '("arg1" "arg2")))))))
+          (:script-argv '("arg1" "arg2"))))))
+
+  (it "errors on a missing value for a long option with no trailing tokens"
+    (caught-signal= (cli-missing-option-value condition)
+        (parse-argv (make-app :name "cc"
+                              :global-options (list (make-option :name "config"
+                                                                  :kind :value)))
+                    '("cc" "--config"))
+      (:searches cli-error-message "Missing value for --config"))))
