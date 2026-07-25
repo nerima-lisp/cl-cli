@@ -51,18 +51,34 @@ sets it accepts a positive integer, NIL, or :AUTO; :AUTO resolves via
   (let ((words (remove-if (lambda (w) (zerop (length w)))
                           (uiop:split-string text
                                              :separator '(#\Space #\Tab #\Newline))))
-        (lines nil)
         (current ""))
-    (dolist (word words)
-      (cond
-        ((zerop (length current)) (setf current word))
-        ((<= (+ (length current) 1 (length word)) width)
-         (setf current (concatenate 'string current " " word)))
-        (t (push current lines)
-           (setf current word))))
-    (when (plusp (length current))
-      (push current lines))
-    (nreverse lines)))
+    (collecting
+      (dolist (word words)
+        (cond
+          ((zerop (length current)) (setf current word))
+          ((<= (+ (length current) 1 (length word)) width)
+           (setf current (concatenate 'string current " " word)))
+          (t (collect current)
+             (setf current word))))
+      (when (plusp (length current))
+        (collect current)))))
+
+(defun %group-by-key (items key-fn)
+  "Group ITEMS by (KEY-FN item) into ((key . items-in-that-group) ...).
+
+Keys appear in first-seen order; an item whose key is NIL is excluded (it
+belongs to whatever ungrouped bucket the caller tracks separately)."
+  (let ((order nil)
+        (table (make-hash-table :test #'equal)))
+    (dolist (item items)
+      (let ((key (funcall key-fn item)))
+        (when key
+          (unless (nth-value 1 (gethash key table))
+            (setf (gethash key table) nil)
+            (push key order))
+          (push item (gethash key table)))))
+    (mapcar (lambda (key) (cons key (nreverse (gethash key table))))
+            (nreverse order))))
 
 (defun %emit-help-row (stream padded-name description)
   "Emit a `  NAME  DESCRIPTION` row, word-wrapping DESCRIPTION under *HELP-WIDTH*."

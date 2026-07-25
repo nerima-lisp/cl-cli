@@ -184,16 +184,16 @@ those strings a second time."
   (mapcar #'car (%completion-positional-candidates positional)))
 
 (defun %completion-app-positional-values (app)
-  (let (values)
-    (dolist (positional (app-positionals app) (nreverse values))
+  (collecting
+    (dolist (positional (app-positionals app))
       (dolist (value (%completion-positional-candidate-values positional))
-        (push value values)))))
+        (collect value)))))
 
 (defun %completion-command-positional-values (command)
-  (let (values)
-    (dolist (positional (command-positionals command) (nreverse values))
+  (collecting
+    (dolist (positional (command-positionals command))
       (dolist (value (%completion-positional-candidate-values positional))
-        (push value values)))))
+        (collect value)))))
 
 (defun %completion-positionals-hint-p (positionals hint)
   "True when any positional in POSITIONALS declares :value-hint HINT."

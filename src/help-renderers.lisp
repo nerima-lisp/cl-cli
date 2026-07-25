@@ -112,23 +112,10 @@ are no required options, leaving existing usage lines untouched."
                     :key #'command-name))
 
 (defun %command-sections (commands)
-  (let ((ungrouped nil)
-        (group-order nil)
-        (group-table (make-hash-table :test #'equal)))
-    (dolist (command commands)
-      (let ((group (command-group command)))
-        (if group
-            (progn
-              (unless (gethash group group-table)
-                (setf (gethash group group-table) nil)
-                (push group group-order))
-              (push command (gethash group group-table)))
-            (push command ungrouped))))
+  (let ((ungrouped (remove-if #'command-group commands)))
     (nconc (when ungrouped
-             (list (cons nil (nreverse ungrouped))))
-           (mapcar (lambda (group)
-                     (cons group (nreverse (gethash group group-table))))
-                   (nreverse group-order)))))
+             (list (cons nil ungrouped)))
+           (%group-by-key commands #'command-group))))
 
 (defun %command-description-string (command)
   "COMMAND's description with a trailing deprecation note when applicable.

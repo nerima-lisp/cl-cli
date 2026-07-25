@@ -41,17 +41,7 @@
 
 Groups appear in first-seen order; options without a :group are excluded (they
 belong under the main options heading)."
-  (let ((order nil)
-        (table (make-hash-table :test #'equal)))
-    (dolist (option options)
-      (let ((group (option-help-group option)))
-        (when group
-          (unless (nth-value 1 (gethash group table))
-            (setf (gethash group table) nil)
-            (push group order))
-          (push option (gethash group table)))))
-    (mapcar (lambda (group) (cons group (nreverse (gethash group table))))
-            (nreverse order))))
+  (%group-by-key options #'option-help-group))
 
 (defun %print-options (stream app options &key (title "Options"))
   (let* ((visible (%sorted-visible-options options))
