@@ -137,12 +137,13 @@
   ;; 230-option app that was an O(n^2) hash-table-construction cost. 200
   ;; iterations, same 2000ms budget convention as the completion renderers
   ;; above.
-  (it-each (("manpage") ("markdown"))
+  (it-each (("manpage") ("markdown") ("json"))
       "renders a ~A document for a 230-option/20-command app in well under budget"
       (label)
     (let ((result (benchmark (:warmup 1 :samples 5)
                     (dotimes (i 200)
-                      (if (string= label "manpage")
-                          (render-manpage *benchmark-large-completion-app*)
-                          (render-markdown *benchmark-large-completion-app*))))))
+                      (cond
+                        ((string= label "manpage") (render-manpage *benchmark-large-completion-app*))
+                        ((string= label "markdown") (render-markdown *benchmark-large-completion-app*))
+                        (t (render-json *benchmark-large-completion-app*)))))))
       (expect (< (median-ms result) 2000)))))
