@@ -195,16 +195,7 @@ appears as its own path-qualified entry."
 (defun %manpage-env-backed-options (app)
   "Every visible option (global or on any command, nested included) with env vars."
   (remove-if-not #'option-env-vars
-                 (remove-if #'option-hidden-p
-                            (collecting
-                              (dolist (option (app-global-options app))
-                                (collect option))
-                              (labels ((walk (commands)
-                                         (dolist (command commands)
-                                           (dolist (option (command-options command))
-                                             (collect option))
-                                           (walk (command-subcommands command)))))
-                                (walk (app-commands app)))))))
+                 (remove-if #'option-hidden-p (%all-app-options app))))
 
 (defun %manpage-environment-section (app stream)
   (let ((options (%manpage-env-backed-options app)))

@@ -9,22 +9,13 @@ out to `app __complete KEY` when the word before the cursor is a dynamic option.
 A token that appears on two options resolves to whichever comes first, the same
 single-pool ambiguity the flat completers already accept for their candidate
 lists. KEY-NAME is the downcased option key, matching RENDER-COMPLETE-REPLY."
-  (let ((specs (collecting
-                 (dolist (option (app-global-options app))
-                   (collect option))
-                 (labels ((walk (commands)
-                            (dolist (command commands)
-                              (dolist (option (command-options command))
-                                (collect option))
-                              (walk (command-subcommands command)))))
-                   (walk (app-commands app))))))
-    (collecting
-      (dolist (option specs)
-        (when (and (option-complete option)
-                   (not (option-hidden-p option)))
-          (let ((key (string-downcase (symbol-name (option-key option)))))
-            (dolist (name (%completion-recognized-option-names option))
-              (collect (cons (option-token-display-name name) key)))))))))
+  (collecting
+    (dolist (option (%all-app-options app))
+      (when (and (option-complete option)
+                 (not (option-hidden-p option)))
+        (let ((key (string-downcase (symbol-name (option-key option)))))
+          (dolist (name (%completion-recognized-option-names option))
+            (collect (cons (option-token-display-name name) key))))))))
 
 (defun %completion-zsh-write-option-value-case-body (stream options &key attached-p)
   "Write the `case \"$word\" in ...` body for OPTIONS' value candidates directly to STREAM.

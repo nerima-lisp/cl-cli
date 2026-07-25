@@ -70,3 +70,17 @@ A `help` command added via MAKE-STANDARD-COMMANDS is unaffected."
           (when (string= needle alias)
             (return-from command-by-name command))))
       nil)))
+
+(defun %all-app-options (app)
+  "Every option declared anywhere in APP: global options first, then every
+command's own options in depth-first recursive order (including nested
+subcommands)."
+  (collecting
+    (dolist (option (app-global-options app))
+      (collect option))
+    (labels ((walk (commands)
+               (dolist (command commands)
+                 (dolist (option (command-options command))
+                   (collect option))
+                 (walk (command-subcommands command)))))
+      (walk (app-commands app)))))
