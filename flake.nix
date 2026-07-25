@@ -31,7 +31,12 @@
 
   outputs = { self, nixpkgs, cl-weave, cl-prolog, cl-process-kit, cl-boundary-kit, cl-log-kit, cl-json-kit }:
     let
-      systems = [ "x86_64-linux" ];
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "x86_64-darwin"
+        "aarch64-darwin"
+      ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
       clWeaveSourceDir = cl-weave.outPath;
       clPrologSourceDir = cl-prolog.outPath;
@@ -81,6 +86,39 @@
             license = pkgs.lib.licenses.mit;
           };
         };
+      # The suites in tests/cases-shell-verification.lisp pipe cl-cli's own
+      # generated output through the real tools that will consume it. They
+      # self-skip when a tool is missing, so the tools have to be on PATH
+      # inside the sandbox or the checks silently verify nothing.
+      verificationTools = pkgs: [
+        pkgs.bash
+        pkgs.zsh
+        pkgs.fish
+        pkgs.mandoc
+        pkgs.nushell
+        pkgs.elvish
+        pkgs.powershell
+      ];
+
+      # Sources for the portable half of the suite. Every one of these loads
+      # on SBCL and ECL alike.
+      coreTestSources = {
+        CL_WEAVE_SOURCE_DIR = clWeaveSourceDir;
+        CL_PROLOG_SOURCE_DIR = clPrologSourceDir;
+        CL_JSON_KIT_SOURCE_DIR = clJsonKitSourceDir;
+      };
+
+      # Sources for the shell-verification half. cl-process-kit pulls in
+      # cl-log-kit, which hard-codes sb-thread and therefore only compiles on
+      # SBCL (https://github.com/nerima-lisp/cl-log-kit/issues/1), so only the
+      # SBCL check gets them. tests/run-tests.lisp refuses to load that half
+      # anywhere SB-THREAD is missing regardless; leaving these out keeps the
+      # check's declared inputs honest about what it actually exercises.
+      shellVerificationSources = {
+        CL_PROCESS_KIT_SOURCE_DIR = clProcessKitSourceDir;
+        CL_BOUNDARY_KIT_SOURCE_DIR = clBoundaryKitSourceDir;
+        CL_LOG_KIT_SOURCE_DIR = clLogKitSourceDir;
+      };
     in
     {
       packages = forAllSystems (system:
@@ -96,41 +134,27 @@
           pkgs = import nixpkgs { inherit system; };
         in
         {
-          default = pkgs.mkShell {
+          default = pkgs.mkShell ({
             packages = [
               pkgs.sbcl
+              pkgs.ecl
               pkgs.rlwrap
-            ];
-            CL_WEAVE_SOURCE_DIR = clWeaveSourceDir;
-            CL_PROLOG_SOURCE_DIR = clPrologSourceDir;
-            CL_PROCESS_KIT_SOURCE_DIR = clProcessKitSourceDir;
-            CL_BOUNDARY_KIT_SOURCE_DIR = clBoundaryKitSourceDir;
-            CL_LOG_KIT_SOURCE_DIR = clLogKitSourceDir;
-            CL_JSON_KIT_SOURCE_DIR = clJsonKitSourceDir;
-          };
+            ] ++ verificationTools pkgs;
+          } // coreTestSources // shellVerificationSources);
         });
 
       checks = forAllSystems (system:
         let
           pkgs = import nixpkgs { inherit system; };
-          # cl-log-kit (a transitive test dependency, via cl-process-kit)
-          # requires ASDF >= 3.3.1, but every non-SBCL implementation here
-          # bundles an older ASDF baked into its runtime image (ECL 26.5.5
-          # ships 3.1.8.11). ASDF supports reloading a newer version over an
-          # older one in place, so pkgs.asdf's single-file bundle is loaded
-          # before the test system gets a chance to require the old one.
-          makeLispCheck = implementation: package:
-            pkgs.runCommand "cl-cli-tests-${implementation}"
-              {
-                nativeBuildInputs = [ package ];
+          # `extraArgs` carries the implementation-specific dependency set, so
+          # the only difference between the two checks below is which half of
+          # the suite their environment can reach.
+          makeLispCheck = { name, package, command, extraSources ? { } }:
+            pkgs.runCommand "cl-cli-tests-${name}"
+              ({
+                nativeBuildInputs = [ package ] ++ verificationTools pkgs;
                 src = self;
-                CL_WEAVE_SOURCE_DIR = clWeaveSourceDir;
-                CL_PROLOG_SOURCE_DIR = clPrologSourceDir;
-                CL_PROCESS_KIT_SOURCE_DIR = clProcessKitSourceDir;
-                CL_BOUNDARY_KIT_SOURCE_DIR = clBoundaryKitSourceDir;
-                CL_LOG_KIT_SOURCE_DIR = clLogKitSourceDir;
-                CL_JSON_KIT_SOURCE_DIR = clJsonKitSourceDir;
-              }
+              } // coreTestSources // extraSources)
               ''
                 cp -R "$src" source
                 chmod -R u+w source
@@ -138,42 +162,35 @@
                 export HOME="$TMPDIR/home"
                 export XDG_CACHE_HOME="$TMPDIR/cache"
                 mkdir -p "$HOME" "$XDG_CACHE_HOME"
-                ${implementation} --norc \
-                  --load ${pkgs.asdf}/lib/common-lisp/asdf/build/asdf.lisp \
-                  --load tests/run-tests.lisp --eval '(cl-cli/tests:run-tests)'
+                ${command}
                 touch "$out"
               '';
-          sbcl-check = pkgs.runCommand "cl-cli-tests-sbcl"
-            {
-              nativeBuildInputs = [ pkgs.sbcl ];
-              src = self;
-              CL_WEAVE_SOURCE_DIR = clWeaveSourceDir;
-              CL_PROLOG_SOURCE_DIR = clPrologSourceDir;
-              CL_PROCESS_KIT_SOURCE_DIR = clProcessKitSourceDir;
-              CL_BOUNDARY_KIT_SOURCE_DIR = clBoundaryKitSourceDir;
-              CL_LOG_KIT_SOURCE_DIR = clLogKitSourceDir;
-              CL_JSON_KIT_SOURCE_DIR = clJsonKitSourceDir;
-            }
-            ''
-              cp -R "$src" source
-              chmod -R u+w source
-              cd source
-              export HOME="$TMPDIR/home"
-              export XDG_CACHE_HOME="$TMPDIR/cache"
-              mkdir -p "$HOME" "$XDG_CACHE_HOME"
-              sbcl --non-interactive --load tests/run-tests.lisp --eval '(cl-cli/tests:run-tests)' --quit
-              touch "$out"
+          sbcl-check = makeLispCheck {
+            name = "sbcl";
+            package = pkgs.sbcl;
+            extraSources = shellVerificationSources;
+            command = ''
+              sbcl --non-interactive --load tests/run-tests.lisp \
+                --eval '(cl-cli/tests:run-tests)' --quit
             '';
-          ecl-check = makeLispCheck "ecl" pkgs.ecl;
+          };
+          # nixpkgs' ECL bundles an ASDF older than the 3.3.1 the test systems
+          # need (26.5.5 ships 3.1.8.11). ASDF upgrades itself in place, so
+          # pkgs.asdf's single-file bundle is loaded first.
+          ecl-check = makeLispCheck {
+            name = "ecl";
+            package = pkgs.ecl;
+            command = ''
+              ecl --norc \
+                --load ${pkgs.asdf}/lib/common-lisp/asdf/build/asdf.lisp \
+                --load tests/run-tests.lisp --eval '(cl-cli/tests:run-tests)'
+            '';
+          };
         in
         {
           sbcl = sbcl-check;
           ecl = ecl-check;
-          default = pkgs.runCommand "cl-cli-checks" {} ''
-            mkdir -p "$out"
-            ln -s ${sbcl-check} "$out/sbcl"
-            ln -s ${ecl-check} "$out/ecl"
-          '';
+          docs = mkDocs pkgs;
         });
     };
 }
