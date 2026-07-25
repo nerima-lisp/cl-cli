@@ -88,6 +88,24 @@
     (loop for char across (%completion-control-safe-string value)
           do (write-char (if (char= char #\:) #\Space char) out))))
 
+(defun %completion-zsh-describe-value (value)
+  "Return VALUE as one `_describe` NAME field, with the separator escaped.
+
+`_describe` splits each entry at the first unescaped colon, so a candidate
+whose *value* contains one -- `host:8080', a `key:value' pair -- is otherwise
+truncated to the part before it while the remainder is silently folded into
+the description, and the user tab-completes `host'. The description half can
+afford to map a colon to a space (%COMPLETION-ZSH-DESCRIBE-FIELD); the value
+half cannot, because it is the text inserted on the command line, so the colon
+is backslash-escaped and `_describe' hands the original back. Backslashes get
+the same treatment in the same pass, or a value containing one would consume
+the escape we just added."
+  (with-output-to-string (out)
+    (loop for char across (%completion-control-safe-string value)
+          do (when (or (char= char #\:) (char= char #\\))
+               (write-char #\\ out))
+             (write-char char out))))
+
 (defun %completion-write-shell-quoted (stream string)
   "Write STRING single-quoted for a POSIX shell (bash/zsh/fish) directly to STREAM.
 

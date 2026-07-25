@@ -17,7 +17,7 @@
   :bug-tracker +cl-cli-issues-url+
   :source-control (:git +cl-cli-repository-url+)
   :license "MIT"
-  :version "1.0.0"
+  :version "1.0.1"
   :depends-on ("uiop")
   :in-order-to ((asdf:test-op (asdf:test-op "cl-cli/tests")))
   :serial t
@@ -79,7 +79,7 @@
   :description "Core test system for cl-cli."
   :author "takeokunn"
   :license "MIT"
-  :version "1.0.0"
+  :version "1.0.1"
   :depends-on ("cl-cli" "cl-weave" "cl-prolog/weave" "cl-json-kit")
   :serial t
   :components ((:file "tests/package")
@@ -152,7 +152,7 @@
   "Tests that run cl-cli's generated scripts through the real shells and mandoc."
   :author "takeokunn"
   :license "MIT"
-  :version "1.0.0"
+  :version "1.0.1"
   :depends-on ("cl-cli/tests" "cl-process-kit")
   :serial t
   :components ((:file "tests/cases-shell-verification"))

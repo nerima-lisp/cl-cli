@@ -56,6 +56,32 @@
            (text (markdown-text app)))
       (assert-searches text "left \\| right")))
 
+  (it "escapes a pipe in the code-span column too, not just the description"
+    ;; The test above covers the description column, which goes through
+    ;; %MD-ESCAPE-CELL. The first column goes through %MD-INLINE-CODE, and a
+    ;; code span is no shelter from GFM's cell splitting -- verified against
+    ;; cmark-gfm, GitHub's own renderer, which turned this row into
+    ;; `<td>`--fmt &lt;json</td><td>yaml</td>`: code span destroyed, `toml>`
+    ;; lost, description column dropped entirely. `<json|yaml|toml>` is an
+    ;; idiomatic value name, so this is easy to hit by accident.
+    (let* ((app (make-app :name "tool"
+                          :global-options (list (make-option :name "fmt"
+                                                             :kind :value
+                                                             :value-name "json|yaml|toml"
+                                                             :description "Output format."))))
+           (text (markdown-text app)))
+      (assert-searches text "| `--fmt <json\\|yaml\\|toml>` | Output format. |")))
+
+  (it "keeps the pipe escape scoped to table cells"
+    ;; Asserted on the two helpers rather than through a spec, because no spec
+    ;; can reach the non-cell path with a pipe: command names are validated to
+    ;; letters, digits, '-', '_' and '.', so the one other %MD-INLINE-CODE
+    ;; caller (the per-command heading) cannot receive one. The distinction
+    ;; still has to hold -- a heading is not a cell, and `\|` there would
+    ;; render as a literal backslash rather than a pipe.
+    (expect (string= (cl-cli::%md-inline-code "a|b") "`a|b`"))
+    (expect (string= (cl-cli::%md-inline-code-cell "a|b") "`a\\|b`")))
+
   (it "escapes raw HTML and Markdown controls in prose metadata"
     (let* ((app (make-app :name "tool"
                           :version "<b>2.0</b> *beta*"

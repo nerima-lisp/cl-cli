@@ -814,11 +814,15 @@ the hidden callback command with `make-standard-commands :include-dynamic-p t`
 
 All six generated completions — bash, zsh, fish, PowerShell, nushell, and
 elvish — then call `demo __complete branch <partial>` at completion time and
-offer whatever the function prints. (bash/zsh/fish and elvish shell out from the
-completion function; PowerShell inspects the token before the cursor; nushell
-attaches a per-flag custom completer.) Because the shell already knows which
-slot it is completing, the callback only receives the option/positional key and
-the partial word — the full command line is never re-parsed. A candidate may be
+offer whatever the function prints. bash, zsh, PowerShell, and elvish match the
+token before the cursor against the app's dynamic options and then shell out;
+fish attaches the callback per option as a `complete -a '(command ...)'`
+expression; nushell attaches a per-flag custom completer. Because the shell
+already knows which slot it is completing, the callback only receives the
+option/positional key and the partial word — the full command line is never
+re-parsed. (The nushell completer is the one exception to the partial word: it
+asks for the whole list and filters client-side, as nushell's custom completers
+are designed to, so your callback sees an empty prefix there.) A candidate may be
 a plain string or a `(value . description)` cons; descriptions are emitted
 tab-separated and shown by shells that support them.
 `cl-cli:render-complete-reply` performs the same lookup directly if you wire the
@@ -991,7 +995,8 @@ All public symbols live in the `cl-cli` package.
 
 **Spec constructors** — `make-app`, `make-command`, `make-option`,
 `make-positional`, `exclusive-group`, `required-exclusive-group`,
-`inclusive-group`.
+`inclusive-group`. `define-app` and `define-command` are the declarative
+macro form over the same vocabulary — see [Declarative DSL](#declarative-dsl).
 
 **Built-in commands** — `make-standard-commands` (the aggregate), or the
 individual `make-help-command`, `make-version-command`,

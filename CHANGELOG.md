@@ -7,6 +7,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-07-26
+
+Three renderer bugs that 1.0.0 shipped with, found by an adversarial audit that
+reported after the tag went out. All three were reproduced against the real
+consumer — elvish, zsh, and GitHub's own `cmark-gfm` — before and after the
+fix, and each now has a regression test that fails on the old behavior.
+
+### Fixed
+
+- **Elvish dynamic completion threw on every Tab.** The renderer emitted
+  `e:'app' __complete ...`; elvish's `e:` external-command namespace accepts
+  only a bare word, so quoting the app name parsed as the bareword `e:`
+  concatenated with a string, producing the plain string `"e:app"` — which
+  elvish then refused to call (`command must be callable or string containing
+  slash`). Any app with a `:complete` option was affected. Now emits
+  `(external 'app')`, which takes a real string argument and so also stays
+  correct for a name that needs quoting — dropping the quotes would have fixed
+  the common case and broken that one.
+
+  Two things let this ship: `elvish -compileonly` cannot see a runtime value
+  error, and `tests/cases-dynamic-completion.lisp` asserted the broken string
+  verbatim. The new check in `tests/cases-shell-verification.lisp` runs the
+  generated completer and asserts on what it returns.
+- **zsh truncated any candidate value containing a colon.** `_describe` splits
+  each entry at the first unescaped colon, and only the description half was
+  being sanitized. A candidate `host:8080` completed as `host`, with `8080`
+  folded into the description — a silently wrong insertion, on exactly the
+  `host:port` shape a candidate list tends to carry. The value half is now
+  backslash-escaped (it cannot be sanitized the way the description is, since
+  it is the text inserted on the command line). Only affected options whose
+  candidates carry descriptions; a bare `:choices` list takes the `compadd`
+  path, which was already correct.
+- **Markdown tables broke on a `|` in a value name.** `%md-inline-code`
+  renders the first column of every option and argument table but did not
+  escape pipes, and a GFM cell ends at the first unescaped `|` even inside a
+  code span. `--fmt <json|yaml|toml>` split its row across the wrong cells,
+  destroyed the code span, dropped `toml>`, and lost the description column
+  entirely. Verified against `cmark-gfm`. The escape is scoped to table cells;
+  the per-command heading, the other caller, must not have it.
+
+### Changed
+
+- The real-shell verification watchdog goes from 10s to 60s. It is not a
+  budget -- it exists only so a wedged child cannot block the run -- and 10s
+  was smaller than `pwsh`'s cold start inside the Nix sandbox (0.2s outside
+  it), which turned `nix flake check` intermittently red. The self-test that
+  pins the timeout mechanism uses its own short deadline, so it still proves
+  the watchdog fires.
+- The ECL check no longer preloads a newer ASDF. That was needed only for
+  `cl-log-kit`'s ASDF >= 3.3.1 requirement, and `cl-log-kit` is no longer on
+  ECL's path since the test systems were split — so the check now runs exactly
+  the `ecl --norc --load tests/run-tests.lisp` line the documentation gives.
+
+### Documentation
+
+- `docs/src/README.md` still said "Status: Pre-1.0".
+- `RELEASING.md` and `docs/src/releasing.md` said `:version` appears twice in
+  `cl-cli.asd`; the test-system split made it three, and a release that
+  followed the old instruction would have shipped a mismatched system.
+- README described the dynamic-completion mechanism backwards (it is bash,
+  zsh, PowerShell and elvish that match the token before the cursor; fish is
+  the one attaching per option), and both README and the guide claimed all six
+  shells pass the partial word — nushell does not, and asks for the whole list
+  instead, so a `:complete` callback sees an empty prefix there.
+- `CONTRIBUTING.md` pointed new tests at `tests/run-tests.lisp`, which is the
+  loader; it now names the `tests/cases-*.lisp` file and which of the two test
+  systems a case belongs to, and warns against the assert-the-current-output
+  habit that let the elvish bug through.
+- README's constructor list omitted `define-app` / `define-command`.
+
 ## [1.0.0] - 2026-07-26
 
 The API is now covered by Semantic Versioning. What that promise does and does
@@ -655,7 +725,8 @@ compile the suite at all.
   escape or other terminal control sequences into a user's terminal. Spec
   construction additionally rejects control characters in option value names.
 
-[Unreleased]: https://github.com/nerima-lisp/cl-cli/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/nerima-lisp/cl-cli/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/nerima-lisp/cl-cli/releases/tag/v1.0.1
 [1.0.0]: https://github.com/nerima-lisp/cl-cli/releases/tag/v1.0.0
 [0.3.0]: https://github.com/nerima-lisp/cl-cli/releases/tag/v0.3.0
 [0.2.0]: https://github.com/nerima-lisp/cl-cli/releases/tag/v0.2.0

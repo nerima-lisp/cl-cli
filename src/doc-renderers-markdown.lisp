@@ -101,6 +101,22 @@ escape the former and fold the latter to a space."
          (delimiter (%md-backtick-delimiter (list safe))))
     (format nil "~A~A~A" delimiter safe delimiter)))
 
+(defun %md-inline-code-cell (text)
+  "%MD-INLINE-CODE for a table cell, with pipes escaped.
+
+GFM ends a cell at the first unescaped `|' and does so *inside* inline spans
+too -- a code span is no shelter, which is easy to assume otherwise. `\\|' is
+the documented way to carry a literal pipe through, and renders as a bare one.
+Without this, an idiomatic value name like `<json|yaml|toml>' splits its row
+across the wrong cells, destroys the code span, and drops the description
+column entirely. Escaping after wrapping is safe: the delimiter is only ever
+backticks."
+  (with-output-to-string (out)
+    (loop for char across (%md-inline-code text)
+          do (when (char= char #\|)
+               (write-char #\\ out))
+             (write-char char out))))
+
 (defun %md-synopsis (app)
   (format nil "~A~A" (%md-single-line (app-name app)) (%doc-synopsis-tail app)))
 
@@ -141,7 +157,7 @@ escape the former and fold the latter to a space."
     (let ((target-table (%option-target-table resolution-options)))
       (dolist (option row-options)
         (format stream "| ~A | ~A |~%"
-                (%md-inline-code (%doc-option-synopsis option))
+                (%md-inline-code-cell (%doc-option-synopsis option))
                 (%md-escape-cell (%option-description-string option resolution-options target-table)))))
     (format stream "~%")))
 
@@ -151,7 +167,7 @@ escape the former and fold the latter to a space."
     (format stream "| --- | --- |~%")
     (dolist (positional positionals)
       (format stream "| ~A | ~A |~%"
-              (%md-inline-code (%format-positional-token positional))
+              (%md-inline-code-cell (%format-positional-token positional))
               (%md-escape-cell (%positional-description-string positional))))
     (format stream "~%")))
 

@@ -55,8 +55,17 @@ threshold or delete an assertion so that a red run turns green.
 
 When adding or changing parser behavior:
 
-- add or update a focused test in `tests/run-tests.lisp`
+- add or update a focused test in the matching `tests/cases-*.lisp` file, and
+  register any new file in `cl-cli.asd`. (`tests/run-tests.lisp` is the loader,
+  not a place to put tests.) A test that shells out to a real tool belongs in
+  `tests/cases-shell-verification.lisp`, under the
+  `cl-cli/tests/shell-verification` system; everything else goes in the
+  portable `cl-cli/tests`.
 - cover both the success path and the expected failure mode when relevant
+- prefer an assertion that would fail if the behavior were wrong over one that
+  merely records what the code prints today. A completion renderer emitting
+  `e:'app'` shipped broken because a test asserted that exact string; the
+  question to ask is "what property does this encode", not "does this match"
 - update `README.md` and the matching page under `docs/src/` if the
   user-visible surface changed
 

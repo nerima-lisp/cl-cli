@@ -83,7 +83,14 @@ subcommands and global option tokens. Hidden commands and options are omitted."
                                  (%completion-elvish-quote (cdr pair))))
                        dynamic))
        (format stream "  if (has-key $dynamic $prev) {~%")
-       (format stream "    e:~A __complete $dynamic[$prev] $words[-1] | from-lines | each {|line|~%"
+       ;; `(external 'name')` rather than `e:name`: the `e:` namespace accepts
+       ;; only a bareword, so quoting the app name there parses as the bareword
+       ;; `e:` concatenated with a string -- yielding the plain string "e:name",
+       ;; which elvish then refuses to call ("command must be callable or string
+       ;; containing slash"). Dropping the quotes would fix that one case and
+       ;; break any app name needing them; `external` takes a real string
+       ;; argument, so it stays correct for every name.
+       (format stream "    (external ~A) __complete $dynamic[$prev] $words[-1] | from-lines | each {|line|~%"
                (%completion-elvish-quote app-name))
        (format stream "      put (str:split \"\\t\" $line | take 1)~%")
        (format stream "    }~%")

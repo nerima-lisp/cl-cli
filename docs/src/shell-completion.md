@@ -129,7 +129,16 @@ offer whatever the function prints:
 
 Because the shell already knows which slot it is completing, the callback
 only receives the option key and the partial word — the full command line is
-never re-parsed. A candidate may be a plain string or a `(value . description)`
+never re-parsed.
+
+!!! note "nushell passes no partial word"
+
+    The nushell completer invokes `demo __complete branch` without the
+    partial and filters the returned list itself, which is how nushell's
+    custom completers are meant to work. Your `:complete` function therefore
+    receives an empty prefix under nushell. That is fine for a bounded list,
+    but a callback that uses the prefix to *limit* an expensive lookup should
+    be able to cope with being asked for everything. A candidate may be a plain string or a `(value . description)`
 cons; descriptions are emitted tab-separated and shown by shells that support
 them.
 

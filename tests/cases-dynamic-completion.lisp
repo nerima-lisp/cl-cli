@@ -127,4 +127,4 @@ branch	desc")
         "def \"nu-complete tool branch\" [] {"
         "  ^\"tool\" __complete branch | lines | each")
       (assert-searches (render-completion app "elvish")
-        "e:'tool' __complete $dynamic[$prev] $words[-1]"))))
+        "(external 'tool') __complete $dynamic[$prev] $words[-1]"))))

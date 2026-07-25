@@ -38,9 +38,10 @@ add or update focused tests before tagging.
 
 ## Publish
 
-1. Bump `:version` in `cl-cli.asd`. It appears twice — once in the `cl-cli`
-   system and once in `cl-cli/tests` — and both must match. `flake.nix`
-   reads the first `:version` line as the docs package version.
+1. Bump `:version` in `cl-cli.asd`. It appears three times — in `cl-cli`,
+   `cl-cli/tests`, and `cl-cli/tests/shell-verification` — and all three must
+   match. `flake.nix` reads the first `:version` line as the docs package
+   version.
 2. Update `CHANGELOG.md`: cut `[Unreleased]` into a dated section for the
    new version, add that version's link reference at the bottom of the
    file, and repoint the `[Unreleased]` compare link at the new tag.

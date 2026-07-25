@@ -11,8 +11,21 @@
 ;;;; its own process group, so a timeout cannot leave an orphaned grandchild
 ;;;; behind the way a bare terminate-process could.
 
-(defparameter +shell-tool-timeout-seconds+ 10
-  "Deadline for every real-shell verification subprocess in this file.")
+(defparameter +shell-tool-timeout-seconds+ 60
+  "Deadline for every real-shell verification subprocess in this file.
+
+This is a watchdog, not a budget: its only job is to stop a wedged child --
+a broken local install prompting on stdin, say -- from blocking the run
+forever. It measures nothing about cl-cli, so sizing it to fit a healthy
+tool's worst case costs no signal, unlike the millisecond budgets in
+tests/cases-parser-benchmark.lisp, which must never be widened to go green.
+
+10s was too small for what it had to cover. `pwsh` cold-starts a whole CLR
+with no writable cache inside the Nix sandbox and blew straight through it
+there while taking 0.2s on the same machine outside; elvish went from 0.03s
+to 2.9s the same way. The self-test at the end of this file pins the timeout
+mechanism itself with an explicit short deadline, so raising the default does
+not stop that being verified.")
 
 (defparameter +elvish-edit-namespace-stub+
   (format nil "var edit: = (ns [&completion:=(ns [&arg-completer=[&]])])~%")
@@ -140,6 +153,37 @@ the conventional shell timeout(1) exit status."
                                   "{|@words| put $no-such-variable }"))
       (declare (ignore out err))
       (expect (not (zerop code)))))
+
+  (it-run-if (%tool-available-p "elvish")
+      "the generated elvish completer can actually call the program for dynamic values"
+    ;; -compileonly cannot see this class of defect, and a substring assertion
+    ;; on the generated text did not either: the renderer emitted `e:'app'`,
+    ;; which elvish parses as the bareword `e:` concatenated with a string,
+    ;; giving the plain string "e:app" -- and then refuses to call it. Every
+    ;; app with a :complete option threw on every Tab, while the suite stayed
+    ;; green because a test asserted the broken text verbatim.
+    ;;
+    ;; So this one runs the completer. The app is named `echo` so the external
+    ;; command it shells out to is guaranteed present and its output
+    ;; predictable; `echo __complete branch ''` echoes its own arguments back,
+    ;; which then has to survive from-lines and the tab split to appear here.
+    ;; Reaching the assertion at all proves the call form resolved.
+    (let* ((app (make-app
+                 :name "echo"
+                 :global-options
+                 (list (make-option :name "branch" :kind :value
+                                    :complete (lambda (prefix)
+                                                (declare (ignore prefix))
+                                                '("main"))))))
+           (script (concatenate 'string
+                                +elvish-edit-namespace-stub+
+                                (render-completion app "elvish")
+                                (format nil "put ($edit:completion:arg-completer['echo'] ~
+                                             echo --branch '')~%"))))
+      (multiple-value-bind (out err code) (%check-tool "elvish" '() script)
+        (expect (zerop code))
+        (expect (zerop (length err)))
+        (expect (search "__complete branch" out)))))
 
   (it-run-if (%tool-available-p "sh")
       "%check-tool's timeout actually terminates a hung child instead of trusting it unverified"

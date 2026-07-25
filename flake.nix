@@ -174,16 +174,19 @@
                 --eval '(cl-cli/tests:run-tests)' --quit
             '';
           };
-          # nixpkgs' ECL bundles an ASDF older than the 3.3.1 the test systems
-          # need (26.5.5 ships 3.1.8.11). ASDF upgrades itself in place, so
-          # pkgs.asdf's single-file bundle is loaded first.
+          # No ASDF preload here any more. It used to be required because
+          # cl-log-kit demands ASDF >= 3.3.1 while nixpkgs' ECL 26.5.5 bundles
+          # 3.1.8.11 -- but cl-log-kit is no longer on ECL's path at all now
+          # that the shell-verification half is a separate system, and the
+          # remaining test dependencies load fine against the bundled ASDF.
+          # This keeps the documented `ecl --norc --load tests/run-tests.lisp`
+          # invocation and the one CI runs identical.
           ecl-check = makeLispCheck {
             name = "ecl";
             package = pkgs.ecl;
             command = ''
-              ecl --norc \
-                --load ${pkgs.asdf}/lib/common-lisp/asdf/build/asdf.lisp \
-                --load tests/run-tests.lisp --eval '(cl-cli/tests:run-tests)'
+              ecl --norc --load tests/run-tests.lisp \
+                --eval '(cl-cli/tests:run-tests)'
             '';
           };
         in

@@ -74,6 +74,34 @@
         "'dev:Local development'"
         "'prod:Production release'")))
 
+  (it "escapes a colon inside a candidate value so _describe cannot truncate it"
+    ;; _describe splits each entry at the first unescaped colon. The value half
+    ;; is the text inserted on the user's command line, so unlike the
+    ;; description half it cannot be sanitised by mapping the colon to a space
+    ;; -- it has to survive intact. Unescaped, `host:8080' completed as `host'
+    ;; with `8080:...' folded into the description: a silently wrong insertion,
+    ;; and host:port is exactly the shape a candidate list carries.
+    (let ((app (demo-app
+                :global-options (list (make-option :name "host" :kind :value
+                                                   :completion-candidates
+                                                   '(("plain" . "a plain host")
+                                                     ("host:8080" . "with a port")))))))
+      (assert-searches (render-completion app "zsh")
+        "'host\\:8080:with a port'"
+        "'plain:a plain host'")))
+
+  (it "escapes a backslash inside a candidate value before the colon it protects"
+    ;; A value ending in a backslash would otherwise consume the escape added
+    ;; for the separator, putting the split back where it started.
+    (let ((app (demo-app
+                :global-options (list (make-option :name "path" :kind :value
+                                                   :completion-candidates
+                                                   '(("a\\" . "trailing backslash")
+                                                     ("c\\:d" . "backslash then colon")))))))
+      (assert-searches (render-completion app "zsh")
+        "'a\\\\:trailing backslash'"
+        "'c\\\\\\:d:backslash then colon'")))
+
   (it "quotes shell-sensitive descriptions and candidates"
     (let ((app (make-completion-fixture
                 :command-description "Don't $(run)"

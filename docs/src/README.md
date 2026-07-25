@@ -82,8 +82,12 @@ in minimal Common Lisp and Nix environments.
 
 ## Status
 
-Pre-1.0. The capability list below is the current public surface, validated by
-the test suite documented in [Contributing](contributing.md):
+Stable. From `1.0.0` the exported API is covered by Semantic Versioning — see
+[Compatibility](compatibility.md) for exactly what that promise includes, which
+Lisp implementations are tested, and how a symbol is deprecated.
+
+The capability list below is the current public surface, validated by the test
+suite documented in [Contributing](contributing.md):
 
 - strict, exact-match option and flag parsing, with optional GNU-style
   abbreviated-prefix matching

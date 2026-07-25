@@ -169,7 +169,7 @@ untouched."
           (%completion-write-shell-quoted
            stream
            (format nil "~A:~A"
-                   (car candidate)
+                   (%completion-zsh-describe-value (car candidate))
                    (%completion-zsh-describe-field (or (cdr candidate) ""))))
           (format stream "~%"))
         (format stream "        )~%")
