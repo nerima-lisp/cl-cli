@@ -9,15 +9,35 @@
 ;;;; Follows the same optional-stream convention as the other renderers.
 
 (defun %completion-nushell-quote (string)
-  "Quote STRING as a Nushell double-quoted literal."
-  (with-output-to-string (out)
-    (write-char #\" out)
-    (loop for char across (%completion-control-safe-string string)
-          do (case char
-               (#\\ (write-string "\\\\" out))
-               (#\" (write-string "\\\"" out))
-               (t (write-char char out))))
-    (write-char #\" out)))
+  "Quote STRING as a Nushell double-quoted literal.
+
+Strips control characters and backslash-escapes `\\`/`\"` in one pass,
+rather than through %COMPLETION-CONTROL-SAFE-STRING (a second, separately-
+allocated WITH-OUTPUT-TO-STRING pass) -- the same fix already applied to
+%COMPLETION-SHELL-QUOTE, %COMPLETION-ZSH-ARGUMENTS-FIELD, and
+%COMPLETION-POWERSHELL-QUOTE. Neither `\\` nor `\"` is a control code, so
+folding both into one COND is behavior-preserving."
+  (let ((value (if string (princ-to-string string) "")))
+    (with-output-to-string (out)
+      (write-char #\" out)
+      (loop for char across value
+            for code = (char-code char)
+            do (cond
+                 ((char= char #\\)
+                  (write-string "\\\\" out))
+                 ((char= char #\")
+                  (write-string "\\\"" out))
+                 ((or (char= char #\Newline)
+                      (char= char #\Return)
+                      (char= char #\Tab))
+                  (write-char #\Space out))
+                 ((or (< code 32)
+                      (= code 127)
+                      (and (>= code 128) (< code 160)))
+                  nil)
+                 (t
+                  (write-char char out))))
+      (write-char #\" out))))
 
 (defun %completion-nushell-command-completer-name (app)
   (format nil "nu-complete ~A command" (app-name app)))

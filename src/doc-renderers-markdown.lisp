@@ -8,39 +8,76 @@
 ;;;; to drop straight into a README or a docs site (GitHub-flavored Markdown).
 
 (defun %md-escape-prose (text)
-  "Escape free-form prose so metadata cannot inject raw HTML or Markdown."
-  (with-output-to-string (out)
-    (loop for char across (%md-control-safe-string text)
-          do (case char
-               (#\& (write-string "&amp;" out))
-               (#\< (write-string "&lt;" out))
-               (#\> (write-string "&gt;" out))
-               ((#\\ #\` #\* #\_ #\{ #\} #\[ #\] #\# #\+ #\!)
-                (write-char #\\ out)
-                (write-char char out))
-               (t (write-char char out))))))
+  "Escape free-form prose so metadata cannot inject raw HTML or Markdown.
+
+Strips control characters and escapes HTML/Markdown-significant characters
+in one pass, rather than through %MD-CONTROL-SAFE-STRING (a second,
+separately-allocated WITH-OUTPUT-TO-STRING pass) -- the same fix already
+applied to the completion renderers' shell-quoting functions. The escaped
+character set is disjoint from the control-character set, so folding both
+into one COND is behavior-preserving."
+  (let ((value (if text (princ-to-string text) "")))
+    (with-output-to-string (out)
+      (loop for char across value
+            for code = (char-code char)
+            do (cond
+                 ((char= char #\&) (write-string "&amp;" out))
+                 ((char= char #\<) (write-string "&lt;" out))
+                 ((char= char #\>) (write-string "&gt;" out))
+                 ((find char "\\`*_{}[]#+!")
+                  (write-char #\\ out)
+                  (write-char char out))
+                 ((or (char= char #\Newline)
+                      (char= char #\Return)
+                      (char= char #\Tab))
+                  (write-char #\Space out))
+                 ((or (< code 32)
+                      (= code 127)
+                      (and (>= code 128) (< code 160)))
+                  nil)
+                 (t (write-char char out)))))))
 
 (defun %md-control-safe-string (value)
   "Return VALUE with terminal-control characters folded out of Markdown output."
   (%completion-control-safe-string value))
 
 (defun %md-single-line (value)
-  (with-output-to-string (out)
-    (loop for char across (%md-control-safe-string value)
-          do (write-char (if (member char '(#\Newline #\Return) :test #'char=)
-                             #\Space
-                             char)
-                         out))))
+  "Fold VALUE to one Markdown-safe line.
+
+%MD-CONTROL-SAFE-STRING already maps newline/return/tab to a space, so its
+result can never contain a line break -- this used to re-scan that result in
+a second WITH-OUTPUT-TO-STRING pass just to (redundantly) map the very same
+characters to a space again."
+  (%md-control-safe-string value))
 
 (defun %md-max-backtick-run (strings)
+  "Longest run of backticks any of STRINGS would contain after control-stripping.
+
+Replicates %MD-CONTROL-SAFE-STRING's character mapping directly while
+counting, instead of building the safe string first and counting on that --
+but must preserve its exact semantics: a character it maps to a space
+(newline/return/tab) breaks a backtick run, while a character it drops
+entirely (other control codes) does NOT, since a dropped character never
+appears in the final output at all."
   (let ((maximum 0))
     (dolist (string strings maximum)
       (let ((run 0))
-        (loop for char across (%md-control-safe-string string)
-              do (if (char= char #\`)
-                     (setf run (1+ run)
-                           maximum (max maximum run))
-                     (setf run 0)))))))
+        (loop for char across (or string "")
+              for code = (char-code char)
+              do (cond
+                   ((char= char #\`)
+                    (setf run (1+ run)
+                          maximum (max maximum run)))
+                   ((or (char= char #\Newline)
+                        (char= char #\Return)
+                        (char= char #\Tab))
+                    (setf run 0))
+                   ((or (< code 32)
+                        (= code 127)
+                        (and (>= code 128) (< code 160)))
+                    nil)
+                   (t
+                    (setf run 0))))))))
 
 (defun %md-backtick-delimiter (strings &key (minimum 1))
   (make-string (max minimum (1+ (%md-max-backtick-run strings)))

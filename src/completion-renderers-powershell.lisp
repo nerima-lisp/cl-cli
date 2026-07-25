@@ -11,14 +11,34 @@
   "Quote STRING as a PowerShell single-quoted literal.
 
 PowerShell escapes an embedded single quote by doubling it, unlike the POSIX
-shells (which close-escape-reopen); this must not reuse %COMPLETION-SHELL-QUOTE."
-  (with-output-to-string (out)
-    (write-char #\' out)
-    (loop for char across (%completion-control-safe-string string)
-          do (if (char= char #\')
-                 (write-string "''" out)
-                 (write-char char out)))
-    (write-char #\' out)))
+shells (which close-escape-reopen); this must not reuse %COMPLETION-SHELL-QUOTE.
+
+Strips control characters and doubles embedded single quotes in one pass,
+rather than through %COMPLETION-CONTROL-SAFE-STRING (a second, separately-
+allocated WITH-OUTPUT-TO-STRING pass) -- the same fix already applied to
+%COMPLETION-SHELL-QUOTE and %COMPLETION-ZSH-ARGUMENTS-FIELD. A quote is
+never itself a control code, so folding both into one COND is behavior-
+preserving; %COMPLETION-CONTROL-SAFE-STRING's other call sites (including
+this file's own top-level app-name binding) are untouched."
+  (let ((value (if string (princ-to-string string) "")))
+    (with-output-to-string (out)
+      (write-char #\' out)
+      (loop for char across value
+            for code = (char-code char)
+            do (cond
+                 ((char= char #\')
+                  (write-string "''" out))
+                 ((or (char= char #\Newline)
+                      (char= char #\Return)
+                      (char= char #\Tab))
+                  (write-char #\Space out))
+                 ((or (< code 32)
+                      (= code 127)
+                      (and (>= code 128) (< code 160)))
+                  nil)
+                 (t
+                  (write-char char out))))
+      (write-char #\' out))))
 
 (defun %completion-powershell-array (tokens)
   "Render TOKENS as a PowerShell array literal `@('a', 'b')`."
@@ -26,14 +46,21 @@ shells (which close-escape-reopen); this must not reuse %COMPLETION-SHELL-QUOTE.
           (mapcar #'%completion-powershell-quote tokens)))
 
 (defun %completion-powershell-command-option-map (app stream)
+  "Emit `$commandOptions` mapping each visible command (and its aliases) to its
+own option array.
+
+TOKENS' rendered array literal is built once per command and reused across
+every alias, rather than being rebuilt (with its own internal per-token
+quoting) once per alias as the original did."
   (format stream "    $commandOptions = @{~%")
   (dolist (command (%completion-visible-commands app))
     (let ((tokens (%completion-visible-option-tokens (command-options command))))
       (when tokens
-        (dolist (name (%completion-command-names command))
-          (format stream "        ~A = ~A~%"
-                  (%completion-powershell-quote name)
-                  (%completion-powershell-array tokens))))))
+        (let ((quoted-tokens (%completion-powershell-array tokens)))
+          (dolist (name (%completion-command-names command))
+            (format stream "        ~A = ~A~%"
+                    (%completion-powershell-quote name)
+                    quoted-tokens))))))
   (format stream "    }~%"))
 
 (defun %completion-powershell-dynamic-block (app stream)

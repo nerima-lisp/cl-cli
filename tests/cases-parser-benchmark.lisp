@@ -153,4 +153,19 @@
     (let ((result (benchmark (:warmup 1 :samples 5)
                     (dotimes (i 200)
                       (render-completion *benchmark-large-completion-app* "fish")))))
+      (expect (< (median-ms result) 2000))))
+
+  (it "renders a powershell completion script for a 230-option/20-command app in well under budget"
+    ;; Guards src/completion-renderers-powershell.lisp:
+    ;; %COMPLETION-POWERSHELL-QUOTE folds control-stripping and quote-doubling
+    ;; into one pass instead of two nested WITH-OUTPUT-TO-STRING calls (the same
+    ;; fix already applied to %COMPLETION-SHELL-QUOTE and
+    ;; %COMPLETION-ZSH-ARGUMENTS-FIELD), and %COMPLETION-POWERSHELL-COMMAND-OPTION-MAP
+    ;; builds each command's option array once and reuses it across aliases
+    ;; instead of rebuilding it per alias. 2000ms for 200 iterations leaves
+    ;; generous headroom over the ~0.11ms/call measured on a similarly-sized
+    ;; synthetic app on a fast machine.
+    (let ((result (benchmark (:warmup 1 :samples 5)
+                    (dotimes (i 200)
+                      (render-completion *benchmark-large-completion-app* "powershell")))))
       (expect (< (median-ms result) 2000)))))

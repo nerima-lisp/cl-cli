@@ -34,6 +34,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The Nushell and Elvish completion renderers' quoting functions
+  (`%COMPLETION-NUSHELL-QUOTE`, `%COMPLETION-ELVISH-QUOTE`) and the
+  Markdown documentation renderer's prose-escaping functions
+  (`%MD-ESCAPE-PROSE`, `%MD-SINGLE-LINE`, `%MD-MAX-BACKTICK-RUN`, all in
+  `src/doc-renderers-markdown.lisp`) had the same double-nested
+  `WITH-OUTPUT-TO-STRING` pattern found and fixed in bash/zsh/PowerShell's
+  quoting functions earlier in this changelog -- each ran its own escaping
+  pass over the *already-built* result of a separate control-character-
+  stripping pass, rather than folding both into one. `%MD-SINGLE-LINE`'s
+  second pass turned out to be provably dead code once traced through
+  (its input can never contain the newline/return characters it was
+  checking for, since the upstream control-stripping pass already maps
+  them to a space), so it now simply delegates. `%MD-MAX-BACKTICK-RUN`
+  needed care: a character control-stripping *drops* entirely doesn't
+  break a backtick run in the final output, while one it *maps to a
+  space* does, so its merged single pass reproduces that distinction
+  exactly rather than just concatenating both transformations (see the
+  new regression test in `tests/cases-doc-markdown.lisp`, which checks a
+  control character between two backticks counts as one run of 2 while a
+  newline between them counts as two runs of 1). Nushell and Elvish
+  completion rendering were separately profiled and found already fast
+  enough (tens of microseconds per call on a 330-option benchmark app)
+  that this fix's effect is not separately measurable there; it is applied
+  for consistency with the other renderers, not for a measured win. No
+  public API or observable output changed.
+- The PowerShell completion renderer (`RENDER-POWERSHELL-COMPLETION`):
+  `%COMPLETION-POWERSHELL-QUOTE` folds control-character-stripping and
+  single-quote-doubling into one pass instead of two nested
+  `WITH-OUTPUT-TO-STRING` calls (the same fix already applied to
+  `%COMPLETION-SHELL-QUOTE` and `%COMPLETION-ZSH-ARGUMENTS-FIELD`), and
+  `%COMPLETION-POWERSHELL-COMMAND-OPTION-MAP` now builds each command's
+  option-array literal once and reuses it across every alias instead of
+  rebuilding it (re-quoting every token again) per alias. (Profiled all
+  four remaining completion renderers this round: nushell and elvish are
+  already tens of microseconds per call -- optimizing them further would
+  be immeasurable -- so only PowerShell needed work.) Measured on a
+  330-option/33-command benchmark app: PowerShell rendering is roughly 1.3x
+  faster. No public API or observable script output changed; see
+  `tests/cases-parser-benchmark.lisp`.
 - The fish completion renderer (`RENDER-FISH-COMPLETION`) no longer
   re-shell-quotes the same loop-invariant value on every iteration of a
   loop it's constant across: the app name, each level's "already seen a

@@ -89,6 +89,21 @@
                        "echo ``` cannot close fence")
       (assert-not-searches text escape)))
 
+  (it "counts a backtick run across a dropped control character but not across a space-mapped one"
+    ;; CL-CLI::%MD-MAX-BACKTICK-RUN replicates %MD-CONTROL-SAFE-STRING's
+    ;; character mapping while counting, instead of building the safe string
+    ;; first and counting on that -- a regression here would silently pick a
+    ;; too-short backtick fence/code-span delimiter. A true control character
+    ;; (e.g. ESC) is DROPPED entirely by control-safety, so two backticks
+    ;; either side of one become adjacent in the final output and must count
+    ;; as a run of 2; a newline/return/tab is instead MAPPED to a space, which
+    ;; sits between the backticks in the output, so each stays its own run of 1.
+    (let ((escape (string (code-char 27))))
+      (expect (= 2 (cl-cli::%md-max-backtick-run
+                    (list (format nil "`~A`" escape)))))
+      (expect (= 1 (cl-cli::%md-max-backtick-run
+                    (list (format nil "`~%`")))))))
+
   (it "uses delimiter-safe Markdown code spans for value names"
     (let* ((app (make-app :name "tool"
                           :global-options (list (make-option :name "template"

@@ -7,14 +7,33 @@
 ;;;; Follows the same optional-stream convention as the other renderers.
 
 (defun %completion-elvish-quote (string)
-  "Quote STRING as an Elvish single-quoted literal (a quote doubles itself)."
-  (with-output-to-string (out)
-    (write-char #\' out)
-    (loop for char across (%completion-control-safe-string string)
-          do (if (char= char #\')
-                 (write-string "''" out)
-                 (write-char char out)))
-    (write-char #\' out)))
+  "Quote STRING as an Elvish single-quoted literal (a quote doubles itself).
+
+Strips control characters and doubles embedded single quotes in one pass,
+rather than through %COMPLETION-CONTROL-SAFE-STRING (a second, separately-
+allocated WITH-OUTPUT-TO-STRING pass) -- the same fix already applied to
+%COMPLETION-SHELL-QUOTE, %COMPLETION-ZSH-ARGUMENTS-FIELD, and
+%COMPLETION-POWERSHELL-QUOTE. A quote is never itself a control code, so
+folding both into one COND is behavior-preserving."
+  (let ((value (if string (princ-to-string string) "")))
+    (with-output-to-string (out)
+      (write-char #\' out)
+      (loop for char across value
+            for code = (char-code char)
+            do (cond
+                 ((char= char #\')
+                  (write-string "''" out))
+                 ((or (char= char #\Newline)
+                      (char= char #\Return)
+                      (char= char #\Tab))
+                  (write-char #\Space out))
+                 ((or (< code 32)
+                      (= code 127)
+                      (and (>= code 128) (< code 160)))
+                  nil)
+                 (t
+                  (write-char char out))))
+      (write-char #\' out))))
 
 (defun %completion-elvish-list (tokens)
   (format nil "[~{~A~^ ~}]" (mapcar #'%completion-elvish-quote tokens)))
