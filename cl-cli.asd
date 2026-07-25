@@ -1,8 +1,8 @@
 (defparameter +cl-cli-repository-url+
-  "https://github.com/takeokunn/cl-cli")
+  "https://github.com/nerima-lisp/cl-cli")
 
 (defparameter +cl-cli-issues-url+
-  "https://github.com/takeokunn/cl-cli/issues")
+  "https://github.com/nerima-lisp/cl-cli/issues")
 
 (defparameter +cl-cli-readme+
   (when *load-pathname*
@@ -18,16 +18,22 @@
   :source-control (:git +cl-cli-repository-url+)
   :license "MIT"
   :version "0.2.0"
-  :depends-on ("uiop" "cl-prolog")
+  :depends-on ("uiop")
   :in-order-to ((asdf:test-op (asdf:test-op "cl-cli/tests")))
   :serial t
   :components ((:file "src/package")
                (:file "src/conditions")
                (:file "src/core")
                (:file "src/model-helpers")
-               (:file "src/model")
+               (:file "src/model-structs")
+               (:file "src/model-lookup")
                (:file "src/option-relations")
+               (:file "src/model-option")
+               (:file "src/model-positional")
+               (:file "src/model-command")
+               (:file "src/model-validation")
                (:file "src/model-app")
+               (:file "src/model-dsl")
                (:file "src/util")
                (:file "src/terminal")
                (:file "src/parser-lookup")
@@ -36,6 +42,7 @@
                (:file "src/parser-values")
                (:file "src/parser-core")
                (:file "src/parser-dispatch")
+               (:file "src/help-style")
                (:file "src/help-renderers")
                (:file "src/help-printers")
                (:file "src/help-commands")
@@ -61,7 +68,7 @@
   :author "takeokunn"
   :license "MIT"
   :version "0.2.0"
-  :depends-on ("cl-cli" "cl-weave" "cl-prolog/weave")
+  :depends-on ("cl-cli" "cl-weave" "cl-prolog/weave" "cl-process-kit")
   :serial t
   :components ((:file "tests/package")
                (:file "tests/test-fixtures")
@@ -69,6 +76,9 @@
                (:file "tests/test-support")
                (:file "tests/cases-parse")
                (:file "tests/cases-property-parse")
+               (:file "tests/cases-parser-fuzz")
+               (:file "tests/cases-parser-benchmark")
+               (:file "tests/cases-define-dsl")
                (:file "tests/cases-options")
                (:file "tests/cases-typed-values")
                (:file "tests/cases-count")

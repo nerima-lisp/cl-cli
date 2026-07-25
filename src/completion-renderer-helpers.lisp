@@ -183,7 +183,7 @@ lists. KEY-NAME is the downcased option key, matching RENDER-COMPLETE-REPLY."
         ;; is not one of the allowed values).
         (when (%completion-option-candidates option)
           (format out " -f")))
-      (when (member kind '(:flag :boolean :count))
+      (when (%valueless-option-kind-p kind)
         (format out " -f")))
     (when (option-description option)
       (format out " -d ~A"

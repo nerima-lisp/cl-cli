@@ -5,6 +5,8 @@
    :make-command
    :make-option
    :make-positional
+   :define-app
+   :define-command
    :exclusive-group
    :required-exclusive-group
    :inclusive-group
