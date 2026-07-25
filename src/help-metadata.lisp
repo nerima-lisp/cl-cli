@@ -78,51 +78,49 @@ has an extra intra-group-conflict filter the other four don't share.")
 
 (defun %option-metadata-parts
     (option options &optional (target-table (%option-target-table options)))
-  (let ((parts nil))
+  (collecting
     (let ((deprecation (%deprecation-note (option-deprecated option))))
       (when deprecation
-        (push deprecation parts)))
+        (collect deprecation)))
     (when (option-multiple-p option)
-      (push "repeatable" parts))
+      (collect "repeatable"))
     (when (eq (option-kind option) :count)
-      (push "count" parts))
+      (collect "count"))
     (when (option-required-p option)
-      (push "required" parts))
+      (collect "required"))
     (when (and (option-value-type option)
                (not (eq (option-value-type option) :string)))
-      (push (format nil "type: ~(~A~)" (option-value-type option)) parts))
+      (collect (format nil "type: ~(~A~)" (option-value-type option))))
     (let ((range (%numeric-range-metadata (option-value-min option)
                                           (option-value-max option))))
       (when range
-        (push range parts)))
+        (collect range)))
     (when (option-value-delimiter option)
-      (push (format nil "list (delimited by '~A')" (option-value-delimiter option))
-            parts))
+      (collect (format nil "list (delimited by '~A')" (option-value-delimiter option))))
     (let ((hint (%value-hint-note (option-value-hint option))))
-      (when hint (push hint parts)))
+      (when hint (collect hint)))
     ;; A :count option's implicit 0 default is conventional noise, so suppress
     ;; it; a caller-chosen non-zero starting count is still worth surfacing.
     (when (and (option-default-present-p option)
                (not (and (eq (option-kind option) :count)
                          (eql (option-default option) 0))))
-      (push (format nil "default: ~A" (option-default option)) parts))
+      (collect (format nil "default: ~A" (option-default option))))
     (when (option-env-vars option)
-      (push (format nil "env: ~{~A~^, ~}" (option-env-vars option)) parts))
+      (collect (format nil "env: ~{~A~^, ~}" (option-env-vars option))))
     (when (option-choices option)
-      (push (format nil "choices: ~{~A~^ | ~}" (option-choices option)) parts))
+      (collect (format nil "choices: ~{~A~^ | ~}" (option-choices option))))
     (let ((group-members (%option-group-member-names option options target-table)))
       (when group-members
-        (push (if (eq (option-group-mode (option-group option)) :inclusive)
-                  (format nil "all or none of: ~{~A~^ | ~}" group-members)
-                  (format nil "~A one of: ~{~A~^ | ~}"
-                          (if (option-group-required-p (option-group option))
-                              "exactly"
-                              "at most")
-                          group-members))
-              parts)))
+        (collect (if (eq (option-group-mode (option-group option)) :inclusive)
+                     (format nil "all or none of: ~{~A~^ | ~}" group-members)
+                     (format nil "~A one of: ~{~A~^ | ~}"
+                             (if (option-group-required-p (option-group option))
+                                 "exactly"
+                                 "at most")
+                             group-members)))))
     (dolist (entry +option-relation-labels+)
       (let ((line (%relation-line option options target-table (car entry) (cdr entry))))
-        (when line (push line parts))))
+        (when line (collect line))))
     ;; Conflicts among members of this option's own group are already conveyed by
     ;; the "one of" line above; only surface conflicts with options outside it.
     (let ((visible-conflicts
@@ -133,11 +131,9 @@ has an extra intra-group-conflict filter the other four don't share.")
                                                  (option-conflicts-with option)
                                                  target-table))))
       (when visible-conflicts
-        (push (format nil "conflicts: ~{~A~^, ~}"
-                      (mapcar #'option-relation-target-display-name
-                              visible-conflicts))
-              parts)))
-    (nreverse parts)))
+        (collect (format nil "conflicts: ~{~A~^, ~}"
+                         (mapcar #'option-relation-target-display-name
+                                 visible-conflicts)))))))
 
 (defun %option-metadata-string
     (option options &optional (target-table (%option-target-table options)))

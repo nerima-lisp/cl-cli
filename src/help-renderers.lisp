@@ -163,28 +163,26 @@ deprecated command reads the same everywhere."
           (%print-command-row stream command))))))
 
 (defun %positional-metadata-parts (positional)
-  (let ((parts nil))
+  (collecting
     (when (positional-spec-default-present-p positional)
-      (push (format nil "default: ~A" (positional-spec-default positional)) parts))
+      (collect (format nil "default: ~A" (positional-spec-default positional))))
     (when (and (positional-spec-value-type positional)
                (not (eq (positional-spec-value-type positional) :string)))
-      (push (format nil "type: ~(~A~)" (positional-spec-value-type positional)) parts))
+      (collect (format nil "type: ~(~A~)" (positional-spec-value-type positional))))
     (let ((range (%numeric-range-metadata (positional-spec-value-min positional)
                                           (positional-spec-value-max positional))))
       (when range
-        (push range parts)))
+        (collect range)))
     (when (positional-spec-choices positional)
-      (push (format nil "choices: ~{~A~^ | ~}" (positional-spec-choices positional))
-            parts))
+      (collect (format nil "choices: ~{~A~^ | ~}" (positional-spec-choices positional))))
     (let ((hint (%value-hint-note (positional-spec-value-hint positional))))
-      (when hint (push hint parts)))
+      (when hint (collect hint)))
     (let ((min (positional-spec-min-count positional))
           (max (positional-spec-max-count positional)))
       (cond
-        ((and min max) (push (format nil "~A..~A values" min max) parts))
-        (min (push (format nil "at least ~A value~:P" min) parts))
-        (max (push (format nil "at most ~A value~:P" max) parts))))
-    (nreverse parts)))
+        ((and min max) (collect (format nil "~A..~A values" min max)))
+        (min (collect (format nil "at least ~A value~:P" min)))
+        (max (collect (format nil "at most ~A value~:P" max)))))))
 
 (defun %positional-description-string (positional)
   (concatenate 'string
