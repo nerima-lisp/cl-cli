@@ -15,6 +15,10 @@
     (with-parsed-argv (inv (negatives-app) '("calc" "-1.5"))
       (expect (= (positional-value inv :n) -3/2))))
 
+  (it "accepts a leading-dot negative decimal positional"
+    (with-parsed-argv (inv (negatives-app) '("calc" "-.5"))
+      (expect (= (positional-value inv :n) -1/2))))
+
   (it "still parses real short options"
     (with-parsed-argv (inv (negatives-app) '("calc" "-s" "2" "-7"))
       (expect (string= (option-value inv :scale) "2"))

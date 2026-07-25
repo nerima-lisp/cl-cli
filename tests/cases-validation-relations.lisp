@@ -113,6 +113,26 @@
       (expect (string= (option-value inv :profile) "dev"))
       (expect (string= (option-value inv :config) "dev.toml"))))
 
+  (it "requires accepts a --long-flag-spelled relation target"
+    (with-parsed-argv (inv (demo-app
+                            :global-options (list (make-option :name "profile" :kind :value)
+                                                  (make-option :name "config"
+                                                              :kind :value
+                                                              :requires '("--profile"))))
+                          '("demo" "--profile" "prod" "--config" "dev.toml"))
+      (expect (string= (option-value inv :profile) "prod"))
+      (expect (string= (option-value inv :config) "dev.toml"))))
+
+  (it "requires accepts a -short-flag-spelled relation target"
+    (with-parsed-argv (inv (demo-app
+                            :global-options (list (make-option :name "profile" :short #\p :kind :value)
+                                                  (make-option :name "config"
+                                                              :kind :value
+                                                              :requires '("-p"))))
+                          '("demo" "-p" "prod" "--config" "dev.toml"))
+      (expect (string= (option-value inv :profile) "prod"))
+      (expect (string= (option-value inv :config) "dev.toml"))))
+
   (it "requires at least one of the declared requires-any-of alternatives"
     (let ((app (demo-app
                 :global-options (list (make-option :name "token" :kind :value)
