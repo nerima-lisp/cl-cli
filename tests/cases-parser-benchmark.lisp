@@ -32,6 +32,20 @@
                              :positionals (list (make-positional :key :input
                                                                  :required-p t))))))
 
+(defparameter *benchmark-large-completion-app*
+  (make-app
+   :name "bench-large"
+   :global-options (loop for i below 30
+                         collect (make-option :name (format nil "global-opt-~D" i)
+                                              :kind :value))
+   :commands (loop for i below 20
+                   collect (make-command
+                            :name (format nil "cmd-~D" i)
+                            :options (loop for j below 10
+                                          collect (make-option
+                                                   :name (format nil "cmd~D-opt-~D" i j)
+                                                   :kind :value))))))
+
 (describe-sequential "parser benchmark"
   (it "caches each scope's built-in-augmented specs and lookup table once at MAKE-APP time"
     ;; PREPARE-OPTION-PARSER-STATE reuses these (SPECS . TABLE) conses instead
@@ -98,4 +112,17 @@
     (let* ((strings (loop for i below 10000 collect (format nil "cmd-~D" (mod i 1000))))
            (result (benchmark (:warmup 1 :samples 5)
                      (cl-cli::%completion-space-joined strings))))
-      (expect (< (median-ms result) 50)))))
+      (expect (< (median-ms result) 50))))
+
+  (it "renders a bash completion script for a 230-option/20-command app in well under budget"
+    ;; Guards the stream-threaded bash renderer (src/completion-renderers-bash.lisp):
+    ;; every recursive command node and every shell-quoted array-literal/case-label
+    ;; value now writes straight into one shared stream instead of consing its own
+    ;; string for a parent to copy again. 2000ms for 200 iterations leaves generous
+    ;; headroom over the ~0.4ms/call measured on a similarly-sized synthetic app on
+    ;; a fast machine, while still catching a regression back to the old
+    ;; string-per-node/string-per-value pattern.
+    (let ((result (benchmark (:warmup 1 :samples 5)
+                    (dotimes (i 200)
+                      (render-completion *benchmark-large-completion-app* "bash")))))
+      (expect (< (median-ms result) 2000)))))

@@ -88,37 +88,47 @@
     (loop for char across (%completion-control-safe-string value)
           do (write-char (if (char= char #\:) #\Space char) out))))
 
-(defun %completion-shell-quote (string)
-  "Single-quote STRING for a POSIX shell (bash/zsh/fish).
+(defun %completion-write-shell-quoted (stream string)
+  "Write STRING single-quoted for a POSIX shell (bash/zsh/fish) directly to STREAM.
 
-Strips control characters and escapes embedded single quotes in one pass
-over STRING, rather than through %COMPLETION-CONTROL-SAFE-STRING (a second,
-separately-allocated WITH-OUTPUT-TO-STRING pass) -- this is render-
-completion's hottest single allocation on an app with many options, since
-every option/command name and description is shell-quoted at least once.
-Quote-escaping and control-stripping act on disjoint character sets (a
-quote is never itself a control code), so folding both into one COND
-preserves %COMPLETION-CONTROL-SAFE-STRING's exact behavior for this caller
-without changing its other 12+ call sites, which still use it standalone."
+Strips control characters and escapes embedded single quotes in one pass,
+rather than through %COMPLETION-CONTROL-SAFE-STRING (a second, separately-
+allocated WITH-OUTPUT-TO-STRING pass) -- this is render-completion's hottest
+single allocation on an app with many options, since every option/command
+name and description is shell-quoted at least once. Quote-escaping and
+control-stripping act on disjoint character sets (a quote is never itself a
+control code), so folding both into one COND preserves
+%COMPLETION-CONTROL-SAFE-STRING's exact behavior for this caller without
+changing its other 12+ call sites, which still use it standalone.
+
+Writing straight to a caller-supplied STREAM (instead of always returning a
+freshly-consed string via %COMPLETION-SHELL-QUOTE) lets hot callers that
+already hold an open stream -- e.g. the bash renderer's array-literal/
+case-label builders -- skip an intermediate string allocation per quoted
+value entirely."
   (let ((value (if string (princ-to-string string) "")))
-    (with-output-to-string (out)
-      (write-char #\' out)
-      (loop for char across value
-            for code = (char-code char)
-            do (cond
-                 ((char= char #\')
-                  (write-string "'\"'\"'" out))
-                 ((or (char= char #\Newline)
-                      (char= char #\Return)
-                      (char= char #\Tab))
-                  (write-char #\Space out))
-                 ((or (< code 32)
-                      (= code 127)
-                      (and (>= code 128) (< code 160)))
-                  nil)
-                 (t
-                  (write-char char out))))
-      (write-char #\' out))))
+    (write-char #\' stream)
+    (loop for char across value
+          for code = (char-code char)
+          do (cond
+               ((char= char #\')
+                (write-string "'\"'\"'" stream))
+               ((or (char= char #\Newline)
+                    (char= char #\Return)
+                    (char= char #\Tab))
+                (write-char #\Space stream))
+               ((or (< code 32)
+                    (= code 127)
+                    (and (>= code 128) (< code 160)))
+                nil)
+               (t
+                (write-char char stream))))
+    (write-char #\' stream)))
+
+(defun %completion-shell-quote (string)
+  "Single-quote STRING for a POSIX shell (bash/zsh/fish); see %COMPLETION-WRITE-SHELL-QUOTED."
+  (with-output-to-string (out)
+    (%completion-write-shell-quoted out string)))
 
 (defun %completion-space-joined (strings)
   ;; :TEST #'EQUAL (not #'STRING=) is semantically identical for strings --
@@ -127,11 +137,6 @@ without changing its other 12+ call sites, which still use it standalone."
   ;; once an app has a large option/command count.
   (format nil "~{~A~^ ~}"
           (remove-duplicates strings :test #'equal)))
-
-(defun %completion-bash-array-literal (strings)
-  (format nil "(~{~A~^ ~})"
-          (mapcar #'%completion-shell-quote
-                  (remove-duplicates strings :test #'equal))))
 
 (defun %completion-case-labels (strings)
   (format nil "~{~A~^|~}"
@@ -199,36 +204,6 @@ without changing its other 12+ call sites, which still use it standalone."
                                        :command-name command-name
                                        :attached-p attached-p)))
 
-(defun %completion-option-scan-rules (options &key command-name)
-  (with-output-to-string (out)
-    (dolist (option options)
-      (unless (option-hidden-p option)
-        (let ((kind (option-kind option)))
-          (when (or (eq kind :value)
-                    (and (eq kind :optional-value)
-                         (option-consume-optional-value-p option)))
-            (let* ((value-source (%completion-option-value-source option))
-                   (dir-hint-p (eq (option-value-hint option) :dir))
-                   (dynamic-p (and (option-complete option) t))
-                   ;; Emit a case for candidates, a :dir hint (explicit compgen
-                   ;; -d), or a :complete function (runtime callback). A :file
-                   ;; hint / plain value option instead falls through to `complete
-                   ;; -o default` filename completion. An empty case label (`)`)
-                   ;; is a bash syntax error, so nothing is emitted otherwise.
-                   (emit-p (or value-source dir-hint-p dynamic-p))
-                   (expect (if (eq kind :value)
-                               "expect_value=1"
-                               "expect_optional_value=1")))
-              (when emit-p
-                (format out "      ~A) ~A ;;~%"
-                        (%completion-case-labels
-                         (%completion-option-token-patterns option
-                                                            :command-name command-name))
-                        (cond
-                          (dynamic-p
-                           (format nil "~A comp_dynamic=~A" expect
-                                   (%completion-shell-quote
-                                    (string-downcase (symbol-name (option-key option))))))
-                          (value-source (format nil "~A value_source=~A" expect
-                                                (%completion-bash-array-literal value-source)))
-                          (dir-hint-p (format nil "~A comp_dir=1" expect))))))))))))
+;;; %COMPLETION-OPTION-SCAN-RULES now lives in completion-renderers-bash.lisp
+;;; (it writes directly into that renderer's shared stream instead of
+;;; returning its own string).
