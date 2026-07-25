@@ -25,6 +25,7 @@
                (:file "src/conditions")
                (:file "src/core")
                (:file "src/model-helpers")
+               (:file "src/model-value-typing")
                (:file "src/model-structs")
                (:file "src/model-lookup")
                (:file "src/option-relations")
