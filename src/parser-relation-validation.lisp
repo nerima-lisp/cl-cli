@@ -1,6 +1,6 @@
 (in-package :cl-cli)
 
-(defun validate-option-relationships (values specs &optional graph)
+(defun validate-option-relationships (values specs &optional graph key-table target-table)
   ;; Most CLIs declare no requires/conflicts at all. Skip building a relation
   ;; graph when there is nothing to validate -- otherwise every parse pays for
   ;; a graph build plus O(present log present) empty closure lookups that can
@@ -11,20 +11,21 @@
                       (option-conflicts-with spec)))
                 specs)
     (return-from validate-option-relationships values))
-  ;; SPECS' :requires/:conflicts graph is fixed at spec-construction time, so
-  ;; %VALIDATE-APP-SPEC already built and validated this exact graph once and
-  ;; cached it on the app/command spec. Callers pass it in via GRAPH; only
-  ;; rebuild here as a fallback for callers validating an ad hoc SPECS list
-  ;; that was never run through MAKE-APP. Every transitive closure is already
-  ;; precomputed on GRAPH (see OPTION-RELATION-GRAPH), so looking one up below
-  ;; is a plain O(1) hash read -- no memoization layer needed here.
+  ;; SPECS' :requires/:conflicts graph, key-table, and target-table are all
+  ;; fixed at spec-construction time, so %VALIDATE-APP-SPEC already built and
+  ;; cached all three on the app/command spec. Callers pass them in via GRAPH/
+  ;; KEY-TABLE/TARGET-TABLE; only rebuild here as a fallback for callers
+  ;; validating an ad hoc SPECS list that was never run through MAKE-APP.
+  ;; Every transitive closure is already precomputed on GRAPH (see
+  ;; OPTION-RELATION-GRAPH), so looking one up below is a plain O(1) hash
+  ;; read -- no memoization layer needed here.
   (let* ((graph (or graph (make-option-relation-graph specs)))
          (present-specs
            (remove-if-not (lambda (spec)
                             (plist-has-key-p values (option-key spec)))
                           specs))
-         (spec-by-key (%option-key-table specs))
-         (spec-by-target (%option-target-table specs)))
+         (spec-by-key (or key-table (%option-key-table specs)))
+         (spec-by-target (or target-table (%option-target-table specs))))
     (flet ((validate-requires (spec)
              (dolist (dependency-key (transitive-required-option-keys graph (option-key spec)))
                (let ((dependency (gethash dependency-key spec-by-key)))
@@ -92,7 +93,7 @@
           (validate-requires-any-of spec)
           (validate-conflicts spec))))))
 
-(defun validate-required-option-groups (values specs)
+(defun validate-required-option-groups (values specs &optional key-table)
   "Signal CLI-MISSING-OPTION-VALUE when a required option group has no member set.
 
 Exclusivity within a group is already enforced through :conflicts-with, so this
@@ -106,7 +107,7 @@ distinct group is checked once."
                 specs)
     (return-from validate-required-option-groups values))
   (let ((seen (make-hash-table :test #'eq))
-        (spec-by-key (%option-key-table specs)))
+        (spec-by-key (or key-table (%option-key-table specs))))
     (dolist (spec specs values)
       (let ((group (option-group spec)))
         (when (and group
@@ -126,7 +127,7 @@ distinct group is checked once."
                                                 member-specs))
                                 :option (option-key (first member-specs))))))))))
 
-(defun validate-inclusive-groups (values specs)
+(defun validate-inclusive-groups (values specs &optional key-table)
   "Signal when an all-or-none option group has some but not all members set.
 
 Each distinct :INCLUSIVE group is checked once. Hidden members are named
@@ -139,7 +140,7 @@ generically in the error, mirroring the other relationship diagnostics."
                 specs)
     (return-from validate-inclusive-groups values))
   (let ((seen (make-hash-table :test #'eq))
-        (spec-by-key (%option-key-table specs)))
+        (spec-by-key (or key-table (%option-key-table specs))))
     (dolist (spec specs values)
       (let ((group (option-group spec)))
         (when (and group
@@ -163,7 +164,7 @@ generically in the error, mirroring the other relationship diagnostics."
   (let ((spec (%lookup-option-target spec-by-target target)))
     (and spec (plist-has-key-p values (option-key spec)))))
 
-(defun validate-conditional-requirements (values specs)
+(defun validate-conditional-requirements (values specs &optional target-table)
   "Enforce :required-if / :required-unless for options absent from VALUES.
 
 :required-if makes an option mandatory when any listed target is present;
@@ -175,7 +176,7 @@ generically in the error, mirroring the other relationship diagnostics."
                   (or (option-required-if spec) (option-required-unless spec)))
                 specs)
     (return-from validate-conditional-requirements values))
-  (let ((spec-by-target (%option-target-table specs)))
+  (let ((spec-by-target (or target-table (%option-target-table specs))))
     (dolist (spec specs values)
       (unless (plist-has-key-p values (option-key spec))
         (let ((trigger (find-if (lambda (target)

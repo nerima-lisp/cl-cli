@@ -108,12 +108,19 @@ with no stack growth regardless of REMAINING's length."
          (setf option-values (apply-option-defaults option-values validated-specs))
          (unless (member action '(:help :version))
            (validate-required-options option-values validated-specs)
-           (validate-option-relationships
-            option-values validated-specs
-            (if command
-                (gethash command (app-command-relation-graphs app))
-                (app-global-relation-graph app)))
-           (validate-required-option-groups option-values validated-specs)
-           (validate-inclusive-groups option-values validated-specs)
-           (validate-conditional-requirements option-values validated-specs))
+           (let ((key-table (if command
+                                (gethash command (app-command-relation-key-tables app))
+                                (app-global-relation-key-table app)))
+                 (target-table (if command
+                                   (gethash command (app-command-relation-target-tables app))
+                                   (app-global-relation-target-table app))))
+             (validate-option-relationships
+              option-values validated-specs
+              (if command
+                  (gethash command (app-command-relation-graphs app))
+                  (app-global-relation-graph app))
+              key-table target-table)
+             (validate-required-option-groups option-values validated-specs key-table)
+             (validate-inclusive-groups option-values validated-specs key-table)
+             (validate-conditional-requirements option-values validated-specs target-table)))
          (values option-values positional-values action))))))

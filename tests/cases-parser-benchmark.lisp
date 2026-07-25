@@ -32,6 +32,26 @@
                              :positionals (list (make-positional :key :input
                                                                  :required-p t))))))
 
+(defparameter *benchmark-relation-heavy-parse-app*
+  ;; Combines :requires, :conflicts-with, :required-if, and a required
+  ;; exclusive group on overlapping options, so every one of
+  ;; VALIDATE-OPTION-RELATIONSHIPS/-REQUIRED-OPTION-GROUPS/-INCLUSIVE-GROUPS/
+  ;; -CONDITIONAL-REQUIREMENTS does real work on every PARSE-ARGV call rather
+  ;; than hitting its early-exit guard -- unlike every other benchmark app in
+  ;; this file, none of which declare any option relations at all.
+  (make-app
+   :name "reltool"
+   :global-options
+   (append
+    (list (make-option :name "profile" :kind :value)
+          (make-option :name "config" :kind :value :requires '(:profile))
+          (make-option :name "verbose" :kind :flag :conflicts-with '(:quiet))
+          (make-option :name "quiet" :kind :flag)
+          (make-option :name "output" :kind :value :required-if '(:config)))
+    (required-exclusive-group
+     (make-option :name "a" :kind :flag)
+     (make-option :name "b" :kind :flag)))))
+
 (defun %benchmark-relation-heavy-options (n)
   "N flag options, each requiring its predecessor and conflicting with a
 shared sentinel -- exercises VALIDATE-OPTION-RELATIONSHIPS-DECLARED's
@@ -105,6 +125,20 @@ app in this file (none of which declare any :requires/:conflicts-with)."
                     (dotimes (i 100000)
                       (parse-argv *benchmark-subcommand-app*
                                  '("bench" "-v" "build" "--target" "x86" "in.lisp"))))))
+      (expect (< (median-ms result) 2000))))
+
+  (it "repeated parses against a relation-heavy app stay well under budget"
+    ;; Guards VALIDATE-OPTION-RELATIONSHIPS/-REQUIRED-OPTION-GROUPS/
+    ;; -INCLUSIVE-GROUPS/-CONDITIONAL-REQUIREMENTS against regressing back to
+    ;; rebuilding an %OPTION-KEY-TABLE/%OPTION-TARGET-TABLE from scratch on
+    ;; every PARSE-ARGV call instead of reusing the app-level cache populated
+    ;; at MAKE-APP time. 200,000 calls (a tighter loop than the 100,000 above
+    ;; since this argv is shorter), same 2000ms budget convention.
+    (let ((result (benchmark (:warmup 1 :samples 5)
+                    (dotimes (i 200000)
+                      (parse-argv *benchmark-relation-heavy-parse-app*
+                                 '("reltool" "--profile" "p" "--config" "c"
+                                   "--output" "o" "-a"))))))
       (expect (< (median-ms result) 2000))))
 
   (it "scans a 5,000-flag argv (%SCAN-OPTIONS-PREFIX) in well under budget"

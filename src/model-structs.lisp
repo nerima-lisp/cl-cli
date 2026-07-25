@@ -106,6 +106,18 @@
   ;; table lives on the APP -- which is never itself shared as another app's
   ;; input -- so each app owns an independent cache even when commands are.
   (command-relation-graphs (make-hash-table :test 'eq))
+  ;; VALIDATE-OPTION-RELATIONSHIPS/-REQUIRED-OPTION-GROUPS/-INCLUSIVE-GROUPS/
+  ;; -CONDITIONAL-REQUIREMENTS (src/parser-relation-validation.lisp) each ran
+  ;; on every single PARSE-ARGV call and each independently rebuilt an
+  ;; %OPTION-KEY-TABLE and/or %OPTION-TARGET-TABLE from the same specs list
+  ;; the relation graph above was already built from -- for an app using
+  ;; :requires-if/option-groups/etc, that's 2-4 redundant hash-table builds
+  ;; per parse. Both tables are pure functions of an immutable specs list, so
+  ;; cache them here too, keyed by command exactly like COMMAND-RELATION-GRAPHS.
+  global-relation-key-table
+  global-relation-target-table
+  (command-relation-key-tables (make-hash-table :test 'eq))
+  (command-relation-target-tables (make-hash-table :test 'eq))
   ;; Option specs are immutable and their built-ins/lookup table are fully
   ;; determined at MAKE-APP time, so both are computed once here (mirroring
   ;; the relation-graph caches above) instead of being rebuilt --
