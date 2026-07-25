@@ -2,10 +2,13 @@
 
 ## Usage questions
 
-Use the GitHub issue tracker for questions about:
+Use the
+[GitHub issue tracker](https://github.com/nerima-lisp/cl-cli/issues) for
+questions about:
 
 - modeling a CLI with `make-app`, `make-command`, or `make-option`
-- migration from an existing in-house parser
+- migration from an existing in-house parser — see the [Migration
+  Guide](migration-guide.md)
 - help, completion, or runtime argv integration
 - expected strictness for parsing and validation behavior
 
@@ -24,16 +27,17 @@ includes:
 
 - a minimal reproduction
 - the exact implementation used, such as `sbcl` or `ecl`
-- whether the bug is parser behavior, help rendering, completion rendering, or runtime argv handling
+- whether the bug is parser behavior, help rendering, completion rendering,
+  or runtime argv handling
 - the smallest failing test you would expect in `tests/`
 
 ## Security issues
 
 Do not use public issues for suspected vulnerabilities. Follow
-[SECURITY.md](SECURITY.md).
+[Security](security.md).
 
 ## Maintenance expectations
 
 This repository currently treats the default branch as the supported line.
-Compatibility guarantees for each tagged release are documented in
-[CHANGELOG.md](CHANGELOG.md).
+Compatibility guarantees are documented per release in
+[CHANGELOG.md](https://github.com/nerima-lisp/cl-cli/blob/main/CHANGELOG.md).

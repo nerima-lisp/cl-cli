@@ -11,6 +11,9 @@ result-*
 *.lx64fsl
 *.dx64fsl
 
+# MkDocs local build output (docs/mkdocs.yml sets site_dir: ../site)
+/site/
+
 # Editor / OS noise
 *~
 \#*\#

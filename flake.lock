@@ -1,17 +1,65 @@
 {
   "nodes": {
-    "cl-prolog": {
+    "cl-boundary-kit": {
       "flake": false,
       "locked": {
-        "lastModified": 1784437549,
-        "narHash": "sha256-1WRrmNeniD1w1euhGhOCEpQoPVum5M2G6JVESAHzW1w=",
-        "owner": "takeokunn",
-        "repo": "cl-prolog",
-        "rev": "b3049ad4f616e9b5cfc6987b1449b3f0920b1323",
+        "lastModified": 1784900573,
+        "narHash": "sha256-fP9ETmrQoNsMJzkhiT1Cpqsr0ul0xxWmY8Q3pijPQPs=",
+        "owner": "nerima-lisp",
+        "repo": "cl-boundary-kit",
+        "rev": "ab08affa809bd802b63c09828ea346eaf9537751",
         "type": "github"
       },
       "original": {
-        "owner": "takeokunn",
+        "owner": "nerima-lisp",
+        "repo": "cl-boundary-kit",
+        "type": "github"
+      }
+    },
+    "cl-log-kit": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784893936,
+        "narHash": "sha256-n1qdN+GPMwobdR0lSgDmmx3oWouJY7G/UV5T5aV54Qo=",
+        "owner": "nerima-lisp",
+        "repo": "cl-log-kit",
+        "rev": "314f34fa94c996fc8d216598c07dae30155dc9e7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nerima-lisp",
+        "repo": "cl-log-kit",
+        "type": "github"
+      }
+    },
+    "cl-process-kit": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784899853,
+        "narHash": "sha256-Q+Q476TCQfMUS4ytJKH+x40I/DkZFqe+aKnD1zDLEY8=",
+        "owner": "nerima-lisp",
+        "repo": "cl-process-kit",
+        "rev": "6b090020390d01f3987448560f9bd7b700014a2b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nerima-lisp",
+        "repo": "cl-process-kit",
+        "type": "github"
+      }
+    },
+    "cl-prolog": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1784953575,
+        "narHash": "sha256-S7SPfYAtSZpAf2vCbEH7GcatfxT7DZV/aSn2OXFVF3Y=",
+        "owner": "nerima-lisp",
+        "repo": "cl-prolog",
+        "rev": "b3275ad2697ebcdcd97f1f9f586426d750d3ddb7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nerima-lisp",
         "repo": "cl-prolog",
         "type": "github"
       }
@@ -19,15 +67,15 @@
     "cl-weave": {
       "flake": false,
       "locked": {
-        "lastModified": 1784453306,
-        "narHash": "sha256-Ff88QPdT2BKHSQF0HHeypPgvG0kQGBQXSilMyX2fMsY=",
-        "owner": "takeokunn",
+        "lastModified": 1784952600,
+        "narHash": "sha256-SdLeK85XeO5Y0aD7Gx35wX522zB44ee88xCMlWmeO1U=",
+        "owner": "nerima-lisp",
         "repo": "cl-weave",
-        "rev": "bf6b7876e08246b78b550642abf7c40a0c469c50",
+        "rev": "48ee4c2e31f12b499b0473c1cb66e554f519a911",
         "type": "github"
       },
       "original": {
-        "owner": "takeokunn",
+        "owner": "nerima-lisp",
         "repo": "cl-weave",
         "type": "github"
       }
@@ -50,6 +98,9 @@
     },
     "root": {
       "inputs": {
+        "cl-boundary-kit": "cl-boundary-kit",
+        "cl-log-kit": "cl-log-kit",
+        "cl-process-kit": "cl-process-kit",
         "cl-prolog": "cl-prolog",
         "cl-weave": "cl-weave",
         "nixpkgs": "nixpkgs"

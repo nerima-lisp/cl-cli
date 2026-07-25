@@ -2,8 +2,8 @@
 
 ## Supported versions
 
-This project does not currently publish versioned support windows. Report issues
-against the latest commit on the default branch.
+This project does not currently publish versioned support windows. Report
+issues against the latest commit on the default branch.
 
 ## Reporting a vulnerability
 
@@ -32,5 +32,6 @@ Maintainers should aim to:
 - prepare a fix and regression test
 - disclose the issue after a fix is available when responsible to do so
 
-Because this is a library, security fixes should also document whether the risk
-is exploitable through default parser behavior or only through consumer misuse.
+Because this is a library, security fixes should also document whether the
+risk is exploitable through default parser behavior or only through consumer
+misuse.
