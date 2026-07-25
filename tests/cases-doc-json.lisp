@@ -67,6 +67,41 @@
            (text (json-text app)))
       (assert-searches text "a\\\"b\\\\c")))
 
+  (it "escapes a raw control character outside the named escape set as \\uXXXX"
+    (let* ((app (make-app :name "tool"
+                          :global-options (list (make-option :name "note"
+                                                             :kind :value
+                                                             :description (format nil "a~Cb" (code-char 1))))))
+           (text (json-text app)))
+      (assert-searches text "a\\u0001b")))
+
+  (it "encodes a non-integer number as a JSON float, not a Lisp ratio"
+    (let* ((app (make-app :name "tool"
+                          :global-options (list (make-option :name "ratio"
+                                                             :kind :value
+                                                             :type :number
+                                                             :default 1.5))))
+           (text (json-text app)))
+      (assert-searches text "\"default\":1.5")))
+
+  (it "encodes true and false boolean-kind defaults distinctly from an absent default"
+    (let* ((app (make-app :name "tool"
+                          :global-options (list (make-option :name "strict" :kind :boolean :default t)
+                                                (make-option :name "cache" :kind :boolean :default nil))))
+           (text (json-text app)))
+      (assert-searches text "\"key\":\"strict\"" "\"default\":true")
+      (assert-searches text "\"key\":\"cache\"" "\"default\":null")))
+
+  (it "encodes each value-count spelling in valueCount"
+    (let* ((app (make-app :name "tool"
+                          :global-options (list (make-option :name "files" :kind :value :value-count :+)
+                                                (make-option :name "tags" :kind :value :value-count :*)
+                                                (make-option :name "pair" :kind :value :value-count 2))))
+           (text (json-text app)))
+      (assert-searches text "\"valueCount\":\"+\"")
+      (assert-searches text "\"valueCount\":\"*\"")
+      (assert-searches text "\"valueCount\":2")))
+
   (it "round-trips escaped strings through an independent JSON reader"
     ;; Substring-searching for the escaped form (above) only proves the
     ;; writer emitted *an* escape sequence, not that it's the *correct* one
