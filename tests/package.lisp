@@ -10,6 +10,7 @@
                 :assert-mutation-score
                 :benchmark
                 :describe-sequential
+                :describe-skip
                 :expect
                 :gen-list
                 :gen-member

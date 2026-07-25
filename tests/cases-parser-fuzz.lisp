@@ -22,7 +22,10 @@ constructors so each fuzz trial can build a fresh, unshared app spec.")
   "A pool of option-like, malformed, and plain-argument tokens for IT-FUZZ to
 combine adversarially; deliberately includes tokens no example app declares.")
 
-(describe-sequential "parser fuzz"
+;; IT-FUZZ needs cl-weave's :TIMEOUT capability to bound a runaway trial; see
+;; HARNESS-TIMEOUT-AVAILABLE-P in tests/test-support.lisp for why that gates
+;; the suite rather than being asserted inside it.
+(describe-sequential-run-if (harness-timeout-available-p) "parser fuzz"
   (it-fuzz "parse-argv never signals outside CLI-USAGE-ERROR on adversarial argv"
       ((builder (gen-member *parser-fuzz-app-builders*))
        (tokens (gen-list (gen-member *parser-fuzz-tokens*)

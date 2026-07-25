@@ -1,5 +1,49 @@
 (in-package :cl-cli/tests)
 
+;;;; ---------------------------------------------------------------------
+;;;; Implementation gating
+;;;;
+;;;; cl-cli itself is portable Common Lisp over UIOP, and the bulk of this
+;;;; suite runs unchanged on every implementation. Two suites cannot: one
+;;;; needs a harness capability cl-weave only wires up on some
+;;;; implementations, and one asserts absolute wall-clock budgets that were
+;;;; measured against a specific compiler. Both gates are predicates on the
+;;;; thing that actually differs, so neither silently hides a cl-cli bug.
+
+(defmacro describe-sequential-run-if (condition name &body body)
+  "DESCRIBE-SEQUENTIAL, but skip the whole suite unless CONDITION holds.
+
+cl-weave ships DESCRIBE-RUN-IF, but it expands to plain DESCRIBE and so drops
+the :SEQUENTIAL execution mode -- which a timing suite cannot give up without
+measuring contention instead of the code under test."
+  `(if ,condition
+       (describe-sequential ,name ,@body)
+       (describe-skip ,name "conditional run-if" ,@body)))
+
+(defun harness-timeout-available-p ()
+  "True when cl-weave can enforce the per-case timeout IT-FUZZ requires.
+
+cl-weave registers its :TIMEOUT platform capability only where it has an
+implementation-specific way to interrupt a running case; elsewhere IT-FUZZ
+signals PLATFORM-CAPABILITY-UNAVAILABLE before any cl-cli code runs, which
+would read as a cl-cli parser failure. Probing cl-weave's own capability list
+rather than testing for an implementation by name means the gate opens by
+itself if cl-weave gains the capability somewhere new."
+  (let ((probe (find-symbol "PLATFORM-CAPABILITY-AVAILABLE-P" "CL-WEAVE")))
+    (and probe (funcall probe :timeout) t)))
+
+(defun performance-budgets-calibrated-p ()
+  "True on the implementation the millisecond budgets in the benchmark suite
+were measured against.
+
+The budgets are absolute wall-clock numbers, and the suite exists to prove
+SBCL still tail-call-optimizes the CPS scan loops. Run elsewhere they measure
+that implementation's compiler instead: ECL is roughly 7x slower on the same
+app and would report a permanent failure that no cl-cli change could fix.
+Calibrating a second set of budgets is the way to widen this, not loosening
+the first set until both fit."
+  (string= (lisp-implementation-type) "SBCL"))
+
 (defmacro signals-all (condition-type &body forms)
   `(progn
      ,@(loop for form in forms

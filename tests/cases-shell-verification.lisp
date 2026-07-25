@@ -1,8 +1,8 @@
 (in-package :cl-cli/tests)
 
 ;;;; Verify generated scripts with the REAL tools that consume them (bash, zsh,
-;;;; fish, mandoc) -- catching structural errors substring assertions cannot.
-;;;; Each check is skipped when its tool is absent.
+;;;; fish, nushell, powershell, elvish, mandoc) -- catching structural errors
+;;;; substring assertions cannot. Each check is skipped when its tool is absent.
 ;;;;
 ;;;; Every subprocess launch here goes through CL-PROCESS-KIT with an explicit
 ;;;; :TIMEOUT: a hung syntax-checker (a broken local install prompting on
@@ -13,6 +13,18 @@
 
 (defparameter +shell-tool-timeout-seconds+ 10
   "Deadline for every real-shell verification subprocess in this file.")
+
+(defparameter +elvish-edit-namespace-stub+
+  (format nil "var edit: = (ns [&completion:=(ns [&arg-completer=[&]])])~%")
+  "Prelude that makes elvish's interactive-only `edit:' namespace resolvable.
+
+`elvish -compileonly' is the only non-interactive way to compile a script, but
+it runs elvish in non-interactive mode, where the `edit:' module does not
+exist -- so any real completion script fails on `edit:completion:arg-completer'
+before its own contents are ever checked. Binding `edit:' to a plain namespace
+value stubs out exactly that one interactive surface and nothing else: parse
+errors and unresolved variables anywhere in the generated script still fail the
+compile, which the negative-control case below pins down.")
 
 (defun %tool-available-p (name)
   (ignore-errors
@@ -106,6 +118,28 @@ the conventional shell timeout(1) exit status."
                      (render-completion (verification-app) "powershell"))
       (declare (ignore out err))
       (expect (zerop code))))
+
+  (it-run-if (%tool-available-p "elvish")
+      "the generated elvish completion passes elvish -compileonly"
+    (multiple-value-bind (out err code)
+        (%check-tool "elvish" '("-compileonly")
+                     (concatenate 'string +elvish-edit-namespace-stub+
+                                  (render-completion (verification-app) "elvish")))
+      (declare (ignore out))
+      (expect (zerop code))
+      (expect (zerop (length err)))))
+
+  (it-run-if (%tool-available-p "elvish")
+      "elvish -compileonly rejects a broken completer body, so the check above has teeth"
+    ;; Negative control. Without this, a stub that accidentally made every
+    ;; script compile would leave the check above passing vacuously forever.
+    (multiple-value-bind (out err code)
+        (%check-tool "elvish" '("-compileonly")
+                     (concatenate 'string +elvish-edit-namespace-stub+
+                                  "set edit:completion:arg-completer['x'] = "
+                                  "{|@words| put $no-such-variable }"))
+      (declare (ignore out err))
+      (expect (not (zerop code)))))
 
   (it-run-if (%tool-available-p "sh")
       "%check-tool's timeout actually terminates a hung child instead of trusting it unverified"

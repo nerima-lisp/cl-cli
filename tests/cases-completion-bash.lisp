@@ -140,4 +140,40 @@
                                                     :kind :value
                                                     :choices '("bin" "obj"))))))
       (assert-completion-searches (app)
-        "case \"compile:$cur\" in"))))
+        "case \"compile:$cur\" in")))
+
+  (it "neutralizes shell metacharacters in candidate values"
+    ;; A generated completion script is sourced by the user's interactive
+    ;; shell, so a candidate value that escapes its quoting is arbitrary code
+    ;; execution, not a cosmetic defect. bash's only correct way to put a
+    ;; single quote inside a single-quoted word is to close, escape, and
+    ;; reopen; `$(...)`, backticks and `\` are inert inside single quotes and
+    ;; must therefore be emitted verbatim rather than mangled.
+    (let ((app (demo-app
+                :positionals (list (make-positional
+                                    :key :target
+                                    :completion-candidates
+                                    (list "a'b" "c\"d" "e\\f" "g$(touch /tmp/pwn)"
+                                          "h`touch /tmp/pwn`"))))))
+      (assert-completion-searches (app)
+        "comp_values=('a'\"'\"'b' 'c\"d' 'e\\f' 'g$(touch /tmp/pwn)' 'h`touch /tmp/pwn`')")
+      (assert-completion-not-searches (app)
+        ;; An unescaped quote would end the literal and leave the rest of the
+        ;; candidate as bare shell words.
+        "'a'b'")))
+
+  (it "neutralizes control characters in candidate values"
+    ;; Two different treatments, and the difference is deliberate: whitespace
+    ;; controls become a space, so a candidate that spanned lines still reads
+    ;; as two words rather than silently fusing into one, while non-printing
+    ;; controls are dropped outright -- an ESC would let a candidate rewrite
+    ;; the terminal of anyone who merely pressed Tab.
+    (let* ((app (demo-app
+                 :positionals (list (make-positional
+                                     :key :target
+                                     :completion-candidates
+                                     (list (format nil "a~Cb" #\Newline)
+                                           (format nil "c~C[31md" #\Escape))))))
+           (text (render-completion app "bash")))
+      (expect (null (find #\Escape text)))
+      (assert-completion-searches (app) "'a b'" "'c[31md'"))))

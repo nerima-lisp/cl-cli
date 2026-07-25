@@ -98,8 +98,14 @@ app in this file (none of which declare any :requires/:conflicts-with)."
     (let ((specs (cl-cli::built-in-option-specs *benchmark-subcommand-app*)))
       (expect (eq specs (cl-cli::app-cached-built-in-option-specs
                         *benchmark-subcommand-app*)))
-      (expect (eq (option-key (first specs)) :help))))
+      (expect (eq (option-key (first specs)) :help)))))
 
+;; Everything below asserts an absolute wall-clock budget, so it only means
+;; anything on the implementation those budgets were measured against -- see
+;; PERFORMANCE-BUDGETS-CALIBRATED-P in tests/test-support.lisp. The two cache
+;; identity checks above are ordinary correctness tests and stay portable.
+(describe-sequential-run-if (performance-budgets-calibrated-p)
+    "parser benchmark budgets"
   (it "constructs a 100-option relation-heavy app in well under budget"
     ;; VALIDATE-OPTION-RELATIONSHIPS-DECLARED used to rebuild
     ;; %OPTION-TARGET-TABLE from scratch on every single declared relation

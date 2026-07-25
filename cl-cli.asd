@@ -67,12 +67,20 @@
                (:file "src/completion-dynamic")
                (:file "src/completion-commands")))
 
+;;; The test suite is split in two so that the portable half stays loadable on
+;;; every implementation. `cl-cli/tests' is the core suite; its dependencies
+;;; are all portable Common Lisp. `cl-cli/tests/shell-verification' adds the
+;;; checks that shell out to bash/zsh/fish/mandoc, and only that half needs
+;;; `cl-process-kit' (whose transitive `cl-log-kit' dependency is SBCL-only --
+;;; https://github.com/nerima-lisp/cl-log-kit/issues/1). Keeping the split at
+;;; the system boundary means a non-SBCL implementation runs the core suite for
+;;; real instead of failing to compile the whole thing.
 (asdf:defsystem "cl-cli/tests"
-  :description "Test system for cl-cli."
+  :description "Core test system for cl-cli."
   :author "takeokunn"
   :license "MIT"
   :version "0.3.0"
-  :depends-on ("cl-cli" "cl-weave" "cl-prolog/weave" "cl-process-kit" "cl-json-kit")
+  :depends-on ("cl-cli" "cl-weave" "cl-prolog/weave" "cl-json-kit")
   :serial t
   :components ((:file "tests/package")
                (:file "tests/test-fixtures")
@@ -120,6 +128,9 @@
                (:file "tests/cases-completion-bash")
                (:file "tests/cases-completion-zsh")
                (:file "tests/cases-completion-fish")
+               (:file "tests/cases-completion-powershell")
+               (:file "tests/cases-completion-nushell")
+               (:file "tests/cases-completion-elvish")
                (:file "tests/cases-completion-commands")
                (:file "tests/cases-positional-completion")
                (:file "tests/cases-value-hints")
@@ -131,7 +142,18 @@
                (:file "tests/cases-doc-markdown")
                (:file "tests/cases-doc-json")
                (:file "tests/cases-doc-commands")
-               (:file "tests/cases-shell-verification")
                (:file "tests/cases-consumer-migrations"))
+  :perform (asdf:test-op (op c)
+             (uiop:symbol-call :cl-cli/tests :run-tests)))
+
+(asdf:defsystem "cl-cli/tests/shell-verification"
+  :description
+  "Tests that run cl-cli's generated scripts through the real shells and mandoc."
+  :author "takeokunn"
+  :license "MIT"
+  :version "0.3.0"
+  :depends-on ("cl-cli/tests" "cl-process-kit")
+  :serial t
+  :components ((:file "tests/cases-shell-verification"))
   :perform (asdf:test-op (op c)
              (uiop:symbol-call :cl-cli/tests :run-tests)))
