@@ -130,81 +130,87 @@ the token reflects what was actually typed."
         (cons (format nil "-~A" rest) tokens)
         tokens)))
 
+(defun %scan-short-cluster (cluster tokens specs table values action index on-done)
+  "Scan CLUSTER's characters from INDEX, calling ON-DONE with
+(values tokens action done-p) once the cluster is exhausted or a character
+consumes the rest of the cluster / following tokens as a value.
+
+Genuine continuation-passing style: every terminal case (each option kind
+that absorbs a value, a stop-parsing flag/count/boolean, or running off the
+end of CLUSTER) calls ON-DONE instead of RETURN-FROM, and the one
+keep-scanning case is a tail call, so SBCL compiles this to a loop with no
+stack growth regardless of CLUSTER's length."
+  (if (>= index (length cluster))
+      (funcall on-done values tokens action nil)
+      (let* ((name (string (char cluster index)))
+             (entry (resolve-option-entry table name)))
+        (unless entry
+          (signal-unknown-short-option name specs))
+        (let ((spec (option-entry-spec entry)))
+          (flet ((continue-or-stop (new-values new-action)
+                   (if (option-stop-parsing-p spec)
+                       (funcall on-done new-values
+                                (%prepend-short-cluster-remainder cluster index tokens)
+                                new-action t)
+                       (%scan-short-cluster cluster tokens specs table new-values
+                                            new-action (1+ index) on-done))))
+            (case (option-kind spec)
+              (:flag
+               (multiple-value-bind (new-values new-action)
+                   (store-flag-option values spec action)
+                 (continue-or-stop new-values new-action)))
+              ;; A :count short option keeps scanning the cluster, so a
+              ;; repeated character such as `-vvv` increments the counter
+              ;; once per occurrence -- exactly the conventional verbosity
+              ;; shape. Like :flag it never absorbs a value of its own.
+              (:count
+               (multiple-value-bind (new-values new-action)
+                   (store-count-option values spec action)
+                 (continue-or-stop new-values new-action)))
+              (:boolean
+               (multiple-value-bind (new-values new-action)
+                   (store-boolean-option-value values spec action nil)
+                 (continue-or-stop new-values new-action)))
+              (:optional-value
+               (let* ((rest (subseq cluster (1+ index)))
+                      (attached (and (> (length rest) 0) rest))
+                      (consume-separated-optional-p
+                        (and (null attached)
+                             (option-consume-optional-value-p spec)
+                             tokens
+                             (not (option-like-token-p (first tokens)))))
+                      (raw (cond
+                             (attached attached)
+                             (consume-separated-optional-p (first tokens))
+                             (t t))))
+                 (multiple-value-bind (new-values new-action)
+                     (store-parsed-option-value values spec action raw)
+                   (funcall on-done new-values
+                            (if consume-separated-optional-p (rest tokens) tokens)
+                            new-action (option-stop-parsing-p spec)))))
+              ((:value :key-value)
+               (if (%multi-value-option-p spec)
+                   (let ((rest (subseq cluster (1+ index))))
+                     (multiple-value-bind (new-values new-tokens new-action done-p)
+                         (consume-multi-value-option
+                          spec (and (plusp (length rest)) rest) tokens values action
+                          (format nil "-~A" name))
+                       (funcall on-done new-values new-tokens new-action done-p)))
+                   (let* ((rest (subseq cluster (1+ index)))
+                          (attached (and (> (length rest) 0) rest))
+                          (raw (or attached (first tokens))))
+                     (when (and (null attached) (null tokens))
+                       (signal-cli-error 'cli-missing-option-value
+                                         (format nil "Missing value for -~A" name)
+                                         :option (option-key spec)))
+                     (multiple-value-bind (new-values new-action)
+                         (store-parsed-option-value values spec action raw)
+                       (funcall on-done new-values
+                                (if (and (null attached) tokens) (rest tokens) tokens)
+                                new-action (option-stop-parsing-p spec))))))))))))
+
 (defun consume-short-cluster (cluster tokens specs table values action)
-  (loop for index from 0 below (length cluster)
-        do (let* ((name (string (char cluster index)))
-                  (entry (resolve-option-entry table name)))
-             (unless entry
-               (signal-unknown-short-option name specs))
-             (let ((spec (option-entry-spec entry)))
-               (case (option-kind spec)
-                 (:flag
-                  (multiple-value-setq (values action)
-                    (store-flag-option values spec action))
-                  (when (option-stop-parsing-p spec)
-                    (return-from consume-short-cluster
-                      (values values
-                              (%prepend-short-cluster-remainder cluster index tokens)
-                              action t))))
-                 ;; A :count short option keeps scanning the cluster, so a
-                 ;; repeated character such as `-vvv` increments the counter
-                 ;; once per occurrence -- exactly the conventional verbosity
-                 ;; shape. Like :flag it never absorbs a value of its own.
-                 (:count
-                  (multiple-value-setq (values action)
-                    (store-count-option values spec action))
-                  (when (option-stop-parsing-p spec)
-                    (return-from consume-short-cluster
-                      (values values
-                              (%prepend-short-cluster-remainder cluster index tokens)
-                              action t))))
-                 (:boolean
-                  (multiple-value-setq (values action)
-                    (store-boolean-option-value values spec action nil))
-                  (when (option-stop-parsing-p spec)
-                    (return-from consume-short-cluster
-                      (values values
-                              (%prepend-short-cluster-remainder cluster index tokens)
-                              action t))))
-                 (:optional-value
-                  (let* ((rest (subseq cluster (1+ index)))
-                         (attached (and (> (length rest) 0) rest))
-                         (consume-separated-optional-p
-                           (and (null attached)
-                                (option-consume-optional-value-p spec)
-                                tokens
-                                (not (option-like-token-p (first tokens)))))
-                         (raw (cond
-                                (attached attached)
-                                (consume-separated-optional-p (first tokens))
-                                (t t))))
-                    (multiple-value-setq (values action)
-                      (store-parsed-option-value values spec action raw))
-                    (when consume-separated-optional-p
-                      (setf tokens (rest tokens)))
-                    (return-from consume-short-cluster
-                      (values values tokens action (option-stop-parsing-p spec)))))
-                 ((:value :key-value)
-                  (when (%multi-value-option-p spec)
-                    (let ((rest (subseq cluster (1+ index))))
-                      (return-from consume-short-cluster
-                        (consume-multi-value-option
-                         spec (and (plusp (length rest)) rest) tokens values action
-                         (format nil "-~A" name)))))
-                  (let* ((rest (subseq cluster (1+ index)))
-                         (attached (and (> (length rest) 0) rest))
-                         (raw (or attached (first tokens))))
-                    (when (and (null attached) (null tokens))
-                      (signal-cli-error 'cli-missing-option-value
-                                        (format nil "Missing value for -~A" name)
-                                        :option (option-key spec)))
-                    (multiple-value-setq (values action)
-                      (store-parsed-option-value values spec action raw))
-                    (when (and (null attached) tokens)
-                      (setf tokens (rest tokens)))
-                    (return-from consume-short-cluster
-                      (values values tokens action (option-stop-parsing-p spec)))))))))
-  (values values tokens action nil))
+  (%scan-short-cluster cluster tokens specs table values action 0 #'values))
 
 (defun consume-argument-option-token (token validated-specs table values action
                                       remaining)

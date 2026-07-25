@@ -7,14 +7,18 @@
   (:import-from :cl-prolog/weave
                 :deftest-queries)
   (:import-from :cl-weave
+                :benchmark
                 :describe-sequential
                 :expect
                 :gen-list
                 :gen-member
                 :gen-string
                 :it
+                :it-each
+                :it-fuzz
                 :it-property
                 :it-run-if
+                :median-ms
                 :run-all
                 :signals)
   (:export :run-tests))

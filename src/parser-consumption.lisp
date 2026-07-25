@@ -1,5 +1,34 @@
 (in-package :cl-cli)
 
+(defun %scan-options-prefix (validated-specs table tokens values action
+                              literal-separator-seen-p on-done)
+  "Scan TOKENS for a flat (non-subcommand) option prefix, calling ON-DONE with
+the final (values action literal-separator-seen-p remaining) once nothing more
+can be consumed.
+
+Genuine continuation-passing style: every terminal case calls ON-DONE instead
+of returning through a chain of direct-style call frames, and the one
+recursive case is a tail call, so SBCL compiles this to a loop with no stack
+growth regardless of TOKENS' length."
+  (cond
+    ((null tokens)
+     (funcall on-done values tokens action literal-separator-seen-p))
+    ((string= (first tokens) "--")
+     (funcall on-done values (rest tokens) action t))
+    (t
+     (multiple-value-bind (new-values new-remaining new-action done-p consumed-p)
+         (consume-argument-option-token (first tokens) validated-specs table
+                                        values action tokens)
+       (cond
+         ((not consumed-p)
+          (funcall on-done values tokens action literal-separator-seen-p))
+         (done-p
+          (funcall on-done new-values new-remaining new-action
+                   literal-separator-seen-p))
+         (t
+          (%scan-options-prefix validated-specs table new-remaining new-values
+                                new-action literal-separator-seen-p on-done)))))))
+
 (defun parse-options-prefix (app tokens option-specs &optional initial-values)
   (let ((*abbreviated-option-entry-cache*
           (or *abbreviated-option-entry-cache*
@@ -7,39 +36,59 @@
                    (make-hash-table :test #'eq)))))
     (multiple-value-bind (validated-specs table)
         (prepare-option-parser-state app option-specs)
-      (let ((values initial-values)
-            (remaining tokens)
-            (action :dispatch)
-            (literal-separator-seen-p nil))
-        (labels ((scan ()
-                   (cond
-                     ((null remaining)
-                      (values values remaining action literal-separator-seen-p))
-                     ((string= (first remaining) "--")
-                      (setf literal-separator-seen-p t
-                            remaining (rest remaining))
-                      (values values remaining action literal-separator-seen-p))
-                     (t
-                      (multiple-value-bind (new-values new-remaining new-action
-                                               done-p consumed-p)
-                          (consume-argument-option-token (first remaining)
-                                                         validated-specs
-                                                         table
-                                                         values
-                                                         action
-                                                         remaining)
-                        (if consumed-p
-                            (progn
-                              (setf values new-values
-                                    remaining new-remaining
-                                    action new-action)
-                              (if done-p
-                                  (values values remaining action
-                                          literal-separator-seen-p)
-                                  (scan)))
-                            (values values remaining action
-                                    literal-separator-seen-p)))))))
-          (scan))))))
+      (%scan-options-prefix validated-specs table tokens initial-values
+                            :dispatch nil #'values))))
+
+(defun %scan-mixed-arguments-consume-positional (pending positional-values remaining)
+  "Consume one positional token, or signal CLI-USAGE-ERROR when none is pending.
+
+Returns (values new-pending new-positional-values new-remaining)."
+  (when (null pending)
+    (signal-unexpected-positionals remaining))
+  (let ((spec (first pending)))
+    (multiple-value-bind (new-positional-values new-remaining)
+        (apply-positional-spec spec positional-values remaining)
+      (values (if (positional-spec-rest-p spec) nil (rest pending))
+              new-positional-values
+              new-remaining))))
+
+(defun %scan-mixed-arguments (validated-specs table remaining pending option-values
+                              positional-values action literal-mode-p on-done)
+  "Scan REMAINING as an interleaved option/positional stream, calling ON-DONE
+with the final (pending option-values positional-values action) once every
+token is consumed.
+
+Genuine continuation-passing style, mirroring %SCAN-OPTIONS-PREFIX: every
+terminal case calls ON-DONE, every other case is a tail call threading the
+full scan state through explicit arguments, so SBCL compiles this to a loop
+with no stack growth regardless of REMAINING's length."
+  (cond
+    ((null remaining)
+     (funcall on-done pending option-values positional-values action))
+    ((and (not literal-mode-p) (string= (first remaining) "--"))
+     (%scan-mixed-arguments validated-specs table (rest remaining) pending
+                            option-values positional-values action t on-done))
+    (literal-mode-p
+     (multiple-value-bind (new-pending new-positional-values new-remaining)
+         (%scan-mixed-arguments-consume-positional pending positional-values
+                                                    remaining)
+       (%scan-mixed-arguments validated-specs table new-remaining new-pending
+                              option-values new-positional-values action t
+                              on-done)))
+    (t
+     (multiple-value-bind (new-values new-remaining new-action done-p consumed-p)
+         (consume-argument-option-token (first remaining) validated-specs table
+                                        option-values action remaining)
+       (if consumed-p
+           (%scan-mixed-arguments validated-specs table new-remaining pending
+                                  new-values positional-values new-action done-p
+                                  on-done)
+           (multiple-value-bind (new-pending new-positional-values new-remaining)
+               (%scan-mixed-arguments-consume-positional pending positional-values
+                                                          remaining)
+             (%scan-mixed-arguments validated-specs table new-remaining
+                                    new-pending option-values new-positional-values
+                                    action literal-mode-p on-done)))))))
 
 (defun parse-mixed-arguments (app tokens option-specs positional-specs
                                &key initial-option-values command)
@@ -49,62 +98,22 @@
                    (make-hash-table :test #'eq)))))
     (multiple-value-bind (validated-specs table)
         (prepare-option-parser-state app option-specs)
-      (let* ((option-values initial-option-values)
-             (positional-values nil)
-             (remaining tokens)
-             (pending positional-specs)
-             (action :dispatch)
-             (literal-mode-p nil))
-        (labels ((consume-positional-token ()
-                   (cond
-                     ((null pending)
-                      (signal-unexpected-positionals remaining))
-                     (t
-                      (let ((spec (first pending)))
-                        (multiple-value-bind (new-values new-remaining)
-                            (apply-positional-spec spec
-                                                   positional-values
-                                                   remaining)
-                          (setf positional-values new-values
-                                remaining new-remaining
-                                pending (if (positional-spec-rest-p spec)
-                                            nil
-                                            (rest pending)))))))))
-          (loop while remaining
-                for token = (first remaining)
-                do (cond
-                     ((and (not literal-mode-p)
-                           (string= token "--"))
-                      (setf literal-mode-p t
-                            remaining (rest remaining)))
-                     ((not literal-mode-p)
-                      (multiple-value-bind (new-values new-remaining new-action done-p
-                                            consumed-p)
-                          (consume-argument-option-token token validated-specs table
-                                                         option-values action
-                                                         remaining)
-                        (if consumed-p
-                            (progn
-                              (setf option-values new-values
-                                    remaining new-remaining
-                                    action new-action)
-                              (when done-p
-                                (setf literal-mode-p t)))
-                            (consume-positional-token))))
-                     (t
-                      (consume-positional-token)))))
-        (unless (member action '(:help :version))
-          (setf positional-values
-                (finalize-pending-positionals pending positional-values)))
-        (setf option-values (apply-option-defaults option-values validated-specs))
-        (unless (member action '(:help :version))
-          (validate-required-options option-values validated-specs)
-          (validate-option-relationships
-           option-values validated-specs
-           (if command
-               (gethash command (app-command-relation-rulebases app))
-               (app-global-relation-rulebase app)))
-          (validate-required-option-groups option-values validated-specs)
-          (validate-inclusive-groups option-values validated-specs)
-          (validate-conditional-requirements option-values validated-specs))
-        (values option-values positional-values action)))))
+      (%scan-mixed-arguments
+       validated-specs table tokens positional-specs initial-option-values nil
+       :dispatch nil
+       (lambda (pending option-values positional-values action)
+         (unless (member action '(:help :version))
+           (setf positional-values
+                 (finalize-pending-positionals pending positional-values)))
+         (setf option-values (apply-option-defaults option-values validated-specs))
+         (unless (member action '(:help :version))
+           (validate-required-options option-values validated-specs)
+           (validate-option-relationships
+            option-values validated-specs
+            (if command
+                (gethash command (app-command-relation-graphs app))
+                (app-global-relation-graph app)))
+           (validate-required-option-groups option-values validated-specs)
+           (validate-inclusive-groups option-values validated-specs)
+           (validate-conditional-requirements option-values validated-specs))
+         (values option-values positional-values action))))))
