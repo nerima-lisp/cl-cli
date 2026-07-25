@@ -217,6 +217,19 @@
                                           :kind :value
                                           :conflicts-with '("token"))))))
 
+  (it "rejects a requires closure that contains two conflicting options"
+    ;; :a requires both :b and :c, so :a's requires-closure is {:a :b :c}.
+    ;; :b and :c conflict with each other -- :a could never be validly
+    ;; supplied, since satisfying its own requirements would always also
+    ;; satisfy one of :b/:c's mutual conflict.
+    (signals-invalid-specification
+      (demo-app
+       :global-options (list (make-option :name "a" :kind :flag
+                                          :requires '(:b :c))
+                             (make-option :name "b" :kind :flag
+                                         :conflicts-with '(:c))
+                             (make-option :name "c" :kind :flag)))))
+
   (it "keeps each app's cached relation rulebase independent when a command is reused across apps"
     ;; COMMAND-SPEC is documented as a reusable, composable object -- the same
     ;; instance can be spliced into :COMMANDS for more than one MAKE-APP call.
