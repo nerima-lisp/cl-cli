@@ -37,6 +37,7 @@
                (:file "src/util")
                (:file "src/terminal")
                (:file "src/parser-lookup")
+               (:file "src/parser-relation-validation")
                (:file "src/parser-option-consumption")
                (:file "src/parser-consumption")
                (:file "src/parser-values")
