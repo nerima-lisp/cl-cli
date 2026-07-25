@@ -17,6 +17,21 @@
                        "--verbose"
                        "--porcelain")))
 
+  (it "omits the :: optional-argument marker in zsh when consume-optional-value-p is false"
+    (let* ((app (demo-app
+                 :global-options (list (optional-value-option "coverage"))))
+           (text (render-completion app "zsh")))
+      (expect (search "--coverage[" text))
+      (expect (not (search "::value:" text)))))
+
+  (it "adds the :: optional-argument marker in zsh when consume-optional-value-p is true"
+    (let* ((app (demo-app
+                 :global-options (list (optional-value-option "coverage"
+                                                               :consume-optional-value-p t))))
+           (text (render-completion app "zsh")))
+      (expect (search "--coverage[" text))
+      (expect (search "]::value:" text))))
+
   (it "includes visible commands and options"
     (let ((app (completion-visible-commands-and-options-fixture)))
       (assert-completion-searches (app "zsh")
