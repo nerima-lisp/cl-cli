@@ -8,12 +8,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 Conformance work against the org's
-[PACKAGE_STANDARD.md](https://github.com/nerima-lisp/.github/blob/main/PACKAGE_STANDARD.md).
+[PACKAGE_STANDARD.md](https://github.com/nerima-lisp/.github/blob/main/PACKAGE_STANDARD.md)
+and
+[CODING_STANDARD.md](https://github.com/nerima-lisp/.github/blob/main/CODING_STANDARD.md).
 No behavior of the `cl-cli` system itself changed; its dependency set is still
 `uiop` alone.
 
 ### Changed
 
+- **Test files are named after the source file they exercise.** The 59
+  `t/cases-*.lisp` files were cut by feature and had no correspondence to
+  `src/`; they are now `t/<source>-test.lisp`, or
+  `t/<source>-<aspect>-test.lisp` where one source has several aspects (for
+  example `t/parser-value-storage-count-test.lisp` and
+  `t/parser-value-storage-key-value-test.lisp`). `t/test-support.lisp` and
+  `t/test-fixtures.lisp` are shared helpers rather than tests and became
+  `t/helpers-support.lisp` and `t/helpers-fixtures.lisp`. No test body or test
+  name changed. Anything loading an individual `t/` file by path must be
+  updated; `(asdf:test-system "cl-cli")` is unaffected.
+- The `defpackage` forms use `#:` designators throughout, in both
+  `src/package.lisp` and `t/package.lisp`.
+- Source lines are wrapped at 100 columns. Long literals inside `format`
+  controls use the `~<newline>` directive, so every generated completion
+  script, man page, Markdown and JSON document is byte-for-byte what it was.
+- **Sibling flake inputs are declared `flake = false`.** None of their flake
+  outputs were ever read -- each is used only as a source tree for the test
+  suite -- and carrying them as full flakes pulled their entire input graphs
+  into `flake.lock`, which stood at 82 nodes against an org range of 5-19. The
+  lock is now 9 nodes. `nixpkgs` is unmoved; the sibling pins now resolve to
+  the commits their release tags actually point to, which the previous lock had
+  drifted away from.
 - **The test systems were renamed.** `cl-cli/tests` is now `cl-cli/test`, and
   `cl-cli/tests/shell-verification` is now `cl-cli/test/shell-verification`,
   matching the org-wide `<pkg>/test` convention. The Lisp package
