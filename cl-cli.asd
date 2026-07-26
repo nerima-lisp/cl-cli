@@ -131,6 +131,7 @@
                (:file "t/parser-value-storage-boolean-test")
                (:file "t/option-relations-test")
                (:file "t/help-printers-test")
+               (:file "t/help-printers-command-footer-test")
                (:file "t/help-renderers-usage-synopsis-test")
                (:file "t/runtime-exit-codes-test")
                (:file "t/completion-renderers-bash-test")
