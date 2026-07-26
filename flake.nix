@@ -10,8 +10,17 @@
     # `github:nerima-lisp/cl-weave` follows that repo's default branch, which
     # means an upstream push to main breaks this repo's CI without warning.
     #
-    # `inputs.nixpkgs.follows` is mandatory: without it each input drags in its
-    # own nixpkgs, inflating flake.lock and rebuilding the same derivations.
+    # `flake = false` on every one of them, per ADR-0079. Nothing below reads a
+    # sibling's `packages`, `checks` or `lib`; each is used only as a source
+    # tree, handed to run-tests.lisp through a CL_*_SOURCE_DIR variable so ASDF
+    # can find the .asd. A `flake = true` input drags its ENTIRE input graph
+    # into flake.lock even when no output is used, and six siblings each
+    # carrying their own nixpkgs/treefmt-nix/cl-weave/paredit-cli/rust-overlay
+    # is what put this lock at 82 nodes against an org range of 5-19.
+    #
+    # No `inputs.nixpkgs.follows` on them either: a non-flake input has no
+    # inputs of its own, so the override has no target and Nix warns
+    # `has an override for a non-existent input 'nixpkgs'` on every evaluation.
     #
     # Every one of these is a TEST dependency. DEPENDENCY_POLICY.md places
     # cl-cli at L1, and the `cl-cli` system itself depends on uiop alone; that
@@ -19,34 +28,37 @@
     # the main system.
     cl-weave = {
       url = "github:nerima-lisp/cl-weave/v1.0.0";
-      inputs.nixpkgs.follows = "nixpkgs";
+      flake = false;
     };
 
     cl-prolog = {
       url = "github:nerima-lisp/cl-prolog/v1.0.1";
-      inputs.nixpkgs.follows = "nixpkgs";
+      flake = false;
     };
 
     cl-process-kit = {
       url = "github:nerima-lisp/cl-process-kit/v1.0.1";
-      inputs.nixpkgs.follows = "nixpkgs";
+      flake = false;
     };
 
     cl-boundary-kit = {
       url = "github:nerima-lisp/cl-boundary-kit/v0.6.0";
-      inputs.nixpkgs.follows = "nixpkgs";
+      flake = false;
     };
 
     cl-log-kit = {
       url = "github:nerima-lisp/cl-log-kit/v1.0.0";
-      inputs.nixpkgs.follows = "nixpkgs";
+      flake = false;
     };
 
     cl-json-kit = {
       url = "github:nerima-lisp/cl-json-kit/v1.0.0";
-      inputs.nixpkgs.follows = "nixpkgs";
+      flake = false;
     };
 
+    # treefmt-nix stays a real flake: `treefmt-nix.lib.evalModule` below reads
+    # one of its outputs, so ADR-0079 keeps it at `flake = true` -- and because
+    # it is a flake, the `follows` does have a target and does its job.
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
