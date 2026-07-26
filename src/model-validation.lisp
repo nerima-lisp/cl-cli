@@ -91,7 +91,8 @@ that key survives :requires/:conflicts-with resolution."
       (if (positional-required-p spec)
           (when optional-seen-p
             (signal-cli-error 'cli-invalid-specification
-                              (format nil "Required positional for ~A must not follow an optional positional."
+                              (format nil "Required positional for ~A must not follow ~
+                                           an optional positional."
                                       owner-name)))
           (setf optional-seen-p t))
       (when (positional-rest-p spec)
@@ -137,7 +138,8 @@ keyed by the command object."
             (%validate-command-node app subcommand command-specs)))
         (when (command-default-command command)
           (signal-cli-error 'cli-invalid-specification
-                            (format nil "Command ~A declares :default-command but has no :subcommands."
+                            (format nil "Command ~A declares :default-command but has ~
+                                         no :subcommands."
                                     (command-name command)))))))
 
 (defun %validate-app-spec (app)

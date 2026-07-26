@@ -98,7 +98,9 @@ two options that conflict with each other."
                   reachable)))
         keys))
 
-(defun validate-option-relation-graph (specs &optional (spec-by-target (%option-target-table specs)))
+(defun validate-option-relation-graph (specs
+                                       &optional (spec-by-target
+                                                  (%option-target-table specs)))
   "Validate SPECS' :requires/:conflicts graph and return (values specs graph).
 
 The graph built here to check for conflicting closures is exactly the one
@@ -119,7 +121,8 @@ VALIDATE-OPTION-RELATIONSHIPS-DECLARED passes its own already-built one."
       (when (%requires-any-of-unsatisfiable-p spec spec-by-target graph)
         (signal-cli-error
          'cli-invalid-specification
-         (format nil "Option ~A's :requires-any-of alternatives all conflict with it, so it could never be satisfied."
+         (format nil "Option ~A's :requires-any-of alternatives all conflict with it, ~
+                      so it could never be satisfied."
                  (%option-display-name spec)))))
     (values specs graph)))
 

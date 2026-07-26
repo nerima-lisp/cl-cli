@@ -18,7 +18,8 @@
 (defun %lookup-option-target (table target)
   (gethash target table))
 
-(defun resolve-related-option-spec (specs target &optional (target-table (%option-target-table specs)))
+(defun resolve-related-option-spec (specs target
+                                    &optional (target-table (%option-target-table specs)))
   "Resolve TARGET (an option name/key) to its SPECS member via TARGET-TABLE.
 
 TARGET-TABLE defaults to a fresh %OPTION-TARGET-TABLE for standalone callers,

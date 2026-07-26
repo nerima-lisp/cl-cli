@@ -118,7 +118,8 @@ write the script to it and return no values."
     (format stream "#compdef ~A~%" app-name)
     (format stream "~A() {~%" function-name)
     (format stream "  local current_word previous_word command_word~%")
-    (format stream "  local -a command_specs option_specs command_option_specs subcommand_specs value_candidates~%")
+    (format stream "  local -a command_specs option_specs command_option_specs ~
+                    subcommand_specs value_candidates~%")
     (format stream "  current_word=${words[CURRENT]}~%")
     (format stream "  if (( CURRENT > 1 )); then~%")
     (format stream "    previous_word=${words[CURRENT-1]}~%")

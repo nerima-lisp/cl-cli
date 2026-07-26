@@ -156,7 +156,8 @@ existing style of computing its own value expression inline."
     (json-member stream "key" t
                  (lambda () (%json-write-keyword-name stream (positional-key positional))))
     (json-member stream "description" (positional-description positional)
-                 (lambda () (%json-write-escaped-string stream (positional-description positional))))
+                 (lambda ()
+                   (%json-write-escaped-string stream (positional-description positional))))
     (json-member stream "required" t
                  (lambda () (%json-write-bool stream (positional-required-p positional))))
     (json-member stream "rest" t
@@ -198,7 +199,8 @@ existing style of computing its own value expression inline."
                                       #'%write-option-json)))
     (json-member stream "positionals" t
                  (lambda ()
-                   (%json-write-array stream (command-positionals command) #'%write-positional-json)))
+                   (%json-write-array stream (command-positionals command)
+                                      #'%write-positional-json)))
     (json-member stream "examples" (command-examples command)
                  (lambda () (%json-write-string-array stream (command-examples command))))
     (json-member stream "helpFooter" (command-help-footer command)
@@ -237,7 +239,9 @@ know.")
                    (%json-write-array stream (%doc-visible-options (app-global-options app))
                                       #'%write-option-json)))
     (json-member stream "positionals" t
-                 (lambda () (%json-write-array stream (app-positionals app) #'%write-positional-json)))
+                 (lambda ()
+                   (%json-write-array stream (app-positionals app)
+                                      #'%write-positional-json)))
     (json-member stream "commands" t
                  (lambda ()
                    (%json-write-array stream (%visible-commands (app-commands app))

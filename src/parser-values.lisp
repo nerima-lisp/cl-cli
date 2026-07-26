@@ -144,7 +144,8 @@ already known truthy (:LAZY or a hash table), never when it is the NIL
                (stringp raw-value)
                (not (member raw-value choices :test #'string=)))
       (signal-cli-error 'cli-invalid-positional-value
-                        (format nil "Invalid value for positional ~A: ~A (expected one of: ~{~A~^, ~})~A"
+                        (format nil "Invalid value for positional ~A: ~A ~
+                                     (expected one of: ~{~A~^, ~})~A"
                                 (positional-key spec)
                                 raw-value
                                 choices

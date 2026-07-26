@@ -27,7 +27,8 @@ copies per value is the highest-leverage single change in this renderer."
   (%completion-bash-write-array-literal stream values)
   (format stream "~%")
   (format stream "~Afor comp_value in \"${comp_values[@]}\"; do~%" indent)
-  (format stream "~A  [[ -n \"$comp_value\" && \"$comp_value\" == \"$cur\"* ]] && COMPREPLY+=(\"$comp_value\")~%" indent)
+  (format stream "~A  [[ -n \"$comp_value\" && \"$comp_value\" == \"$cur\"* ]] ~
+                  && COMPREPLY+=(\"$comp_value\")~%" indent)
   (format stream "~Adone~%" indent))
 
 (defun %completion-bash-write-value-case-body (stream options &key command-name)
@@ -96,13 +97,16 @@ separated value (`--option <TAB>`) actually completes its candidates."
   ;; Read the tab-separated protocol directly so spaces in candidate values
   ;; stay within the same completion record.
   (format stream "~A    while IFS=$'\\t' read -r comp_value _; do~%" indent)
-  (format stream "~A      [[ -n \"$comp_value\" && \"$comp_value\" == \"$cur\"* ]] && COMPREPLY+=(\"$comp_value\")~%" indent)
-  (format stream "~A    done < <(\"${words[0]}\" __complete \"$comp_dynamic\" \"$cur\" 2>/dev/null)~%" indent)
+  (format stream "~A      [[ -n \"$comp_value\" && \"$comp_value\" == \"$cur\"* ]] ~
+                  && COMPREPLY+=(\"$comp_value\")~%" indent)
+  (format stream "~A    done < <(\"${words[0]}\" __complete \"$comp_dynamic\" \"$cur\" ~
+                  2>/dev/null)~%" indent)
   (format stream "~A  elif [[ -n \"$comp_dir\" ]]; then~%" indent)
   (format stream "~A    COMPREPLY=( $(compgen -d -- \"$cur\") )~%" indent)
   (format stream "~A  else~%" indent)
   (format stream "~A    for comp_value in \"${value_source[@]}\"; do~%" indent)
-  (format stream "~A      [[ -n \"$comp_value\" && \"$comp_value\" == \"$cur\"* ]] && COMPREPLY+=(\"$comp_value\")~%" indent)
+  (format stream "~A      [[ -n \"$comp_value\" && \"$comp_value\" == \"$cur\"* ]] ~
+                  && COMPREPLY+=(\"$comp_value\")~%" indent)
   (format stream "~A    done~%" indent)
   (format stream "~A  fi~%" indent)
   (format stream "~A  return 0~%" indent)
@@ -232,7 +236,8 @@ write the script to it and return no values."
       (format stream "#!/usr/bin/env bash~%")
       (format stream "# bash completion for ~A~%" app-name)
       (format stream "~A() {~%" function-name)
-      (format stream "  local cur prev words cword expect_value expect_optional_value comp_dir comp_dynamic comp_value~%")
+      (format stream "  local cur prev words cword expect_value expect_optional_value ~
+                      comp_dir comp_dynamic comp_value~%")
       (format stream "  local -a value_source comp_values~%")
       ;; -s makes _init_completion split `--opt=value` so an attached value
       ;; completes through the same prev-word path as a separated one.

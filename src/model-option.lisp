@@ -84,7 +84,8 @@ more), which greedily consume following tokens up to the next option-like token.
                (when (and (or type min max)
                           (not (eq resolved-kind :value)))
                  (signal-cli-error 'cli-invalid-specification
-                                   (format nil "Option ~A: :type / :min / :max apply only to :value options, not ~A."
+                                   (format nil "Option ~A: :type / :min / :max apply ~
+                                                only to :value options, not ~A."
                                            (option-token-display-name (first names))
                                            resolved-kind)))
                (validate-typed-value-spec type min max parser
@@ -92,29 +93,34 @@ more), which greedily consume following tokens up to the next option-like token.
                                                   (option-token-display-name (first names))))
                (when (and value-delimiter (not (eq resolved-kind :value)))
                  (signal-cli-error 'cli-invalid-specification
-                                   (format nil "Option ~A: :value-delimiter applies only to :value options, not ~A."
+                                   (format nil "Option ~A: :value-delimiter applies ~
+                                                only to :value options, not ~A."
                                            (option-token-display-name (first names))
                                            resolved-kind)))
                (when value-count
                  (unless (or (variadic-value-count-p value-count)
                              (and (integerp value-count) (>= value-count 1)))
                    (signal-cli-error 'cli-invalid-specification
-                                     (format nil "Option ~A: :value-count must be a positive integer or :+ / :*, got: ~S"
+                                     (format nil "Option ~A: :value-count must be a ~
+                                                  positive integer or :+ / :*, got: ~S"
                                              (option-token-display-name (first names))
                                              value-count)))
                  (unless (eq resolved-kind :value)
                    (signal-cli-error 'cli-invalid-specification
-                                     (format nil "Option ~A: :value-count applies only to :value options, not ~A."
+                                     (format nil "Option ~A: :value-count applies only ~
+                                                  to :value options, not ~A."
                                              (option-token-display-name (first names))
                                              resolved-kind)))
                  (when (and value-delimiter (multi-value-count-p value-count))
                    (signal-cli-error 'cli-invalid-specification
-                                     (format nil "Option ~A: :value-count cannot combine with :value-delimiter."
+                                     (format nil "Option ~A: :value-count cannot combine ~
+                                                  with :value-delimiter."
                                              (option-token-display-name (first names))))))
                (when (and value-hint
                           (%valueless-option-kind-p resolved-kind))
                  (signal-cli-error 'cli-invalid-specification
-                                   (format nil "Option ~A: :value-hint applies only to value-bearing options, not ~A."
+                                   (format nil "Option ~A: :value-hint applies only to ~
+                                                value-bearing options, not ~A."
                                            (option-token-display-name (first names))
                                            resolved-kind)))
                (normalize-value-hint value-hint

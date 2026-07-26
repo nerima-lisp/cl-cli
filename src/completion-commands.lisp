@@ -24,11 +24,12 @@ is built.")
       ;; `nu` is the Nushell executable name; accept it as an alias too.
       ((string= shell "nu") "nushell")
       (t
-       (signal-cli-error 'cli-invalid-positional-value
-                         (format nil "Unsupported completion shell: ~A" value)
-                         :name :shell
-                         :value value
-                         :cause "Supported shells are bash, zsh, fish, powershell, nushell, and elvish.")))))
+       (signal-cli-error
+        'cli-invalid-positional-value
+        (format nil "Unsupported completion shell: ~A" value)
+        :name :shell
+        :value value
+        :cause "Supported shells are bash, zsh, fish, powershell, nushell, and elvish.")))))
 
 (defun render-completion (app shell &optional stream)
   "Render a completion script for SHELL."
@@ -49,17 +50,16 @@ SHELL defaults to bash; bash, zsh, fish, powershell, nushell, and elvish are sup
   (make-command
    :name name
    :description description
-   :positionals (list (make-positional :key :shell
-                                       :description "Target shell (bash, zsh, fish, powershell, nushell, elvish)."
-                                       :default "bash"
-                                       :parser #'%parse-supported-shell
-                                       ;; Candidates (not :choices) so shell
-                                       ;; completion suggests these names while
-                                       ;; the parser still accepts aliases such
-                                       ;; as pwsh / nu.
-                                       :completion-candidates
-                                       (mapcar #'car +completion-shells+)
-                                       :required-p nil))
+   :positionals
+   (list (make-positional
+          :key :shell
+          :description "Target shell (bash, zsh, fish, powershell, nushell, elvish)."
+          :default "bash"
+          :parser #'%parse-supported-shell
+          ;; Candidates (not :choices) so shell completion suggests these names
+          ;; while the parser still accepts aliases such as pwsh / nu.
+          :completion-candidates (mapcar #'car +completion-shells+)
+          :required-p nil))
    :handler (lambda (invocation)
               (let ((shell (positional-value invocation :shell)))
                 (render-completion

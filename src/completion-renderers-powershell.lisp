@@ -82,16 +82,20 @@ options."
       (format stream "    $prevToken = ''~%")
       (format stream "    $elements = $commandAst.CommandElements~%")
       (format stream "    if ($wordToComplete) {~%")
-      (format stream "        if ($elements.Count -ge 2) { $prevToken = $elements[$elements.Count - 2].ToString() }~%")
+      (format stream "        if ($elements.Count -ge 2) ~
+                      { $prevToken = $elements[$elements.Count - 2].ToString() }~%")
       (format stream "    } elseif ($elements.Count -ge 1) {~%")
       (format stream "        $prevToken = $elements[$elements.Count - 1].ToString()~%")
       (format stream "    }~%")
       (format stream "    if ($dynamicOptions.ContainsKey($prevToken)) {~%")
-      (format stream "        & ~A '__complete' $dynamicOptions[$prevToken] $wordToComplete | ForEach-Object {~%"
+      (format stream "        & ~A '__complete' $dynamicOptions[$prevToken] ~
+                      $wordToComplete | ForEach-Object {~%"
               (%completion-powershell-quote (app-name app)))
       (format stream "            $parts = $_ -split \"`t\", 2~%")
-      (format stream "            $desc = if ($parts.Count -gt 1) { $parts[1] } else { $parts[0] }~%")
-      (format stream "            [System.Management.Automation.CompletionResult]::new($parts[0], $parts[0], 'ParameterValue', $desc)~%")
+      (format stream "            $desc = if ($parts.Count -gt 1) ~
+                      { $parts[1] } else { $parts[0] }~%")
+      (format stream "            [System.Management.Automation.CompletionResult]~
+                      ::new($parts[0], $parts[0], 'ParameterValue', $desc)~%")
       (format stream "        }~%")
       (format stream "        return~%")
       (format stream "    }~%"))))
@@ -121,12 +125,17 @@ Hidden commands and options are omitted."
     (format stream "    $selected = $null~%")
     (format stream "    foreach ($element in $commandAst.CommandElements) {~%")
     (format stream "        $value = $element.ToString()~%")
-    (format stream "        if ($commandOptions.ContainsKey($value)) { $selected = $value; break }~%")
+    (format stream "        if ($commandOptions.ContainsKey($value)) ~
+                    { $selected = $value; break }~%")
     (format stream "    }~%")
     (format stream "    $candidates = $commands + $globalOptions + $positionals~%")
-    (format stream "    if ($selected) { $candidates = $globalOptions + $commandOptions[$selected] }~%")
-    (format stream "    $candidates | Where-Object { $_.StartsWith($wordToComplete, [System.StringComparison]::Ordinal) } | Sort-Object -Unique | ForEach-Object {~%")
-    (format stream "        [System.Management.Automation.CompletionResult]::new($_, $_, 'ParameterValue', $_)~%")
+    (format stream "    if ($selected) ~
+                    { $candidates = $globalOptions + $commandOptions[$selected] }~%")
+    (format stream "    $candidates | Where-Object ~
+                    { $_.StartsWith($wordToComplete, [System.StringComparison]::Ordinal) } ~
+                    | Sort-Object -Unique | ForEach-Object {~%")
+    (format stream "        [System.Management.Automation.CompletionResult]~
+                    ::new($_, $_, 'ParameterValue', $_)~%")
     (format stream "    }~%")
     (format stream "}~%")
     (values)))

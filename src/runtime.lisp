@@ -180,7 +180,8 @@ error; they default to the BSD sysexits values EX_USAGE (64) and EX_SOFTWARE
                  ;; the app root falls back to app help.
                  (if (invocation-command invocation)
                      (print-command-help app (invocation-command invocation) stdout
-                                         (invocation-command-path invocation) :color color :width width)
+                                         (invocation-command-path invocation)
+                                         :color color :width width)
                      (print-app-help app stdout :color color :width width))))))
         0)
     (cli-usage-error (condition)

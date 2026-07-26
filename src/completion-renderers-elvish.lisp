@@ -90,7 +90,8 @@ subcommands and global option tokens. Hidden commands and options are omitted."
        ;; containing slash"). Dropping the quotes would fix that one case and
        ;; break any app name needing them; `external` takes a real string
        ;; argument, so it stays correct for every name.
-       (format stream "    (external ~A) __complete $dynamic[$prev] $words[-1] | from-lines | each {|line|~%"
+       (format stream "    (external ~A) __complete $dynamic[$prev] $words[-1] ~
+                       | from-lines | each {|line|~%"
                (%completion-elvish-quote app-name))
        (format stream "      put (str:split \"\\t\" $line | take 1)~%")
        (format stream "    }~%")

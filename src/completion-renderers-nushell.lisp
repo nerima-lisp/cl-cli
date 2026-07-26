@@ -91,7 +91,8 @@ options are attached, matching the flags the generated `extern` actually lists."
         (format stream "def ~A [] {~%"
                 (%completion-nushell-quote
                  (%completion-nushell-completer-name app option)))
-        (format stream "  ^~A __complete ~A | lines | each { |it| $it | split row (char tab) | first }~%"
+        (format stream "  ^~A __complete ~A | lines ~
+                        | each { |it| $it | split row (char tab) | first }~%"
                 app-command
                 (string-downcase (symbol-name (option-key option))))
         (format stream "}~%~%")))))

@@ -41,8 +41,11 @@ whatever buffer the caller passes, matching the bash renderer's
             (dynamic-p
              (format stream "        local comp_value~%")
              (format stream "        while IFS=$'\\t' read -r comp_value _; do~%")
-             (format stream "          [[ -n \"$comp_value\" && \"$comp_value\" == \"$current_word\"* ]] && compadd -- \"$comp_value\"~%")
-             (format stream "        done < <(\"${words[1]}\" __complete ~A \"$current_word\" 2>/dev/null)~%"
+             (format stream "          [[ -n \"$comp_value\" ~
+                            && \"$comp_value\" == \"$current_word\"* ]] ~
+                            && compadd -- \"$comp_value\"~%")
+             (format stream "        done < <(\"${words[1]}\" __complete ~A \"$current_word\" ~
+                            2>/dev/null)~%"
                      (string-downcase (symbol-name (option-key option)))))
             ((eq hint :dir)
              (format stream "        _files -/~%"))

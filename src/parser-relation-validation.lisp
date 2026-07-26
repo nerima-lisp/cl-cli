@@ -53,7 +53,8 @@
                                                  (mapcar #'public-option-display-name alternatives))
                                          (format nil "Option ~A requires one of: ~{~A~^, ~}."
                                                  (public-option-display-name spec)
-                                                 (mapcar #'public-option-display-name alternatives)))
+                                                 (mapcar #'public-option-display-name
+                                                         alternatives)))
                                      :option (option-key spec)
                                      :alternatives (mapcar #'option-key alternatives))))))
            (validate-conflicts (spec)

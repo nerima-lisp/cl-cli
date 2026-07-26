@@ -84,7 +84,8 @@ bare T (deprecated without a stated reason)."
                      (car tail)
                      (signal-cli-error
                       'cli-invalid-specification
-                      (format nil "Completion candidate must be a string or a (value . description) pair: ~S"
+                      (format nil "Completion candidate must be a string or a ~
+                                   (value . description) pair: ~S"
                               candidate))))
                 (t tail))))
        (cons value

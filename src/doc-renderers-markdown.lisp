@@ -158,7 +158,8 @@ backticks."
       (dolist (option row-options)
         (format stream "| ~A | ~A |~%"
                 (%md-inline-code-cell (%doc-option-synopsis option))
-                (%md-escape-cell (%option-description-string option resolution-options target-table)))))
+                (%md-escape-cell
+                 (%option-description-string option resolution-options target-table)))))
     (format stream "~%")))
 
 (defun %md-positional-table (positionals stream)

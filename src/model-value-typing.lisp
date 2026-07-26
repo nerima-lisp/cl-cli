@@ -125,7 +125,8 @@ same way a failing :parser lambda would be."
       (when (and bound
                  (not (and (integerp bound) (>= bound 0))))
         (signal-cli-error 'cli-invalid-specification
-                          (format nil "Positional ~S: :min-count / :max-count must be non-negative integers, got: ~S"
+                          (format nil "Positional ~S: :min-count / :max-count must be ~
+                                       non-negative integers, got: ~S"
                                   key bound))))
     (when (and min-count max-count (> min-count max-count))
       (signal-cli-error 'cli-invalid-specification

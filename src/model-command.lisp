@@ -1,6 +1,7 @@
 (in-package :cl-cli)
 
-(defun make-command (&key name aliases group description examples options positionals subcommands default-command handler hidden-p deprecated help-footer)
+(defun make-command (&key name aliases group description examples options positionals
+                       subcommands default-command handler hidden-p deprecated help-footer)
   "Create a command specification.
 
 DEPRECATED marks the command as deprecated (T, or a reason string). A deprecated
