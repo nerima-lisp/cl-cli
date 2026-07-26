@@ -79,11 +79,20 @@ Both report as skipped, with a reason, rather than as failures. See
 
 ## Writing tests
 
-Add or update a focused test in the matching `t/cases-*.lisp` file and register
-any new file in `cl-cli.asd`. `run-tests.lisp` is the loader, not a place to
-put tests. A test that shells out to a real tool belongs in
-`t/cases-shell-verification.lisp` under the `cl-cli/test/shell-verification`
-system; everything else goes in the portable `cl-cli/test`.
+Test files are named after the source file they exercise:
+`t/<source>-test.lisp` for `src/<source>.lisp`, or
+`t/<source>-<aspect>-test.lisp` when one source has several aspects worth
+separating (`t/parser-value-storage-count-test.lisp` and
+`t/parser-value-storage-key-value-test.lisp` both cover
+`src/parser-value-storage.lisp`). Shared fixtures and assertion helpers are
+not tests and are named `t/helpers-<concern>.lisp`.
+
+Add or update a focused test in the file matching the source you changed, and
+register any new file in `cl-cli.asd`. `run-tests.lisp` is the loader, not a
+place to put tests. A test that shells out to a real tool belongs in
+`t/completion-commands-shell-verification-test.lisp` under the
+`cl-cli/test/shell-verification` system; everything else goes in the portable
+`cl-cli/test`.
 
 Cover both the success path and the expected failure mode when relevant.
 

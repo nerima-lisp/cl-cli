@@ -161,6 +161,6 @@ for the specific values involved.
 | `cli-unexpected-argument` | `cli-unexpected-argument-name` | an extra positional appears past a rest positional's `:max-count`, or with no positionals declared |
 | `cli-invalid-specification` | `cli-error-message` only | `make-app`/`make-command`/`make-option`/`make-positional` receives an invalid spec |
 
-The set above is pinned by `tests/cases-public-api.lisp`, which asserts that
+The set above is pinned by `t/package-test.lisp`, which asserts that
 every exported condition is reachable from `cli-error` and that
 `cli-invalid-specification` stays outside the `cli-usage-error` branch.

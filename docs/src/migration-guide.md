@@ -32,7 +32,7 @@ Existing coverage: script tail preservation and separator normalization are
 exercised by "stop parsing option preserves remaining arguments", "supports
 stop parsing short attached value", and "stop parsing script mode can
 normalize opaque tail" in
-[tests/cases-options.lisp](https://github.com/nerima-lisp/cl-cli/blob/main/tests/cases-options.lisp).
+[t/parser-option-consumption-test.lisp](https://github.com/nerima-lisp/cl-cli/blob/main/t/parser-option-consumption-test.lisp).
 
 ## `cl-tmux`
 
@@ -57,7 +57,7 @@ Existing coverage: attached short value parsing is shown in the
 `-S/tmp/tmux.sock` example in [Option Values and
 Kinds](option-values.md#option-kinds); root/default dispatch is exercised by
 "dispatches default command without command token" in
-[tests/cases-options.lisp](https://github.com/nerima-lisp/cl-cli/blob/main/tests/cases-options.lisp).
+[t/parser-option-consumption-test.lisp](https://github.com/nerima-lisp/cl-cli/blob/main/t/parser-option-consumption-test.lisp).
 
 ## `private-trade-fx`
 
@@ -83,7 +83,7 @@ positive-integer example in [Validation and Exit
 Codes](validation.md#custom-parsers); separator-preserving and
 separator-normalizing flows are covered by "extracts application argv after
 separator" and "strip-argv-separators removes literal sentinels" in
-[tests/cases-parse.lisp](https://github.com/nerima-lisp/cl-cli/blob/main/tests/cases-parse.lisp).
+[t/parser-dispatch-test.lisp](https://github.com/nerima-lisp/cl-cli/blob/main/t/parser-dispatch-test.lisp).
 
 ## `nshell`
 
@@ -106,7 +106,7 @@ Existing coverage: root positional parsing is shown in the `script-runner`
 example in [Quick Start](quick-start.md#root-positional-example);
 root/default dispatch behavior is covered by "supports root positionals and
 rest" and "dispatches root handler" in
-[tests/cases-parse.lisp](https://github.com/nerima-lisp/cl-cli/blob/main/tests/cases-parse.lisp).
+[t/parser-dispatch-test.lisp](https://github.com/nerima-lisp/cl-cli/blob/main/t/parser-dispatch-test.lisp).
 
 ## Verification path
 

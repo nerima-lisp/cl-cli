@@ -104,7 +104,7 @@
         in
         builtins.head (builtins.match "[[:space:]]*:version \"([^\"]*)\"" versionLine);
 
-      # The suites in t/cases-shell-verification.lisp pipe cl-cli's own
+      # The suites in t/completion-commands-shell-verification-test.lisp pipe cl-cli's own
       # generated output through the real tools that will consume it. They
       # self-skip when a tool is missing, so the tools have to be on PATH
       # inside the sandbox or the checks silently verify nothing.
