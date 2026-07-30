@@ -38,6 +38,20 @@
 (defun public-command-candidate-p (command)
   (not (command-hidden-p command)))
 
+(defun %visible-command-names-and-aliases (commands)
+  "Collect the name and every alias of each non-hidden command in COMMANDS.
+
+Shared by COMMAND-CANDIDATE-NAMES (an app's own COMMANDS) and
+%UNKNOWN-SUBCOMMAND-MESSAGE (src/parser-dispatch.lisp, a command's
+SUBCOMMANDS) -- both build this exact list, differing only in which list of
+commands is given."
+  (collecting
+    (dolist (command commands)
+      (when (public-command-candidate-p command)
+        (collect (command-name command))
+        (dolist (alias (command-aliases command))
+          (collect alias))))))
+
 (defun option-candidate-names (specs &key short-only-p long-only-p)
   (collecting
     (dolist (spec specs)
@@ -49,12 +63,7 @@
             (collect (option-token-display-name name))))))))
 
 (defun command-candidate-names (app)
-  (collecting
-    (dolist (command (app-commands app))
-      (when (public-command-candidate-p command)
-        (collect (command-name command))
-        (dolist (alias (command-aliases command))
-          (collect alias))))))
+  (%visible-command-names-and-aliases (app-commands app)))
 
 (defun unknown-option-message (raw-name candidates)
   (format nil "Unknown option: ~A~A"

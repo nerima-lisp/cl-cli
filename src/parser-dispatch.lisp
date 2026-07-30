@@ -74,12 +74,7 @@
           token
           (format-suggestion-suffix
            token
-           (collecting
-             (dolist (subcommand (command-subcommands command))
-               (unless (command-hidden-p subcommand)
-                 (collect (command-name subcommand))
-                 (dolist (alias (command-aliases subcommand))
-                   (collect alias))))))))
+           (%visible-command-names-and-aliases (command-subcommands command)))))
 
 (defun %resolve-subcommand (command subcommand-table remaining stop-parsing-p
                             literal-separator-seen-p)
