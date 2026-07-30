@@ -89,6 +89,19 @@
                                                                :type :number)))
                   '("tool" "--ratio" "1 2"))))
 
+  (it "rejects a value that reads cleanly but is not a real number"
+    ;; Distinct from the trailing-junk case above: %READ-CLI-REAL-NUMBER's own
+    ;; (REALP VALUE) check, not its consumed-whitespace loop -- "abc" reads as
+    ;; one whole symbol token (END already at the string's length), so only
+    ;; REALP rejects it. Every other :type :number/:float error test in the
+    ;; suite (read-eval, trailing junk) fails the whitespace loop instead.
+    (signals cli-invalid-option-value
+      (parse-argv (make-app :name "tool"
+                            :global-options (list (make-option :name "ratio"
+                                                               :kind :value
+                                                               :type :number)))
+                  '("tool" "--ratio" "abc"))))
+
   (it "accepts surrounding whitespace in numeric values"
     (with-parsed-argv (inv (make-app :name "tool"
                                      :global-options (list (make-option :name "ratio"

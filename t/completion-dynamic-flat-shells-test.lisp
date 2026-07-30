@@ -36,6 +36,20 @@
     (let ((script (render-powershell-completion (flat-static-app))))
       (assert-not-searches script "$dynamicOptions" "__complete")))
 
+  (it "excludes a hidden dynamic option from the dynamic alist"
+    ;; %COMPLETION-DYNAMIC-OPTION-ALIST's own (not (option-hidden-p option))
+    ;; guard: a hidden :complete option must behave like flat-static-app above
+    ;; (no dynamic block at all), not leak into $dynamicOptions.
+    (let* ((app (make-app
+                :name "dyntool"
+                :global-options (list (make-option :name "branch" :kind :value
+                                                   :hidden-p t
+                                                   :complete (lambda (p) (declare (ignore p))
+                                                               '("main" "dev"))))
+                :commands (make-standard-commands :include-dynamic-p t)))
+           (script (render-powershell-completion app)))
+      (assert-not-searches script "$dynamicOptions" "__complete" "--branch")))
+
   ;; --- Nushell ------------------------------------------------------------
   (it "nushell attaches a custom completer to a dynamic flag and defines it"
     (let ((script (render-nushell-completion (flat-dynamic-app))))

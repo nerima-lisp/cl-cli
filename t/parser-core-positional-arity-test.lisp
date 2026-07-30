@@ -50,6 +50,12 @@
     (signals-invalid-specification
       (make-positional :key :x :rest-p t :min-count -1)))
 
+  (it "rejects a non-integer count"
+    ;; Distinct from the negative-count case above: VALIDATE-REST-COUNT-SPEC's
+    ;; own (INTEGERP BOUND) conjunct, not its (>= BOUND 0) one.
+    (signals-invalid-specification
+      (make-positional :key :x :rest-p t :min-count 1.5)))
+
   (it "rejects an inverted min/max count"
     (signals-invalid-specification
       (make-positional :key :x :rest-p t :min-count 3 :max-count 1))))

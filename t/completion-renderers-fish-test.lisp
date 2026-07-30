@@ -54,4 +54,11 @@
   (it "includes negated boolean options"
     (let ((app (completion-negated-boolean-options-fixture)))
       (assert-completion-searches (app "fish")
-        " -l threads" " -l no-threads" " -f"))))
+        " -l threads" " -l no-threads" " -f")))
+
+  (it "hides hidden commands and options"
+    ;; Every other shell renderer's hidden-exclusion is covered against this
+    ;; same fixture; fish's own guard in %RENDER-FISH-OPTION-LINES had none.
+    (let ((app (completion-hidden-commands-and-options-fixture)))
+      (assert-completion-searches (app "fish") "visible" "-l visible-flag")
+      (assert-completion-not-searches (app "fish") "secret" "-l secret-flag"))))
