@@ -104,31 +104,31 @@ the escape we just added."
                (write-char #\\ out))
              (write-char char out))))
 
-(defun %completion-write-shell-quoted (stream string)
-  "Write STRING single-quoted for a POSIX shell (bash/zsh/fish) directly to STREAM.
+(defun %completion-write-single-quoted (stream string quote-escape)
+  "Write STRING single-quoted to STREAM, writing QUOTE-ESCAPE for an embedded quote.
 
-Strips control characters and escapes embedded single quotes in one pass,
-rather than through %COMPLETION-CONTROL-SAFE-STRING (a second, separately-
-allocated WITH-OUTPUT-TO-STRING pass) -- this is render-completion's hottest
-single allocation on an app with many options, since every option/command
-name and description is shell-quoted at least once. Quote-escaping and
-control-stripping act on disjoint character sets (a quote is never itself a
-control code), so folding both into one COND preserves
-%COMPLETION-CONTROL-SAFE-STRING's exact behavior for this caller without
-changing its other 12+ call sites, which still use it standalone.
+Shared skeleton for the two single-quoting dialects this codebase supports --
+POSIX shells close-escape-reopen (`'\"'\"'`), Elvish/PowerShell double the
+quote (`''`) -- which otherwise differ only in that one substring. Strips
+control characters in the same pass rather than through
+%COMPLETION-CONTROL-SAFE-STRING (a second, separately-allocated
+WITH-OUTPUT-TO-STRING pass): quote-escaping and control-stripping act on
+disjoint character sets (a quote is never itself a control code), so folding
+both into one COND is behavior-preserving and, on an app with many options,
+avoids render-completion's hottest single allocation -- every option/command
+name and description is shell-quoted at least once.
 
 Writing straight to a caller-supplied STREAM (instead of always returning a
-freshly-consed string via %COMPLETION-SHELL-QUOTE) lets hot callers that
-already hold an open stream -- e.g. the bash renderer's array-literal/
-case-label builders -- skip an intermediate string allocation per quoted
-value entirely."
+freshly-consed string) lets hot callers that already hold an open stream --
+e.g. the bash renderer's array-literal/case-label builders -- skip an
+intermediate string allocation per quoted value entirely."
   (let ((value (if string (princ-to-string string) "")))
     (write-char #\' stream)
     (loop for char across value
           for code = (char-code char)
           do (cond
                ((char= char #\')
-                (write-string "'\"'\"'" stream))
+                (write-string quote-escape stream))
                ((or (char= char #\Newline)
                     (char= char #\Return)
                     (char= char #\Tab))
@@ -138,6 +138,11 @@ value entirely."
                (t
                 (write-char char stream))))
     (write-char #\' stream)))
+
+(defun %completion-write-shell-quoted (stream string)
+  "Write STRING single-quoted for a POSIX shell (bash/zsh/fish) directly to STREAM.
+See %COMPLETION-WRITE-SINGLE-QUOTED."
+  (%completion-write-single-quoted stream string "'\"'\"'"))
 
 (defun %completion-shell-quote (string)
   "Single-quote STRING for a POSIX shell (bash/zsh/fish); see %COMPLETION-WRITE-SHELL-QUOTED."
@@ -149,24 +154,8 @@ value entirely."
 
 Shared by Elvish and PowerShell, whose single-quoted-string syntax escapes an
 embedded quote identically -- unlike the POSIX shells, which close-escape-
-reopen (see %COMPLETION-WRITE-SHELL-QUOTED). Strips control characters in the
-same single pass for the same reason as that function."
-  (let ((value (if string (princ-to-string string) "")))
-    (write-char #\' stream)
-    (loop for char across value
-          for code = (char-code char)
-          do (cond
-               ((char= char #\')
-                (write-string "''" stream))
-               ((or (char= char #\Newline)
-                    (char= char #\Return)
-                    (char= char #\Tab))
-                (write-char #\Space stream))
-               ((%control-character-code-p code)
-                nil)
-               (t
-                (write-char char stream))))
-    (write-char #\' stream)))
+reopen. See %COMPLETION-WRITE-SINGLE-QUOTED."
+  (%completion-write-single-quoted stream string "''"))
 
 (defun %completion-space-joined (strings)
   ;; :TEST #'EQUAL (not #'STRING=) is semantically identical for strings --
