@@ -12,31 +12,9 @@
 
 PowerShell escapes an embedded single quote by doubling it, unlike the POSIX
 shells (which close-escape-reopen); this must not reuse %COMPLETION-SHELL-QUOTE.
-
-Strips control characters and doubles embedded single quotes in one pass,
-rather than through %COMPLETION-CONTROL-SAFE-STRING (a second, separately-
-allocated WITH-OUTPUT-TO-STRING pass) -- the same fix already applied to
-%COMPLETION-SHELL-QUOTE and %COMPLETION-ZSH-ARGUMENTS-FIELD. A quote is
-never itself a control code, so folding both into one COND is behavior-
-preserving; %COMPLETION-CONTROL-SAFE-STRING's other call sites (including
-this file's own top-level app-name binding) are untouched."
-  (let ((value (if string (princ-to-string string) "")))
-    (with-output-to-string (out)
-      (write-char #\' out)
-      (loop for char across value
-            for code = (char-code char)
-            do (cond
-                 ((char= char #\')
-                  (write-string "''" out))
-                 ((or (char= char #\Newline)
-                      (char= char #\Return)
-                      (char= char #\Tab))
-                  (write-char #\Space out))
-                 ((%control-character-code-p code)
-                  nil)
-                 (t
-                  (write-char char out))))
-      (write-char #\' out))))
+See %COMPLETION-WRITE-QUOTE-DOUBLED, shared with Elvish's identical syntax."
+  (with-output-to-string (out)
+    (%completion-write-quote-doubled out string)))
 
 (defun %completion-powershell-array (tokens)
   "Render TOKENS as a PowerShell array literal `@('a', 'b')`."

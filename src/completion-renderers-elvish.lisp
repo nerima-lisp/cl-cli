@@ -9,29 +9,10 @@
 (defun %completion-elvish-quote (string)
   "Quote STRING as an Elvish single-quoted literal (a quote doubles itself).
 
-Strips control characters and doubles embedded single quotes in one pass,
-rather than through %COMPLETION-CONTROL-SAFE-STRING (a second, separately-
-allocated WITH-OUTPUT-TO-STRING pass) -- the same fix already applied to
-%COMPLETION-SHELL-QUOTE, %COMPLETION-ZSH-ARGUMENTS-FIELD, and
-%COMPLETION-POWERSHELL-QUOTE. A quote is never itself a control code, so
-folding both into one COND is behavior-preserving."
-  (let ((value (if string (princ-to-string string) "")))
-    (with-output-to-string (out)
-      (write-char #\' out)
-      (loop for char across value
-            for code = (char-code char)
-            do (cond
-                 ((char= char #\')
-                  (write-string "''" out))
-                 ((or (char= char #\Newline)
-                      (char= char #\Return)
-                      (char= char #\Tab))
-                  (write-char #\Space out))
-                 ((%control-character-code-p code)
-                  nil)
-                 (t
-                  (write-char char out))))
-      (write-char #\' out))))
+See %COMPLETION-WRITE-QUOTE-DOUBLED, shared with PowerShell's identical
+single-quote-doubling syntax."
+  (with-output-to-string (out)
+    (%completion-write-quote-doubled out string)))
 
 (defun %completion-elvish-list (tokens)
   (format nil "[~{~A~^ ~}]" (mapcar #'%completion-elvish-quote tokens)))

@@ -144,6 +144,30 @@ value entirely."
   (with-output-to-string (out)
     (%completion-write-shell-quoted out string)))
 
+(defun %completion-write-quote-doubled (stream string)
+  "Write STRING single-quoted to STREAM, doubling an embedded quote to escape it.
+
+Shared by Elvish and PowerShell, whose single-quoted-string syntax escapes an
+embedded quote identically -- unlike the POSIX shells, which close-escape-
+reopen (see %COMPLETION-WRITE-SHELL-QUOTED). Strips control characters in the
+same single pass for the same reason as that function."
+  (let ((value (if string (princ-to-string string) "")))
+    (write-char #\' stream)
+    (loop for char across value
+          for code = (char-code char)
+          do (cond
+               ((char= char #\')
+                (write-string "''" stream))
+               ((or (char= char #\Newline)
+                    (char= char #\Return)
+                    (char= char #\Tab))
+                (write-char #\Space stream))
+               ((%control-character-code-p code)
+                nil)
+               (t
+                (write-char char stream))))
+    (write-char #\' stream)))
+
 (defun %completion-space-joined (strings)
   ;; :TEST #'EQUAL (not #'STRING=) is semantically identical for strings --
   ;; EQUAL compares strings with STRING= itself -- but lets SBCL dispatch to
