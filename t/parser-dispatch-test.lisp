@@ -55,18 +55,22 @@
     (with-parsed-argv (inv (demo-app :commands nil) '("demo" "--help"))
       (expect (eq (invocation-action inv) :help))))
 
-  (it "root --help bypasses required global option/positional validation"
-    ;; PARSE-ROOT-ARGV's own (unless (member parsed-action '(:help :version))
-    ;; ...) skip had no direct test: "uses contextual command help" (below)
-    ;; covers this same idea one level down, at command scope.
+  (it "root --help after a positional bypasses required option validation"
+    ;; A leading "--help" (as in "parses help flag" above) is caught by
+    ;; PARSE-ARGV's own initial global-options prefix scan before
+    ;; PARSE-ROOT-ARGV is ever called. Here "--help" trails a positional
+    ;; token instead, so it is PARSE-ROOT-ARGV's own PARSE-MIXED-ARGUMENTS
+    ;; call that discovers it -- reaching PARSE-ROOT-ARGV's own
+    ;; (unless (member parsed-action '(:help :version)) ...) skip, which had
+    ;; no direct test of its own ("uses contextual command help" below
+    ;; covers the same idea one level down, at command scope).
     (with-parsed-argv (inv (demo-app
                             :commands nil
                             :global-options (list (make-option :name "token"
                                                                :kind :value
                                                                :required-p t))
-                            :positionals (list (make-positional :key :file
-                                                                :required-p t)))
-                           '("demo" "--help"))
+                            :positionals (list (make-positional :key :file)))
+                           '("demo" "somefile" "--help"))
       (expect (eq (invocation-action inv) :help))))
 
   (it "parses short version flag"
