@@ -116,6 +116,6 @@ consumer-side spec translation, not new parser primitives in `cl-cli`.
 1. Read the representative specs in
    [examples/consumer-migrations.lisp](https://github.com/nerima-lisp/cl-cli/blob/main/examples/consumer-migrations.lisp).
 2. Load the system with ASDF.
-3. Run [tests/run-tests.lisp](https://github.com/nerima-lisp/cl-cli/blob/main/tests/run-tests.lisp).
+3. Run [run-tests.lisp](https://github.com/nerima-lisp/cl-cli/blob/main/run-tests.lisp).
 4. If you launch through SBCL, Nix, or a wrapper script, normalize argv first
    with `application-argv`.

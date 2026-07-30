@@ -42,14 +42,14 @@ without changing the documented contract.
   the internal layout of a generated completion script, the roff or Markdown
   formatting details. These are improved in minor releases. Assert on the
   semantics of the output, not on a byte-for-byte snapshot of it — the test
-  suite in `tests/` does exactly that, and is a reasonable model to copy.
+  suite in `t/` does exactly that, and is a reasonable model to copy.
   `render-json`'s *keys* are covered by the promise above; its whitespace is
   not. `render-json` additionally carries its own `schemaVersion` — see
   [Documentation Generation](documentation-generation.md) — so its shape is
   versioned independently of the library.
 - **Performance.** The benchmark suite guards against gross regressions, but
   no specific timing is promised.
-- **The test systems.** `cl-cli/tests` and `cl-cli/tests/shell-verification`,
+- **The test systems.** `cl-cli/test` and `cl-cli/test/shell-verification`,
   and the fixtures in them, are internal to the project.
 
 ## Supported implementations
@@ -82,11 +82,14 @@ what is believed to work.
 
 ## Platforms
 
-CI runs on `x86_64-linux` and `aarch64-darwin`; the Nix flake also defines
-outputs for `aarch64-linux` and `x86_64-darwin`. There is no OS-specific code
-in the library. The completion renderers emit scripts for shells, not for
-operating systems, and the PowerShell renderer is as usable on Linux as on
-Windows.
+CI runs on `x86_64-linux` and `aarch64-darwin`, and the Nix flake declares
+outputs for exactly those two — `aarch64-linux` and `x86_64-darwin` were
+declared once but never built or tested anywhere, so the flake no longer
+advertises them. There is no OS-specific code in the library, though: the
+completion renderers emit scripts for shells, not for operating systems, and
+the PowerShell renderer is as usable on Linux as on Windows. Loading `cl-cli`
+outside Nix is not limited to these two platforms; they are what the flake's
+own checks verify, not a constraint on the library itself.
 
 ## Deprecation
 

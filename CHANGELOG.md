@@ -118,6 +118,12 @@ No behavior of the `cl-cli` system itself changed; its dependency set is still
 - The documentation claimed the ECL check "currently fails". It has passed
   since the test suite was split at the system boundary; the shell-verification
   half is simply excluded there.
+- Installation, compatibility, and migration docs still pointed at
+  `tests/run-tests.lisp` and the `cl-cli/tests`/`cl-cli/tests:run-tests`
+  names from before the test-file and test-system renames, and Compatibility's
+  Platforms section claimed the flake declares outputs for `aarch64-linux` and
+  `x86_64-darwin`, which it stopped doing earlier in this same Unreleased
+  section. None of this had been touched by either rename.
 
 ## [1.0.1] - 2026-07-26
 
