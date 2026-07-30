@@ -1,5 +1,20 @@
 (in-package :cl-cli)
 
+(declaim (inline %control-character-code-p))
+(defun %control-character-code-p (code)
+  "T when CODE (a CHAR-CODE) is a C0/C1 control code or DEL.
+
+Every completion/doc renderer's control-stripping pass tests a character's
+code against this exact range in its own character-by-character hot loop
+(single-pass string sanitizing is deliberate -- see
+%COMPLETION-WRITE-SHELL-QUOTED's docstring). Declaring this INLINE gives
+those call sites one canonical range definition instead of a dozen
+independently maintained copies of the same three comparisons, without
+adding a real function-call per character in the hot path."
+  (or (< code 32)
+      (= code 127)
+      (and (>= code 128) (< code 160))))
+
 (defun ensure-string (thing)
   (etypecase thing
     (string thing)

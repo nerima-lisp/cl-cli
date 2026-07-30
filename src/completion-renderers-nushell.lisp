@@ -31,9 +31,7 @@ folding both into one COND is behavior-preserving."
                       (char= char #\Return)
                       (char= char #\Tab))
                   (write-char #\Space out))
-                 ((or (< code 32)
-                      (= code 127)
-                      (and (>= code 128) (< code 160)))
+                 ((%control-character-code-p code)
                   nil)
                  (t
                   (write-char char out))))

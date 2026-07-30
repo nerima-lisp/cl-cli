@@ -21,9 +21,7 @@ so by the time styling runs the value is always a concrete boolean.")
                (cond
                  ((member char '(#\Newline #\Return #\Tab))
                   (write-char #\Space out))
-                 ((or (< code 32)
-                      (= code 127)
-                      (and (>= code 128) (< code 160))))
+                 ((%control-character-code-p code))
                  (t (write-char char out)))))))
 
 (defun %style-heading (text)

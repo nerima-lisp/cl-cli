@@ -39,9 +39,7 @@ pages."
                       (flush-line))
                      ((char= char #\Tab)
                       (write-char #\Space current))
-                     ((or (< code 32)
-                          (= code 127)
-                          (and (>= code 128) (< code 160))))
+                     ((%control-character-code-p code))
                      (t
                       (write-char char current)))))
         (flush-line)))))

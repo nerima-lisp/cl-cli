@@ -116,10 +116,7 @@ bare T (deprecated without a stated reason)."
                         (format nil "~A must be non-empty." kind)))))
 
 (defun %control-character-p (char)
-  (let ((code (char-code char)))
-    (or (< code 32)
-        (= code 127)
-        (and (>= code 128) (< code 160)))))
+  (%control-character-code-p (char-code char)))
 
 (defun validate-no-control-characters (values kind)
   "Signal CLI-INVALID-SPECIFICATION when VALUES contain terminal controls."
