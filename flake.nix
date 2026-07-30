@@ -438,6 +438,57 @@
             inherit (ctx) src;
             name = "cl-cli-paredit-lint";
           };
+
+          # An sb-cover HTML coverage report for `src/`, as a buildable
+          # artifact rather than a pass/fail gate -- `nix build
+          # .#checks.<system>.coverage --no-link --print-out-paths` prints a
+          # store path whose `cover-index.html` is the report to open.
+          #
+          # This exists because an interactive `sbcl --script` coverage run
+          # against the nix-store sibling dependencies (cl-weave, cl-prolog,
+          # ...) hangs indefinitely on this org's shared dev machines for
+          # reasons never root-caused -- see the project memory this repo's
+          # sessions keep under `reference_cl_cli_interactive_sbcl_hang`. The
+          # identical dependency graph builds correctly and quickly inside the
+          # Nix sandbox, which is what this check exploits: it never touches
+          # an interactive SBCL session at all.
+          #
+          # `ctx.cl.mkCoverageReport` is cl-nix-forge's own battery for
+          # exactly this (`lib/batteries/coverage.nix`) -- built from
+          # `ctx.package`, the SAME doCheck-false derivation `checks.default`
+          # is built from via `mkScriptCheck`, so this costs no build that
+          # check does not already pay for. It handles the
+          # `(declaim (optimize sb-cover:store-coverage-data))` /
+          # `:force t` / `(declaim (optimize (sb-cover:store-coverage-data
+          # 0)))` dance itself (instrumentation is a COMPILE-time property,
+          # and `buildPhase` already compiled `cl-cli` once without it, so a
+          # forced recompile under the declaim is the only way any line ends
+          # up in the report) and fails the build outright if the report
+          # comes back empty, so a broken instrumentation path cannot pass as
+          # a silent no-op the way it did in the abandoned interactive
+          # attempt.
+          #
+          # `systems = [ "cl-cli" ]` rather than the default (`ctx.package`'s
+          # own `lispSystems`, which already resolves to just `[ "cl-cli" ]`
+          # here) is spelled out anyway: it is the one knob that decides what
+          # the report is ABOUT, and leaving it implicit would make a future
+          # multi-system change to this file silently start instrumenting
+          # `cl-cli/test` too.
+          #
+          # No coverage-percentage threshold, and cl-nix-forge deliberately
+          # offers none (see coverage.nix's own comment) -- the project's
+          # `/goal` tracks "no untested reachable branch inside a function
+          # body", which sb-cover's raw expression percentage cannot express
+          # (it under-attributes top-level `defvar`/`defstruct`/
+          # `define-condition` forms and macro-expansion-time helpers by
+          # design), so a numeric gate here would be gating on the wrong
+          # thing.
+          coverage = ctx.cl.mkCoverageReport {
+            drv = ctx.package;
+            systems = [ "cl-cli" ];
+            name = "cl-cli-coverage";
+            timeoutSeconds = 900;
+          };
         };
       };
     };
