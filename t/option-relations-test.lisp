@@ -373,4 +373,32 @@
       (signals cli-missing-option-value
         (parse-argv app '("tool" "export")))
       (signals cli-conflicting-options
-        (parse-argv app '("tool" "export" "--json" "--yaml"))))))
+        (parse-argv app '("tool" "export" "--json" "--yaml")))))
+
+  (it "dedups a transitive requires dependency reached via two paths"
+    ;; :a requires both :b and :c, and :b/:c both require :d -- :d's
+    ;; transitive-requires closure is built once at MAKE-APP time by walking
+    ;; every root's dependency tree, and reaching an already-seen dependency
+    ;; through a second path (here :d via :c, after already being collected
+    ;; via :b) must skip it instead of recollecting or looping.
+    (with-parsed-argv (inv (demo-app
+                            :global-options
+                            (list (make-option :name "d" :kind :flag)
+                                 (make-option :name "b" :kind :flag :requires '(:d))
+                                 (make-option :name "c" :kind :flag :requires '(:d))
+                                 (make-option :name "a" :kind :flag :requires '(:b :c))))
+                           '("demo" "--a" "--b" "--c" "--d"))
+      (expect (option-value inv :a))
+      (expect (option-value inv :b))
+      (expect (option-value inv :c))
+      (expect (option-value inv :d))))
+
+  (it "rejects a requires cycle"
+    ;; OPTION-REQUIREMENT-CYCLE-P / VALIDATE-OPTION-RELATION-GRAPH's cycle
+    ;; check had no test anywhere in the suite -- every other :requires test
+    ;; in this file is acyclic.
+    (caught-signal= (cli-invalid-specification condition)
+        (demo-app
+         :global-options (list (make-option :name "a" :kind :flag :requires '(:b))
+                               (make-option :name "b" :kind :flag :requires '(:a))))
+      (:searches cli-error-message "Option requirements must not contain a cycle."))))

@@ -110,6 +110,49 @@
                                  :subcommands (list (make-command :name "dup")
                                                     (make-command :name "dup")))))))
 
+  (it "honors a command-scoped stop-parsing option before subcommand dispatch"
+    ;; Every other stop-parsing test in the suite declares the option as a
+    ;; global -- %SCOPE-STOP-PARSING-P (the command-scoped variant consulted
+    ;; before a command WITH subcommands tries to resolve its next token as a
+    ;; subcommand) had no coverage of its own.
+    (let ((app (make-app :name "tool"
+                         :commands (list (make-command
+                                          :name "remote"
+                                          :options (list (make-option :name "raw"
+                                                                      :kind :flag
+                                                                      :stop-parsing-p t))
+                                          :subcommands (list (make-command :name "add"))
+                                          :positionals (list (make-positional :key :rest
+                                                                              :rest-p t)))))))
+      (with-parsed-argv (inv app '("tool" "remote" "--raw" "add" "extra"))
+        (expect (option-value inv :raw))
+        (expect (string= (command-name (invocation-command inv)) "remote"))
+        (expect (equal (positional-value inv :rest) '("add" "extra"))))))
+
+  (it "keeps tokens after -- out of nested subcommand dispatch"
+    ;; The root-level counterpart of this (RESOLVE-DISPATCH-COMMAND) is
+    ;; covered elsewhere, but %RESOLVE-SUBCOMMAND's own literal-"--" guard,
+    ;; consulted once already inside a command that has subcommands, was not.
+    (let ((app (make-app :name "tool"
+                         :commands (list (make-command
+                                          :name "remote"
+                                          :subcommands (list (make-command :name "add"))
+                                          :positionals (list (make-positional :key :rest
+                                                                              :rest-p t)))))))
+      (with-parsed-argv (inv app '("tool" "remote" "--" "add" "x"))
+        (expect (string= (command-name (invocation-command inv)) "remote"))
+        (expect (equal (positional-value inv :rest) '("add" "x"))))))
+
+  (it "shows help for a command with subcommands without selecting one"
+    ;; "runs a parent's own help when no subcommand token is given" (above)
+    ;; covers the implicit case; DISPATCH-COMMAND-NODE's own
+    ;; (member action '(:help :version)) early return -- reached only for a
+    ;; command that still has subcommands -- needs an explicit --help too.
+    (let ((text (with-string-output (stdout)
+                  (run-app (nested-app) :argv '("git" "remote" "--help")
+                           :stdout stdout :stderr (make-string-output-stream)))))
+      (assert-searches text "Usage: git remote" "<command>" "add" "remove")))
+
   (it "rejects a nested option key colliding with an ancestor option"
     (signals-invalid-specification
       (make-app :name "tool"

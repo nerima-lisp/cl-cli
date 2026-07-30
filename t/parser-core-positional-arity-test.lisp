@@ -53,3 +53,17 @@
   (it "rejects an inverted min/max count"
     (signals-invalid-specification
       (make-positional :key :x :rest-p t :min-count 3 :max-count 1))))
+
+(describe-sequential "required non-rest positional"
+  (it "signals when a required positional receives no token"
+    ;; Every other :required-p positional test in the suite is a MAKE-APP-time
+    ;; structural validation (ordering/duplicate checks); none of them ever
+    ;; actually parse an argv that omits the required positional, so
+    ;; SIGNAL-MISSING-POSITIONAL itself had no coverage.
+    (caught-signal= (cli-missing-positional condition)
+        (parse-argv (make-app :name "tool"
+                              :positionals (list (make-positional :key :target
+                                                                  :required-p t)))
+                    '("tool"))
+      (:eq cli-missing-positional-name :target)
+      (:searches cli-error-message "Missing positional argument: TARGET"))))

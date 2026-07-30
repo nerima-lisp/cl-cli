@@ -55,6 +55,20 @@
     (with-parsed-argv (inv (demo-app :commands nil) '("demo" "--help"))
       (expect (eq (invocation-action inv) :help))))
 
+  (it "root --help bypasses required global option/positional validation"
+    ;; PARSE-ROOT-ARGV's own (unless (member parsed-action '(:help :version))
+    ;; ...) skip had no direct test: "uses contextual command help" (below)
+    ;; covers this same idea one level down, at command scope.
+    (with-parsed-argv (inv (demo-app
+                            :commands nil
+                            :global-options (list (make-option :name "token"
+                                                               :kind :value
+                                                               :required-p t))
+                            :positionals (list (make-positional :key :file
+                                                                :required-p t)))
+                           '("demo" "--help"))
+      (expect (eq (invocation-action inv) :help))))
+
   (it "parses short version flag"
     (with-parsed-argv (inv (demo-app :version "1.2.3") '("demo" "-V"))
       (expect (eq (invocation-action inv) :version))))
