@@ -105,6 +105,17 @@ No behavior of the `cl-cli` system itself changed; its dependency set is still
 - `release.yml` and `flake-update.yml` workflows, and a `nix-setup` composite
   action shared by all four workflows. Every `uses:` is pinned to a
   40-character commit SHA.
+- **`checks.coverage`**, an `sb-cover` HTML report built inside the Nix
+  sandbox via [cl-nix-forge](https://github.com/nerima-lisp/cl-nix-forge)'s
+  `mkCoverageReport` battery, against the same package derivation
+  `checks.default` already builds from. Run
+  `nix build .#checks.aarch64-darwin.coverage --print-out-paths` and open
+  `cover-index.html` in the printed store path. sb-cover's own raw
+  expression/branch percentages structurally cannot reach 100% on this
+  codebase (top-level `defvar`/`defstruct`/`define-condition` forms and
+  macro-expansion-time helpers are under-attributed by the tool's design,
+  not by missing tests); treat "every reachable branch inside a function
+  body is exercised" as the real target, not the printed percentage.
 
 ### Removed
 
