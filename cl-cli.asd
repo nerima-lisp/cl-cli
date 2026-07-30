@@ -17,7 +17,7 @@
   :bug-tracker +cl-cli-issues-url+
   :source-control (:git +cl-cli-repository-url+)
   :license "MIT"
-  :version "1.0.1"
+  :version "1.1.0"
   :depends-on ("uiop")
   :in-order-to ((asdf:test-op (asdf:test-op "cl-cli/test")))
   :serial t
@@ -83,7 +83,7 @@
   :author "takeokunn <bararararatty@gmail.com>"
   :maintainer "takeokunn <bararararatty@gmail.com>"
   :license "MIT"
-  :version "1.0.1"
+  :version "1.1.0"
   :homepage +cl-cli-repository-url+
   :bug-tracker +cl-cli-issues-url+
   :source-control (:git +cl-cli-repository-url+)
@@ -161,7 +161,7 @@
   :author "takeokunn <bararararatty@gmail.com>"
   :maintainer "takeokunn <bararararatty@gmail.com>"
   :license "MIT"
-  :version "1.0.1"
+  :version "1.1.0"
   :homepage +cl-cli-repository-url+
   :bug-tracker +cl-cli-issues-url+
   :source-control (:git +cl-cli-repository-url+)

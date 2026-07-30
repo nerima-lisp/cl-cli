@@ -47,7 +47,7 @@ man page. See [Quick Start](https://nerima-lisp.github.io/cl-cli/quick-start/).
 ```nix
 # flake.nix
 inputs.cl-cli = {
-  url = "github:nerima-lisp/cl-cli/v1.0.1";
+  url = "github:nerima-lisp/cl-cli/v1.1.0";
   inputs.nixpkgs.follows = "nixpkgs";
 };
 ```

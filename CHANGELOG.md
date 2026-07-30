@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-31
+
 Conformance work against the org's
 [PACKAGE_STANDARD.md](https://github.com/nerima-lisp/.github/blob/main/PACKAGE_STANDARD.md)
 and
@@ -854,7 +856,8 @@ compile the suite at all.
   escape or other terminal control sequences into a user's terminal. Spec
   construction additionally rejects control characters in option value names.
 
-[Unreleased]: https://github.com/nerima-lisp/cl-cli/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/nerima-lisp/cl-cli/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/nerima-lisp/cl-cli/releases/tag/v1.1.0
 [1.0.1]: https://github.com/nerima-lisp/cl-cli/releases/tag/v1.0.1
 [1.0.0]: https://github.com/nerima-lisp/cl-cli/releases/tag/v1.0.0
 [0.3.0]: https://github.com/nerima-lisp/cl-cli/releases/tag/v0.3.0
