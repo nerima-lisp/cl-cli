@@ -388,4 +388,15 @@
                 :help-footer "Report bugs at the tracker.")))
       (with-app-help-text (text app)
         (assert-searches text "A longer description of demo.")
-        (assert-searches text "Report bugs at the tracker.")))))
+        (assert-searches text "Report bugs at the tracker."))))
+
+  (it "renders a fixed multi-value option's value placeholders"
+    (let ((app (make-app
+                :name "demo"
+                :global-options
+                (list (make-option :name "tag"
+                                   :kind :value
+                                   :value-count 2
+                                   :description "Two tags.")))))
+      (with-app-help-text (text app)
+        (assert-searches text "--tag <TAG> <TAG>")))))
