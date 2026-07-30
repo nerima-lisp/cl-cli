@@ -399,4 +399,13 @@
                                    :value-count 2
                                    :description "Two tags.")))))
       (with-app-help-text (text app)
-        (assert-searches text "--tag <TAG> <TAG>")))))
+        (assert-searches text "--tag <TAG> <TAG>"))))
+  (it "renders a typed positional's type metadata"
+    (let ((app (make-app
+                :name "demo"
+                :positionals
+                (list (make-positional :key :port
+                                       :type :integer
+                                       :description "Port to bind.")))))
+      (with-app-help-text (text app)
+        (assert-searches text "type: integer")))))
