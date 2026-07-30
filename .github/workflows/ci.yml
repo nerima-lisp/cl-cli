@@ -56,8 +56,11 @@ jobs:
           cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
 
       # Runs the SBCL test suite (checks.default), the ECL suite (checks.ecl),
-      # the treefmt formatting gate (checks.formatting), and the mkdocs
-      # --strict build (checks.docs).
+      # the treefmt formatting gate (checks.formatting), the mkdocs --strict
+      # build (checks.docs), and the structural S-expression gate
+      # (checks.paredit-lint). All of them are generated or declared by
+      # cl-nix-forge's mkPackageFlake in flake.nix, which is where a new one
+      # goes -- not into a second job here.
       #
       # No `--all-systems`: the flake declares two systems, but the outputs of
       # the other one cannot be *built* from here, only evaluated. The matrix

@@ -6,17 +6,54 @@
     # release tests pass, so it is less likely to land a broken build.
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
+    # The org flake preset. Everything this file used to spell out by hand --
+    # the `:version` extraction out of cl-cli.asd, `forAllSystems`, the treefmt
+    # eval wired to both `formatter` and `checks.formatting`, the mkdocs
+    # package plus its check, the run-tests.lisp gate, the `apps.test`/
+    # `apps.default` pair and the devShell -- is the single `mkPackageFlake`
+    # call below. PACKAGE_STANDARD.md distributes that shape as a *template*
+    # copied by hand into 21 repositories, and the copies drift: cl-weave and
+    # cl-prolog have already converged on the preset, and this file's 357 hand-
+    # written lines were the last copy in the set still re-deriving all of it.
+    #
+    # Pinned to a release TAG like every other input: a bare
+    # `github:nerima-lisp/cl-nix-forge` follows that repository's default
+    # branch and would change this build without warning.
+    #
+    # This and paredit-cli below are the two places ADR-0079's `flake = false`
+    # rule is deliberately not applied, and it costs -- each drags its own
+    # input graph into flake.lock. They earn it by being consumed for their
+    # `lib` outputs, which a bare source tree cannot provide.
+    cl-nix-forge = {
+      url = "github:nerima-lisp/cl-nix-forge/v0.4.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # paredit-cli is the structural editor this repository's Lisp refactors go
+    # through. It is wired in here for `lib.mkLintCheck`, so the balanced-
+    # S-expression property those refactors depend on becomes a `nix flake
+    # check` gate instead of something only an interactive session would ever
+    # notice -- a truncated `defun` still reads as a plausible diff.
+    paredit-cli = {
+      url = "github:nerima-lisp/paredit-cli/v1.3.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Sibling packages are ALWAYS pinned to a release tag. A bare
     # `github:nerima-lisp/cl-weave` follows that repo's default branch, which
-    # means an upstream push to main breaks this repo's CI without warning.
+    # means an upstream push to main breaks this repo's CI without warning --
+    # and the pin is load-bearing beyond reproducibility here: cl-weave's main
+    # system grew a `(:require "sb-cover")` after v1.0.0, which would take the
+    # ECL half of the suite below out at load time.
     #
     # `flake = false` on every one of them, per ADR-0079. Nothing below reads a
     # sibling's `packages`, `checks` or `lib`; each is used only as a source
-    # tree, handed to run-tests.lisp through a CL_*_SOURCE_DIR variable so ASDF
-    # can find the .asd. A `flake = true` input drags its ENTIRE input graph
-    # into flake.lock even when no output is used, and six siblings each
-    # carrying their own nixpkgs/treefmt-nix/cl-weave/paredit-cli/rust-overlay
-    # is what put this lock at 82 nodes against an org range of 5-19.
+    # tree, handed to `cl.lispDerivation` to be BUILT into an ASDF system that
+    # cl-nix-forge then resolves onto CL_SOURCE_REGISTRY. A `flake = true`
+    # input drags its ENTIRE input graph into flake.lock even when no output is
+    # used, and six siblings each carrying their own nixpkgs/treefmt-nix/
+    # cl-weave/paredit-cli/rust-overlay is what put this lock at 82 nodes
+    # against an org range of 5-19.
     #
     # No `inputs.nixpkgs.follows` on them either: a non-flake input has no
     # inputs of its own, so the override has no target and Nix warns
@@ -25,7 +62,8 @@
     # Every one of these is a TEST dependency. DEPENDENCY_POLICY.md places
     # cl-cli at L1, and the `cl-cli` system itself depends on uiop alone; that
     # must stay true, so nothing here may migrate into the .asd :depends-on of
-    # the main system.
+    # the main system -- which is why they are `lispCheckDependencies` and
+    # never `lispDependencies` below.
     cl-weave = {
       url = "github:nerima-lisp/cl-weave/v1.0.0";
       flake = false;
@@ -56,9 +94,11 @@
       flake = false;
     };
 
-    # treefmt-nix stays a real flake: `treefmt-nix.lib.evalModule` below reads
-    # one of its outputs, so ADR-0079 keeps it at `flake = true` -- and because
-    # it is a flake, the `follows` does have a target and does its job.
+    # treefmt-nix stays a real flake: `mkPackageFlake`'s `treefmt.evalModule`
+    # argument below IS `treefmt-nix.lib.evalModule`, so ADR-0079 keeps it at
+    # `flake = true` -- and because it is a flake, the `follows` does have a
+    # target and does its job. It is taken as an argument rather than closed
+    # over by cl-nix-forge so this repo picks its own treefmt-nix version.
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -69,6 +109,8 @@
     {
       self,
       nixpkgs,
+      cl-nix-forge,
+      paredit-cli,
       cl-weave,
       cl-prolog,
       cl-process-kit,
@@ -76,7 +118,6 @@
       cl-log-kit,
       cl-json-kit,
       treefmt-nix,
-      ...
     }:
     let
       # Only the platforms CI actually verifies are declared. ci.yml runs the
@@ -84,30 +125,17 @@
       # evaluates the outputs of the system it runs on, so each of these two is
       # covered by a real build. aarch64-linux and x86_64-darwin were declared
       # before and never verified anywhere; advertising an unbuilt platform is
-      # what PACKAGE_STANDARD.md forbids.
+      # what PACKAGE_STANDARD.md forbids, and it makes `nix flake check
+      # --all-systems` fail with a platform mismatch rather than skip.
       systems = [
         "x86_64-linux"
         "aarch64-darwin"
       ];
-      forAllSystems = nixpkgs.lib.genAttrs systems;
 
-      # Single source of truth for the package version: the `:version` form in
-      # cl-cli.asd. A release only ever edits the .asd file. Nix regexes are
-      # whole-string anchored and `.` never spans newlines, so the version is
-      # extracted line-by-line rather than with one multi-line match.
-      version =
-        let
-          lines = nixpkgs.lib.splitString "\n" (builtins.readFile ./cl-cli.asd);
-          versionLine = builtins.head (
-            builtins.filter (line: builtins.match "[[:space:]]*:version \"[^\"]*\"" line != null) lines
-          );
-        in
-        builtins.head (builtins.match "[[:space:]]*:version \"([^\"]*)\"" versionLine);
-
-      # The suites in t/completion-commands-shell-verification-test.lisp pipe cl-cli's own
-      # generated output through the real tools that will consume it. They
-      # self-skip when a tool is missing, so the tools have to be on PATH
-      # inside the sandbox or the checks silently verify nothing.
+      # The suites in t/completion-commands-shell-verification-test.lisp pipe
+      # cl-cli's own generated output through the real tools that will consume
+      # it. They self-skip when a tool is missing, so the tools have to be on
+      # PATH inside the sandbox or the checks silently verify nothing.
       verificationTools = pkgs: [
         pkgs.bash
         pkgs.zsh
@@ -118,239 +146,299 @@
         pkgs.powershell
       ];
 
-      # Sources for the portable half of the suite. Every one of these loads
-      # on SBCL and ECL alike.
-      coreTestSources = {
-        CL_WEAVE_SOURCE_DIR = cl-weave.outPath;
-        CL_PROLOG_SOURCE_DIR = cl-prolog.outPath;
-        CL_JSON_KIT_SOURCE_DIR = cl-json-kit.outPath;
-      };
-
-      # Sources for the shell-verification half. cl-process-kit pulls in
-      # cl-log-kit, which hard-codes sb-thread and therefore only compiles on
-      # SBCL (https://github.com/nerima-lisp/cl-log-kit/issues/1), so only the
-      # SBCL check gets them. run-tests.lisp refuses to load that half
-      # anywhere SB-THREAD is missing regardless; leaving these out keeps the
-      # check's declared inputs honest about what it actually exercises.
-      shellVerificationSources = {
-        CL_PROCESS_KIT_SOURCE_DIR = cl-process-kit.outPath;
-        CL_BOUNDARY_KIT_SOURCE_DIR = cl-boundary-kit.outPath;
-        CL_LOG_KIT_SOURCE_DIR = cl-log-kit.outPath;
-      };
-
-      # treefmt drives `nix fmt` and the `checks.<system>.formatting` gate.
-      # Scope is Nix only: nixfmt (RFC-style) is a zero-footgun, low-diff
-      # formatter, whereas YAML formatters mangle the GitHub Actions `on:`
-      # key and Markdown reformatting would churn the whole docs tree.
-      treefmtEval = forAllSystems (
-        system:
-        treefmt-nix.lib.evalModule nixpkgs.legacyPackages.${system} {
-          projectRootFile = "flake.nix";
-          programs.nixfmt.enable = true;
-        }
-      );
-
-      mkDocs =
-        pkgs:
-        pkgs.stdenvNoCC.mkDerivation {
-          pname = "cl-cli-docs";
-          inherit version;
-          # Rooted at the repository, not at docs/, because
-          # docs/src/changelog.md snippet-includes the top-level CHANGELOG.md
-          # and pymdownx.snippets resolves base_path against the working
-          # directory mkdocs was started from.
-          src = pkgs.lib.fileset.toSource {
-            root = ./.;
-            fileset = pkgs.lib.fileset.unions [
-              ./docs/mkdocs.yml
-              ./docs/src
-              ./CHANGELOG.md
-            ];
-          };
-          nativeBuildInputs = [ pkgs.python3Packages.mkdocs-material ];
-          # Build fully offline: Material for MkDocs bundles all of its assets,
-          # so no network access is required inside the Nix sandbox. --strict
-          # promotes broken links and unlisted pages to build failures.
-          buildPhase = ''
-            runHook preBuild
-            mkdocs build --strict --config-file docs/mkdocs.yml --site-dir "$out"
-            runHook postBuild
-          '';
-          dontInstall = true;
-          meta = {
-            description = "Rendered MkDocs (Material) documentation for cl-cli";
-            homepage = "https://github.com/nerima-lisp/cl-cli";
-            license = pkgs.lib.licenses.mit;
-          };
+      # A `flake = false` sibling source tree, as a BUILT ASDF system fit for
+      # `lispCheckDependencies`.
+      #
+      # The tree cannot simply be put on the registry as-is: `lispDerivation`
+      # sets ASDF_OUTPUT_TRANSLATIONS to the identity mapping so fasls land
+      # beside their sources and the output stays reusable, and ASDF would then
+      # try to write a sibling's fasls into the read-only Nix store. Building
+      # each one here is what produces a tree that already has its fasls.
+      #
+      # `lisp` is an argument rather than defaulted because fasls are
+      # implementation-specific: cl-nix-forge asserts a consumer and its
+      # dependencies were built by the same implementation, so the SBCL and ECL
+      # halves of the suite need two independent derivations per sibling. The
+      # version is read from the sibling's own .asd for the same reason cl-cli's
+      # is -- a hardcoded copy here is a number nobody would remember to bump.
+      siblingSystem =
+        ctx:
+        {
+          pname,
+          source,
+          lisp,
+          asdName ? "${pname}.asd",
+          lispSystem ? pname,
+          lispDependencies ? [ ],
+        }:
+        ctx.cl.lispDerivation {
+          inherit
+            pname
+            lispSystem
+            lisp
+            lispDependencies
+            ;
+          version = ctx.cl.fromAsdSystem "${source}/${asdName}";
+          src = source;
         };
 
-      # `extraSources` carries the implementation-specific dependency set, so
-      # the only difference between the two checks below is which half of the
-      # suite their environment can reach.
-      mkLispCheck =
-        pkgs:
-        {
-          name,
-          package,
-          command,
-          extraSources ? { },
-        }:
-        pkgs.runCommand "cl-cli-tests-${name}"
-          (
-            {
-              nativeBuildInputs = [ package ] ++ verificationTools pkgs;
-              src = self;
-            }
-            // coreTestSources
-            // extraSources
-          )
-          ''
-            cp -R "$src" source
-            chmod -R u+w source
-            cd source
-            export HOME="$TMPDIR/home"
-            export XDG_CACHE_HOME="$TMPDIR/cache"
-            mkdir -p "$HOME" "$XDG_CACHE_HOME"
-            ${command}
-            touch "$out"
-          '';
+      clWeaveSystem =
+        ctx: lisp:
+        siblingSystem ctx {
+          pname = "cl-weave";
+          source = cl-weave;
+          inherit lisp;
+        };
 
-      sbclCommand = ''
-        sbcl --non-interactive --load run-tests.lisp \
-          --eval '(cl-cli/test:run-tests)' --quit
-      '';
+      clJsonKitSystem =
+        ctx: lisp:
+        siblingSystem ctx {
+          pname = "cl-json-kit";
+          source = cl-json-kit;
+          inherit lisp;
+        };
 
-      # No ASDF preload here any more. It used to be required because
-      # cl-log-kit demands ASDF >= 3.3.1 while nixpkgs' ECL 26.5.5 bundles
-      # 3.1.8.11 -- but cl-log-kit is no longer on ECL's path at all now
-      # that the shell-verification half is a separate system, and the
-      # remaining test dependencies load fine against the bundled ASDF.
-      # This keeps the documented `ecl --norc --load run-tests.lisp`
-      # invocation and the one CI runs identical.
-      eclCommand = ''
-        ecl --norc --load run-tests.lisp \
-          --eval '(cl-cli/test:run-tests)'
-      '';
-    in
-    {
-      packages = forAllSystems (
-        system:
+      # `cl-prolog/weave` is one of four systems cl-prolog.asd defines, and its
+      # `:depends-on` names both `cl-prolog` (resolved out of that same file, so
+      # nothing to pass) and `cl-weave` (which is not, so it is passed). The
+      # ASDF system name carries a slash; `pname` cannot, since it becomes a
+      # store path component.
+      clPrologWeaveSystem =
+        ctx: lisp:
+        siblingSystem ctx {
+          pname = "cl-prolog-weave";
+          source = cl-prolog;
+          asdName = "cl-prolog.asd";
+          lispSystem = "cl-prolog/weave";
+          inherit lisp;
+          lispDependencies = [ (clWeaveSystem ctx lisp) ];
+        };
+
+      # cl-process-kit and its two dependencies are SBCL-only, so they take no
+      # `lisp` argument at all: cl-log-kit calls SB-THREAD unconditionally
+      # (https://github.com/nerima-lisp/cl-log-kit/issues/1), which is the whole
+      # reason cl-cli.asd splits the shell-verification half of the suite into
+      # its own system. An `ecl` flavour of these would be an evaluation error
+      # waiting for somebody to add it to the ECL check.
+      clLogKitSystem =
+        ctx:
+        siblingSystem ctx {
+          pname = "cl-log-kit";
+          source = cl-log-kit;
+          lisp = ctx.pkgs.sbcl;
+        };
+
+      # cl-boundary-kit v0.6.0 `:depends-on (:asdf :cl-log-kit)`. That edge is
+      # easy to miss by reading a working checkout instead of the pinned tag --
+      # cl-boundary-kit dropped it after v0.6.0 -- and the previous
+      # run-tests.lisp arrangement hid it, because registering all three .asd
+      # files up front let ASDF resolve the graph in whatever order it liked.
+      # Here the graph has to be declared, so a wrong edge is a build failure.
+      clBoundaryKitSystem =
+        ctx:
+        siblingSystem ctx {
+          pname = "cl-boundary-kit";
+          source = cl-boundary-kit;
+          lisp = ctx.pkgs.sbcl;
+          lispDependencies = [ (clLogKitSystem ctx) ];
+        };
+
+      # Only cl-process-kit is ever named in a `lispCheckDependencies` list:
+      # `lispDerivation` walks the dependency graph transitively and resolves
+      # the whole closure onto CL_SOURCE_REGISTRY, so cl-boundary-kit and
+      # cl-log-kit arrive because they are named HERE, once, where the ASDF
+      # `:depends-on` that needs them lives.
+      clProcessKitSystem =
+        ctx:
+        siblingSystem ctx {
+          pname = "cl-process-kit";
+          source = cl-process-kit;
+          lisp = ctx.pkgs.sbcl;
+          lispDependencies = [
+            (clBoundaryKitSystem ctx)
+            (clLogKitSystem ctx)
+          ];
+        };
+
+      # The portable half of the suite's dependencies -- `cl-cli/test`'s
+      # `:depends-on`, minus `cl-cli` itself. Every one of these loads on SBCL
+      # and ECL alike, which is what makes the ECL check below possible.
+      coreTestSystems = ctx: lisp: [
+        (clWeaveSystem ctx lisp)
+        (clPrologWeaveSystem ctx lisp)
+        (clJsonKitSystem ctx lisp)
+      ];
+
+      # `checks.ecl` -- the portability gate. cl-cli promises to load on more
+      # than SBCL, and nothing else in the suite would notice an SBCL-only form
+      # creeping into src/.
+      #
+      # Built from `ctx.lispDerivationArgs`, the exact attrset the preset handed
+      # `lispDerivation` for the default package, with only the implementation
+      # and its matching dependency set replaced. Re-spelling pname/version/src/
+      # lispSystem/meta here instead would be a second source of truth for the
+      # package's identity inside the one file whose migration was about
+      # removing exactly that.
+      #
+      # `nativeBuildInputs` rides along from `packageArgs` on purpose. ECL runs
+      # only `cl-cli/test`, which shells out to nothing today -- but a core test
+      # that grows a `bash` invocation tomorrow should fail here rather than
+      # self-skip on the one implementation nobody watches.
+      eclPackage =
+        ctx:
+        ctx.cl.lispDerivation (
+          ctx.lispDerivationArgs
+          // {
+            lisp = ctx.pkgs.ecl;
+            lispCheckDependencies = coreTestSystems ctx ctx.pkgs.ecl;
+          }
+        );
+
+      # `nix run .#test`, wrapping the preset's own generated app rather than
+      # replacing it: the wrapper adds nothing but PATH, so the registry, the
+      # timeout and the runner stay the preset's single spelling of them.
+      #
+      # The PATH is the point. `mkTestApp` has no argument for runtime tools,
+      # and without them the shell-verification cases self-skip -- so a bare
+      # `nix run .#test` would quietly verify less than `nix flake check` does,
+      # while reporting the same "all tests passed".
+      testApp =
+        ctx:
         let
-          pkgs = nixpkgs.legacyPackages.${system};
-        in
-        rec {
-          cl-cli = pkgs.sbcl.buildASDFSystem {
-            pname = "cl-cli";
-            inherit version;
-            src = self;
-            systems = [ "cl-cli" ];
+          generated = ctx.generated.apps.test;
+          wrapper = ctx.pkgs.writeShellApplication {
+            name = "cl-cli-test";
+            runtimeInputs = verificationTools ctx.pkgs;
+            text = ''
+              exec ${generated.program} "$@"
+            '';
           };
-          default = cl-cli;
-          docs = mkDocs pkgs;
-        }
-      );
+        in
+        generated // { program = nixpkgs.lib.getExe wrapper; };
+    in
+    # `mkPackageFlake` spans systems -- it obtains a `pkgs` and its own
+    # cl-nix-forge instance per entry in `systems` -- so the per-system `lib`
+    # this function is taken from contributes nothing but the function itself.
+    cl-nix-forge.lib.${builtins.head systems}.mkPackageFlake {
+      inherit self systems nixpkgs;
 
-      # `nix fmt` entry point.
-      formatter = forAllSystems (system: treefmtEval.${system}.config.build.wrapper);
+      pname = "cl-cli";
+
+      # Single source of truth for the package version: the `:version` form in
+      # cl-cli.asd, so the flake can never drift from the ASDF system
+      # definition. All three systems in that file declare the same version;
+      # `fromAsdSystem` accepts that unanimity and refuses to pick a winner if
+      # they ever disagree -- which the hand-rolled `builtins.match` this
+      # replaces did not, since it simply took the first matching line.
+      asd = ./cl-cli.asd;
+
+      # Spelled out rather than left to the preset's `self` default, which does
+      # not evaluate: a flake's `self` is an attrset carrying an `outPath`, and
+      # `lib.fileset` refuses string-like values. `./.` is the same directory as
+      # a path literal. `self` is still what the preset hands the treefmt gate,
+      # which wants the UNFILTERED tree.
+      root = ./.;
+
+      # `mkLispSource` is an allowlist -- `*.asd` and `*.lisp` under the root,
+      # nothing else unless named here. README.md is named because cl-cli.asd
+      # reads it at ASDF-LOAD time, for `:long-description`, so its absence is
+      # not a missing docs file but a system that cannot be found at all.
+      # Nothing else in src/, t/ or examples/ opens a file it does not create.
+      sourceInclude = [ ./README.md ];
+
+      meta = {
+        description = "Composable Common Lisp CLI parsing and dispatch primitives.";
+        homepage = "https://github.com/nerima-lisp/cl-cli";
+        license = nixpkgs.lib.licenses.mit;
+        platforms = nixpkgs.lib.platforms.unix;
+      };
+
+      # SBCL is the reference implementation, so the default package and
+      # `checks.default` are the ones that get the shell-verification half.
+      # These are BUILT derivations, never CL_SOURCE_REGISTRY strings --
+      # assembling that registry is `lispDerivation`'s job and it does it
+      # transitively, which is why cl-process-kit alone stands in for itself
+      # plus cl-boundary-kit plus cl-log-kit.
+      lispCheckDependencies = ctx: coreTestSystems ctx ctx.pkgs.sbcl ++ [ (clProcessKitSystem ctx) ];
+
+      # Puts the real shells and mandoc on PATH for `checks.default` -- and, via
+      # `inputsFrom` on the check-enabled derivation the preset builds the dev
+      # shell from, for `nix develop` too, so a shell-verification failure can
+      # be reproduced by hand without listing these twice.
+      packageArgs = ctx: {
+        nativeBuildInputs = verificationTools ctx.pkgs;
+      };
+
+      # Rooted at the repository, not at ./docs, because docs/src/changelog.md
+      # is a single pymdownx.snippets include of the top-level CHANGELOG.md and
+      # snippets resolves base_path against the working directory mkdocs runs
+      # in. `mkDocsSite` builds with `--strict`, so a broken link or a page
+      # missing from the nav fails the build, and `checks.docs` runs it -- which
+      # is what keeps such a break inside a pull request instead of surfacing as
+      # a failed post-merge Pages deploy.
+      docs = {
+        root = ./.;
+        fileset = nixpkgs.lib.fileset.unions [
+          ./docs/mkdocs.yml
+          ./docs/src
+          ./CHANGELOG.md
+        ];
+        mkdocsYmlName = "docs/mkdocs.yml";
+      };
+
+      # ONE treefmt evaluation drives `nix fmt` and the `checks.formatting`
+      # gate, so the formatter and the CI gate can never disagree about what
+      # "formatted" means. Scope stays the preset's Nix-only default: nixfmt
+      # (RFC style) is a zero-footgun, low-diff formatter, whereas a YAML
+      # formatter mangles the GitHub Actions `on:` key and reformatting Markdown
+      # would churn the whole docs tree.
+      treefmt.evalModule = treefmt-nix.lib.evalModule;
+
+      # The interactive-only extras, and only those. sbcl, the test
+      # dependencies and the verification tools all arrive through `inputsFrom`
+      # on the derivation the preset builds this shell from -- the CHECK-ENABLED
+      # one -- so `sbcl --script run-tests.lisp` inside `nix develop` resolves
+      # cl-weave and finds zsh on PATH without either being named again here.
+      # ecl is not that derivation's implementation, so it does need naming.
+      devShellPackages = ctx: [
+        ctx.pkgs.ecl
+        ctx.pkgs.rlwrap
+        paredit-cli.packages.${ctx.system}.default
+      ];
+
+      # See `testApp`: the generated app is kept, wrapped only to give the
+      # shell-verification cases the tools they self-skip without.
+      overrideOutputs = ctx: {
+        apps.test = testApp ctx;
+        apps.default = testApp ctx;
+      };
 
       # Granularity lives here, NOT in extra GitHub Actions jobs: `nix flake
       # check` evaluates each attribute as its own derivation, in parallel,
       # with build caching. Add a check here rather than a job in ci.yml.
-      checks = forAllSystems (
-        system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-          lispCheck = mkLispCheck pkgs;
-        in
-        {
-          # SBCL is the reference implementation, so it is the default check
-          # and the only one that gets the shell-verification half.
-          default = lispCheck {
-            name = "sbcl";
-            package = pkgs.sbcl;
-            extraSources = shellVerificationSources;
-            command = sbclCommand;
+      extraOutputs = ctx: {
+        checks = {
+          # The same run-tests.lisp entry point as `checks.default`, under ECL.
+          # One runner serves both because its own guard is a capability check:
+          # it loads the shell-verification half only where SB-THREAD exists and
+          # cl-process-kit is on the registry, and says which half it ran.
+          ecl = ctx.cl.mkScriptCheck {
+            drv = eclPackage ctx;
+            entryPoint = "run-tests.lisp";
+            name = "cl-cli-ecl-test";
+            timeoutSeconds = 600;
           };
 
-          # Portability gate. cl-cli promises to load on more than SBCL, and
-          # nothing else in the suite would notice an SBCL-only form creeping
-          # into src/.
-          ecl = lispCheck {
-            name = "ecl";
-            package = pkgs.ecl;
-            command = eclCommand;
+          # Structural parse gate over every Lisp source in the filtered tree:
+          # fails if any .lisp/.asd file is not a balanced S-expression
+          # document. The suite would not catch it -- an unbalanced file makes
+          # ASDF fail to load the system, which reads like any other build
+          # error and points at the wrong cause.
+          paredit-lint = paredit-cli.lib.${ctx.system}.mkLintCheck {
+            inherit (ctx) src;
+            name = "cl-cli-paredit-lint";
           };
-
-          # Fails `nix flake check` when any tracked Nix file is unformatted,
-          # turning the formatter into an enforced CI gate.
-          formatting = treefmtEval.${system}.config.build.check self;
-
-          # The docs package builds with `mkdocs --strict`, so a broken link or
-          # a page missing from the nav fails the build. Without this the docs
-          # are only ever built by the publish workflow, which runs after a
-          # merge to main, meaning such a break surfaces as a failed deploy
-          # rather than as a failed pull request.
-          docs = mkDocs pkgs;
-        }
-      );
-
-      apps = forAllSystems (
-        system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-          test = pkgs.writeShellApplication {
-            name = "cl-cli-test";
-            runtimeInputs = [ pkgs.sbcl ] ++ verificationTools pkgs;
-            text =
-              let
-                exports = nixpkgs.lib.concatStringsSep "\n" (
-                  nixpkgs.lib.mapAttrsToList (n: v: "export ${n}=${nixpkgs.lib.escapeShellArg v}") (
-                    coreTestSources // shellVerificationSources
-                  )
-                );
-              in
-              ''
-                ${exports}
-                cd "''${1:-.}"
-                ${sbclCommand}
-              '';
-          };
-          # `nix flake check` warns on an app without meta, so it is declared
-          # once and shared by both aliases below.
-          testApp = {
-            type = "app";
-            program = "${test}/bin/cl-cli-test";
-            meta = {
-              description = "Run the cl-cli test suite under SBCL";
-              license = pkgs.lib.licenses.mit;
-            };
-          };
-        in
-        {
-          default = testApp;
-          test = testApp;
-        }
-      );
-
-      devShells = forAllSystems (
-        system:
-        let
-          pkgs = nixpkgs.legacyPackages.${system};
-        in
-        {
-          default = pkgs.mkShell (
-            {
-              packages = [
-                pkgs.sbcl
-                pkgs.ecl
-                pkgs.rlwrap
-              ]
-              ++ verificationTools pkgs;
-            }
-            // coreTestSources
-            // shellVerificationSources
-          );
-        }
-      );
+        };
+      };
     };
 }
