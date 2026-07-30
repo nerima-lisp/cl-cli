@@ -98,6 +98,19 @@ that key survives :requires/:conflicts-with resolution."
       (when (positional-rest-p spec)
         (setf rest-seen-p t)))))
 
+(defun %validate-default-command-exists (label default-command table)
+  "Signal CLI-INVALID-SPECIFICATION when DEFAULT-COMMAND isn't a key in TABLE.
+
+Shared by %VALIDATE-COMMAND-NODE (a command's own default subcommand) and
+%VALIDATE-APP-SPEC (an app's own default command) -- same check, same
+message, differing only in which name/default-command/table triple is
+being validated."
+  (when (and default-command (null (gethash default-command table)))
+    (signal-cli-error 'cli-invalid-specification
+                      (format nil "Unknown :default-command for ~A: ~A"
+                              label
+                              default-command))))
+
 (defun %validate-command-node (app command accumulated-specs)
   "Validate COMMAND and, recursively, its subcommands.
 
@@ -128,12 +141,9 @@ keyed by the command object."
         (let ((subcommand-table (%validate-command-table (command-subcommands command))))
           (setf (gethash command (app-command-subcommand-tables app))
                 (command-table-from-specs (command-subcommands command)))
-          (when (and (command-default-command command)
-                     (null (gethash (command-default-command command) subcommand-table)))
-            (signal-cli-error 'cli-invalid-specification
-                              (format nil "Unknown :default-command for ~A: ~A"
-                                      (command-name command)
-                                      (command-default-command command))))
+          (%validate-default-command-exists (command-name command)
+                                            (command-default-command command)
+                                            subcommand-table)
           (dolist (subcommand (command-subcommands command))
             (%validate-command-node app subcommand command-specs)))
         (when (command-default-command command)
@@ -164,12 +174,9 @@ keyed by the command object."
     (let ((accumulated-specs (append built-ins (app-global-options app))))
       (dolist (command (app-commands app))
         (%validate-command-node app command accumulated-specs)))
-    (when (and (app-default-command app)
-               (null (gethash (app-default-command app) command-table)))
-      (signal-cli-error 'cli-invalid-specification
-                        (format nil "Unknown :default-command for ~A: ~A"
-                                (app-name app)
-                                (app-default-command app))))
+    (%validate-default-command-exists (app-name app)
+                                      (app-default-command app)
+                                      command-table)
     (when (and (app-require-command app)
                (null (app-commands app)))
       (signal-cli-error 'cli-invalid-specification
