@@ -93,29 +93,10 @@ second string, and copying that into the caller's buffer a third time."
 (defun %completion-zsh-arguments-field (value)
   "Return VALUE safe for zsh `_arguments` bracket/placeholder fields.
 
-Strips control characters and blanks out `[`/`]`/`:`/`\\` (zsh `_arguments`
-field delimiters) in one pass over VALUE, rather than through
-%COMPLETION-CONTROL-SAFE-STRING (a second, separately-allocated
-WITH-OUTPUT-TO-STRING pass) -- the same fix already applied to
-%COMPLETION-SHELL-QUOTE. The two character sets are disjoint (none of
-`[]:\\` is a control code), so folding both into one COND is behavior-
-preserving; %COMPLETION-CONTROL-SAFE-STRING's other call sites are
-untouched."
-  (let ((string (if value (princ-to-string value) "")))
-    (with-output-to-string (out)
-      (loop for char across string
-            for code = (char-code char)
-            do (cond
-                 ((find char "[]:\\")
-                  (write-char #\Space out))
-                 ((or (char= char #\Newline)
-                      (char= char #\Return)
-                      (char= char #\Tab))
-                  (write-char #\Space out))
-                 ((%control-character-code-p code)
-                  nil)
-                 (t
-                  (write-char char out)))))))
+Blanks out `[`/`]`/`:`/`\\` (zsh `_arguments` field delimiters) in addition
+to control characters; see %COMPLETION-WRITE-CONTROL-SAFE."
+  (with-output-to-string (out)
+    (%completion-write-control-safe out value "[]:\\")))
 
 (defun %completion-zsh-option-spec (option name)
   (let* ((token (option-token-display-name name))

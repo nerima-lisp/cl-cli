@@ -64,21 +64,35 @@
       (dolist (alias (command-aliases command))
         (collect alias)))))
 
+(defun %completion-write-control-safe (stream value &optional extra-blank)
+  "Write VALUE to STREAM with control characters dropped and whitespace
+controls mapped to a space; any character found in EXTRA-BLANK is also
+mapped to a space.
+
+Shared by %COMPLETION-CONTROL-SAFE-STRING (no EXTRA-BLANK) and
+%COMPLETION-ZSH-ARGUMENTS-FIELD (EXTRA-BLANK `[]:\\`, zsh `_arguments`
+field delimiters) -- the latter's own delimiter set is disjoint from both
+the control-code range and the whitespace-control set, so adding it as one
+more COND clause ahead of them is behavior-preserving for both callers."
+  (let ((string (if value (princ-to-string value) "")))
+    (loop for char across string
+          for code = (char-code char)
+          do (cond
+               ((and extra-blank (find char extra-blank))
+                (write-char #\Space stream))
+               ((or (char= char #\Newline)
+                    (char= char #\Return)
+                    (char= char #\Tab))
+                (write-char #\Space stream))
+               ((%control-character-code-p code)
+                nil)
+               (t
+                (write-char char stream))))))
+
 (defun %completion-control-safe-string (value)
   "Return VALUE as a single printable completion protocol field."
-  (let ((string (if value (princ-to-string value) "")))
-    (with-output-to-string (out)
-      (loop for char across string
-            for code = (char-code char)
-            do (cond
-                 ((or (char= char #\Newline)
-                      (char= char #\Return)
-                      (char= char #\Tab))
-                  (write-char #\Space out))
-                 ((%control-character-code-p code)
-                  nil)
-                 (t
-                  (write-char char out)))))))
+  (with-output-to-string (out)
+    (%completion-write-control-safe out value)))
 
 (defun %completion-zsh-describe-field (value)
   "Return VALUE as one safe `_describe` NAME or DESCRIPTION field."
