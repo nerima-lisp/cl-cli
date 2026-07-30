@@ -61,6 +61,18 @@
       (expect (eq (option-value yes :enabled) t))
       (expect (eq (option-value off :enabled) nil))))
 
+  (it "rejects an unrecognized boolean-typed value"
+    ;; BUILD-TYPED-VALUE-PARSER's :boolean parser calls PARSE-BOOLEAN-DESIGNATOR
+    ;; with no display-name/option-key, so an invalid value here -- unlike the
+    ;; :parser-lambda-with-context path -- takes PARSE-BOOLEAN-DESIGNATOR's
+    ;; plain (ERROR ...) fallback, rewrapped by WITH-VALUE-PARSE-ERRORS.
+    (signals cli-invalid-option-value
+      (parse-argv (make-app :name "tool"
+                            :global-options (list (make-option :name "enabled"
+                                                               :kind :value
+                                                               :type :boolean)))
+                 '("tool" "--enabled" "maybe"))))
+
   (it "never evaluates read-eval syntax in numeric values"
     (signals cli-invalid-option-value
       (parse-argv (make-app :name "tool"

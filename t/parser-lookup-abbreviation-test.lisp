@@ -45,4 +45,15 @@
 
   (it "still rejects a prefix that matches nothing"
     (signals cli-unknown-option
-      (parse-argv (abbrev-app) '("tool" "--zzz")))))
+      (parse-argv (abbrev-app) '("tool" "--zzz"))))
+
+  (it "does not report an ambiguity when a prefix matches two names of the same option"
+    ;; "signals an ambiguity..." above covers two DIFFERENT options sharing a
+    ;; prefix; this covers one option reachable through two of its own table
+    ;; entries (its name and an alias) -- %SAME-OPTION-ENTRY-RESOLUTION-P must
+    ;; collapse them instead of reporting a false ambiguity.
+    (let ((app (abbrev-app :options (list (make-option :name "output"
+                                                        :aliases '("out-file")
+                                                        :kind :value)))))
+      (with-parsed-argv (inv app '("tool" "--out" "a.o"))
+        (expect (string= (option-value inv :output) "a.o"))))))

@@ -128,6 +128,31 @@
                    :kind :value
                    :completion-candidates '(("dev" . "")))))
 
+  (it "accepts a completion candidate given as a proper (value description) list"
+    ;; Every other completion-candidate test in the suite pairs value and
+    ;; description as a dotted CONS; NORMALIZE-OPTION-COMPLETION-CANDIDATE
+    ;; also accepts a proper two-element list for the same pair, via a
+    ;; distinct branch ((CONSP TAIL) ...) that had no coverage of its own.
+    (let* ((app (demo-app
+                :global-options
+                (list (make-option :name "mode" :kind :value
+                                   :completion-candidates '(("dev" "development mode"))))))
+           (text (render-completion app "zsh")))
+      (assert-searches text "development mode")))
+
+  (it "keeps the first completion candidate when a value repeats"
+    ;; NORMALIZE-OPTION-COMPLETION-CANDIDATES' own dedup -- distinct from
+    ;; VALIDATE-NON-EMPTY-STRINGS above -- had no test with a genuinely
+    ;; repeated candidate value.
+    (let* ((app (demo-app
+                :global-options
+                (list (make-option :name "mode" :kind :value
+                                   :completion-candidates '(("dev" . "first")
+                                                            ("dev" . "second"))))))
+           (text (render-completion app "zsh")))
+      (assert-searches text "first")
+      (assert-not-searches text "second")))
+
   (it "requires non-empty command aliases"
     (signals-invalid-specification
       (make-command :name "build" :aliases '(""))))

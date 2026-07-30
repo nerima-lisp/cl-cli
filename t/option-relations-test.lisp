@@ -173,6 +173,22 @@
       (:searches cli-error-message "Option --login requires one of: a hidden option.")
       (:not-searches cli-error-message "--internal-token")))
 
+  (it "requires-any-of names a hidden option generically when IT is the one missing an alternative"
+    ;; The two tests above hide the TARGET; this hides the erroring option
+    ;; itself -- VALIDATE-REQUIRES-ANY-OF's own (if (option-hidden-p spec) ...)
+    ;; branch, distinct from the target-hiding one.
+    (with-caught-signal-from-argv
+        ((cli-missing-any-of-options condition)
+         (app (demo-app
+               :global-options (list (make-option :name "token" :kind :value)
+                                     (make-option :name "username" :kind :value)
+                                     (make-option :name "internal-login" :kind :flag
+                                                 :hidden-p t
+                                                 :requires-any-of '(:token :username))))
+              '("demo" "--internal-login")))
+      (:searches cli-error-message "A hidden option requires one of: --token, --username.")
+      (:not-searches cli-error-message "--internal-login")))
+
   (it "rejects unknown requires-any-of targets"
     (signals-invalid-specification
       (demo-app
@@ -218,6 +234,22 @@
       (:searches cli-error-message "Option --config requires a hidden option.")
       (:not-searches cli-error-message "--internal-token")))
 
+  (it "names a hidden option generically when IT is the one missing a dependency"
+    ;; The test above hides the DEPENDENCY; this hides the erroring option
+    ;; itself -- VALIDATE-REQUIRES' own (if (option-hidden-p spec) ...) branch,
+    ;; distinct from the dependency-hiding one.
+    (with-caught-signal-from-argv
+        ((cli-missing-dependent-option condition)
+         (app (demo-app
+               :global-options (list (make-option :name "profile" :kind :value)
+                                     (make-option :name "internal-token"
+                                                  :kind :value
+                                                  :hidden-p t
+                                                  :requires '(:profile))))
+              '("demo" "--internal-token" "secret")))
+      (:searches cli-error-message "A hidden option requires --profile.")
+      (:not-searches cli-error-message "--internal-token")))
+
   (it "detects conflicting options"
     (with-caught-signal-from-argv
         ((cli-conflicting-options condition)
@@ -247,6 +279,22 @@
       (:eq cli-conflicting-options-right-option :internal-token)
       (:searches cli-error-message "Option --config conflicts with a hidden option.")
       (:not-searches cli-error-message "--internal-token")))
+
+  (it "names a hidden option generically when IT is the one flagged in a conflict"
+    ;; The test above hides the OTHER side of the conflict; this hides the
+    ;; erroring option itself -- VALIDATE-CONFLICTS' own
+    ;; (if (option-hidden-p spec) ...) branch, distinct from the other-hiding one.
+    (with-caught-signal-from-argv
+        ((cli-conflicting-options condition)
+         (app (demo-app
+               :global-options (list (make-option :name "token" :kind :value)
+                                     (make-option :name "internal-quiet"
+                                                  :kind :flag
+                                                  :hidden-p t
+                                                  :conflicts-with '(:token))))
+              '("demo" "--token" "abc" "--internal-quiet")))
+      (:searches cli-error-message "A hidden option conflicts with --token.")
+      (:not-searches cli-error-message "--internal-quiet")))
 
   (it "rejects unknown relation targets"
     (let* ((config (make-option :name "config"
