@@ -160,4 +160,10 @@
     (let* ((app (make-app :name "tool" :description "Fish & Chips"))
            (text (markdown-text app)))
       (assert-searches text "Fish &amp; Chips")
-      (assert-not-searches text "Fish & Chips"))))
+      (assert-not-searches text "Fish & Chips")))
+  (it "drops a C1 control character (code point 128-159)"
+    (let* ((app (make-app :name "tool"
+                          :description (format nil "safe~Atext" (string (code-char 140)))))
+           (text (markdown-text app)))
+      (assert-searches text "safetext")
+      (assert-not-searches text (string (code-char 140))))))
