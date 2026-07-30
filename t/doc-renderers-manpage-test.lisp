@@ -122,4 +122,11 @@
 
   (it "returns no values when given a stream"
     (with-string-output (stream)
-      (expect (null (multiple-value-list (render-manpage (manpage-demo-app) stream)))))))
+      (expect (null (multiple-value-list (render-manpage (manpage-demo-app) stream))))))
+
+  (it "folds an embedded tab to a space"
+    (let* ((app (make-app :name "tool"
+                          :description (format nil "left~Aright" (code-char 9))))
+           (text (manpage-text app)))
+      (assert-searches text "left right")
+      (assert-not-searches text (format nil "left~Aright" (code-char 9))))))
