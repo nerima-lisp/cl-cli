@@ -154,4 +154,10 @@
 
   (it "returns no values when given a stream"
     (with-string-output (stream)
-      (expect (null (multiple-value-list (render-markdown (manpage-demo-app) stream)))))))
+      (expect (null (multiple-value-list (render-markdown (manpage-demo-app) stream))))))
+
+  (it "escapes a bare ampersand in prose metadata"
+    (let* ((app (make-app :name "tool" :description "Fish & Chips"))
+           (text (markdown-text app)))
+      (assert-searches text "Fish &amp; Chips")
+      (assert-not-searches text "Fish & Chips"))))
