@@ -166,4 +166,8 @@
                           :description (format nil "safe~Atext" (string (code-char 140)))))
            (text (markdown-text app)))
       (assert-searches text "safetext")
-      (assert-not-searches text (string (code-char 140))))))
+      (assert-not-searches text (string (code-char 140)))))
+  (it "renders a generic [args] usage tail for a flat handler-only app"
+    (let* ((app (make-app :name "tool" :handler (lambda (i) (declare (ignore i)) 0)))
+           (text (markdown-text app)))
+      (assert-searches text "## Usage" "tool [args]"))))
