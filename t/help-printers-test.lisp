@@ -379,4 +379,13 @@
                                  (make-option :name "yaml" :kind :flag)))))
       (with-app-help-text (text app)
         (assert-searches text "at most one of: --json | --yaml")
-        (assert-not-searches text "conflicts:")))))
+        (assert-not-searches text "conflicts:"))))
+
+  (it "renders the app-level description and help footer"
+    (let ((app (make-app
+                :name "demo"
+                :description "A longer description of demo."
+                :help-footer "Report bugs at the tracker.")))
+      (with-app-help-text (text app)
+        (assert-searches text "A longer description of demo.")
+        (assert-searches text "Report bugs at the tracker.")))))
