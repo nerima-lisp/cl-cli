@@ -31,15 +31,7 @@
   "Write the `subcommand_specs=(...)` assignment for SUBCOMMANDS directly to STREAM."
   (%completion-zsh-write-assignment
    stream "subcommand_specs"
-   (collecting
-     (dolist (command subcommands)
-       (collect (format nil "~A:~A"
-                        (%completion-zsh-describe-field (command-name command))
-                        (%completion-zsh-describe-field (command-description command))))
-       (dolist (alias (command-aliases command))
-         (collect (format nil "~A:alias for ~A"
-                          (%completion-zsh-describe-field alias)
-                          (%completion-zsh-describe-field (command-name command)))))))))
+   (%completion-zsh-command-specs subcommands)))
 
 (defun %completion-zsh-write-command-node (stream app command scope-options depth)
   "Write the `NAME) ... ;;' case clause for COMMAND at word index DEPTH directly to STREAM.

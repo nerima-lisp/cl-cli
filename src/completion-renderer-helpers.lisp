@@ -60,9 +60,15 @@ whatever buffer the caller passes, matching the bash renderer's
             (%completion-visible-option-tokens (command-options command)))
           (%completion-option-tokens-for-specs (built-in-option-specs app))))
 
-(defun %completion-zsh-command-specs (app)
+(defun %completion-zsh-command-specs (commands)
+  "Build the `name:description`/`alias:alias for X` zsh spec strings for COMMANDS.
+
+Shared by %COMPLETION-ZSH-WRITE-COMMAND-SPECS (an app's own COMMANDS) and
+%COMPLETION-ZSH-WRITE-SUBCOMMAND-SPECS (a command's already visibility-
+filtered subcommands) -- both build this exact list, differing only in
+where COMMANDS comes from."
   (collecting
-    (dolist (command (%completion-visible-commands app))
+    (dolist (command commands)
       (collect (format nil "~A:~A"
                        (%completion-zsh-describe-field (command-name command))
                        (%completion-zsh-describe-field (command-description command))))
@@ -72,8 +78,9 @@ whatever buffer the caller passes, matching the bash renderer's
                          (%completion-zsh-describe-field (command-name command))))))))
 
 (defun %completion-zsh-write-command-specs (stream app)
-  (%completion-zsh-write-assignment stream "command_specs"
-                                    (%completion-zsh-command-specs app)))
+  (%completion-zsh-write-assignment
+   stream "command_specs"
+   (%completion-zsh-command-specs (%completion-visible-commands app))))
 
 (defun %completion-zsh-write-assignment (stream variable-name values)
   "Write `  VARIABLE-NAME=(quoted quoted ...)~%` directly to STREAM.
