@@ -4,9 +4,7 @@
 # Serve:   mkdocs serve --no-strict -f docs/mkdocs.yml
 # The Nix flake (`nix build .#docs`) drives the same config offline.
 #
-# Always start mkdocs from the REPOSITORY ROOT. pymdownx.snippets resolves
-# base_path against the working directory, and docs/src/changelog.md includes
-# the top-level CHANGELOG.md.
+# Always start mkdocs from the REPOSITORY ROOT.
 
 # Broken links and pages missing from the nav are build failures. It is set
 # here as well as passed on the command line so that every invocation path
@@ -103,13 +101,6 @@ markdown_extensions:
       line_spans: __span
       pygments_lang_class: true
   - pymdownx.inlinehilite
-  # base_path is relative to the directory mkdocs was started from, which is
-  # the repository root. check_paths turns a missing include into a build
-  # failure, matching what --strict does for links.
-  - pymdownx.snippets:
-      base_path:
-        - "."
-      check_paths: true
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
@@ -164,7 +155,6 @@ nav:
       - Scope and Non-Goals: scope.md
   - Project:
       - Development: development.md
-      - Changelog: changelog.md
 
 not_in_nav: |
   notes/

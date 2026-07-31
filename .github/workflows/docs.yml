@@ -7,10 +7,9 @@ on:
       - "docs/**"
       - "flake.nix"
       - "flake.lock"
-      # packages.docs takes its version from the .asd, and docs/src/changelog.md
-      # snippet-includes CHANGELOG.md, so both change the rendered site.
+      # packages.docs takes its version from the .asd, so a version bump alone
+      # changes the rendered site.
       - "cl-cli.asd"
-      - "CHANGELOG.md"
       - ".github/workflows/docs.yml"
       - ".github/actions/nix-setup/action.yml"
   workflow_dispatch:

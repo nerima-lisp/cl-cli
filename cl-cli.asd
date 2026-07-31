@@ -1,3 +1,11 @@
+;;;; This form comes FIRST, before anything else. ASDF binds *package* to
+;;;; ASDF-USER only for a file it loads itself; read any other way — a REPL
+;;;; `load`, an editor evaluating the buffer, flake.nix parsing :version — the
+;;;; file is read in whatever package happens to be current, and the
+;;;; unqualified forms below would land in the wrong package.
+
+(in-package #:asdf-user)
+
 (defparameter +cl-cli-repository-url+
   "https://github.com/nerima-lisp/cl-cli")
 
@@ -13,13 +21,12 @@
   :long-description +cl-cli-readme+
   :author "takeokunn <bararararatty@gmail.com>"
   :maintainer "takeokunn <bararararatty@gmail.com>"
+  :license "MIT"
+  :version "1.1.0"
   :homepage +cl-cli-repository-url+
   :bug-tracker +cl-cli-issues-url+
   :source-control (:git +cl-cli-repository-url+)
-  :license "MIT"
-  :version "1.1.0"
   :depends-on ("uiop")
-  :in-order-to ((asdf:test-op (asdf:test-op "cl-cli/test")))
   :serial t
   ;; Component names carry their own directory rather than using :pathname,
   ;; because the test system below has to reach one file in examples/ that a
@@ -68,7 +75,8 @@
                (:file "src/doc-renderers-json")
                (:file "src/doc-commands")
                (:file "src/completion-dynamic")
-               (:file "src/completion-commands")))
+               (:file "src/completion-commands"))
+  :in-order-to ((asdf:test-op (asdf:test-op "cl-cli/test"))))
 
 ;;; The test suite is split in two so that the portable half stays loadable on
 ;;; every implementation. `cl-cli/test' is the core suite; its dependencies

@@ -127,7 +127,9 @@ string or list validation in several places.
 
 When the user-visible surface changes, update
 [API Reference](api-reference.md) and the matching guide page in the same pull
-request, and record the change under `## [Unreleased]` in `CHANGELOG.md`.
+request. Release history is not kept in the tree: it goes into the
+[GitHub Release description](https://github.com/nerima-lisp/cl-cli/releases)
+when the release is cut.
 
 ## Releasing
 

@@ -22,26 +22,17 @@ jobs:
   # scheduling and lose cache sharing between them.
   #
   # Add a second job ONLY for work the Nix sandbox cannot do: network access,
-  # a real PTY/TTY, artifact upload, or a different runner OS.
+  # a real PTY/TTY, or artifact upload.
   #
-  # The macOS entry in the matrix below is exactly that exception. cl-cli
-  # declares aarch64-darwin in `systems`, and `nix flake check` only evaluates
-  # the outputs for the system it happens to run on, so the Linux runner can
-  # never verify the Darwin outputs. This stays one job definition: the
-  # granularity is still `checks.*`, the matrix only supplies the second OS.
+  # There is no matrix. As of the 2026-08-01 revision the flake declares
+  # `systems = [ "x86_64-linux" ]` and nothing else, so a second runner OS has
+  # no outputs to verify. A one-entry matrix would keep signalling that another
+  # platform is a one-line addition here, which is exactly the decision that
+  # was reversed. See PACKAGE_STANDARD.md, the CI granularity section.
   check:
-    name: nix flake check (${{ matrix.system }})
-    runs-on: ${{ matrix.runner }}
+    name: nix flake check (x86_64-linux)
+    runs-on: ubuntu-latest
     timeout-minutes: 45
-    strategy:
-      # Never let a Linux failure hide a Darwin-only one, or the reverse.
-      fail-fast: false
-      matrix:
-        include:
-          - runner: ubuntu-latest
-            system: x86_64-linux
-          - runner: macos-latest
-            system: aarch64-darwin
     steps:
       # persist-credentials: false — this job runs untrusted PR code via
       # `nix flake check`, and never needs the token, so don't leave it in
@@ -62,9 +53,8 @@ jobs:
       # cl-nix-forge's mkPackageFlake in flake.nix, which is where a new one
       # goes -- not into a second job here.
       #
-      # No `--all-systems`: the flake declares two systems, but the outputs of
-      # the other one cannot be *built* from here, only evaluated. The matrix
-      # runner covers it for real instead.
+      # No `--all-systems`: the flake declares exactly one system, so the flag
+      # would not widen what is checked.
       #
       # The outer alarm is the one that survives a hung builder holding the
       # step open; `timeout-minutes` alone can leave the job wedged.

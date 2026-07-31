@@ -19,5 +19,5 @@ nix flake check
 ## Documentation
 
 - [ ] README.md updated if the user-visible surface changed
-- [ ] CHANGELOG.md updated for user-visible changes
+- [ ] docs/ updated, or the change does not affect documented behavior
 - [ ] New behavior covered by focused tests

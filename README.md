@@ -97,7 +97,8 @@ completion scripts and man pages through the real `bash`, `zsh`, `fish`,
 See the org-wide [CONTRIBUTING](https://github.com/nerima-lisp/.github/blob/main/CONTRIBUTING.md)
 guide and the [package standard](https://github.com/nerima-lisp/.github/blob/main/PACKAGE_STANDARD.md).
 
-Release notes are in [CHANGELOG.md](CHANGELOG.md).
+Release notes are on the
+[Releases page](https://github.com/nerima-lisp/cl-cli/releases).
 
 ## Support
 

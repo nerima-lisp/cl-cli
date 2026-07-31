@@ -120,16 +120,19 @@
       treefmt-nix,
     }:
     let
-      # Only the platforms CI actually verifies are declared. ci.yml runs the
-      # `check` job on ubuntu-latest and macos-latest, and `nix flake check`
-      # evaluates the outputs of the system it runs on, so each of these two is
-      # covered by a real build. aarch64-linux and x86_64-darwin were declared
-      # before and never verified anywhere; advertising an unbuilt platform is
-      # what PACKAGE_STANDARD.md forbids, and it makes `nix flake check
-      # --all-systems` fail with a platform mismatch rather than skip.
+      # CI builds and tests only x86_64-linux, so that is the sole declared
+      # system: the flake never advertises a platform it does not verify.
+      # `nix flake check --all-systems` fails with a platform mismatch on a
+      # platform no runner can build, rather than skipping it.
+      #
+      # Consequence, accepted deliberately on 2026-08-01: mkPackageFlake
+      # generates EVERY per-system output from this one list -- packages,
+      # checks, apps and devShells alike -- so dropping aarch64-darwin also
+      # drops devShells.aarch64-darwin. `nix develop` and `nix build` therefore
+      # do not work on macOS; development happens on Linux. See
+      # PACKAGE_STANDARD.md, section "systems".
       systems = [
         "x86_64-linux"
-        "aarch64-darwin"
       ];
 
       # The suites in t/completion-commands-shell-verification-test.lisp pipe
@@ -369,19 +372,17 @@
         nativeBuildInputs = verificationTools ctx.pkgs;
       };
 
-      # Rooted at the repository, not at ./docs, because docs/src/changelog.md
-      # is a single pymdownx.snippets include of the top-level CHANGELOG.md and
-      # snippets resolves base_path against the working directory mkdocs runs
-      # in. `mkDocsSite` builds with `--strict`, so a broken link or a page
-      # missing from the nav fails the build, and `checks.docs` runs it -- which
-      # is what keeps such a break inside a pull request instead of surfacing as
-      # a failed post-merge Pages deploy.
+      # Rooted at the repository, not at ./docs, so the config path is the same
+      # `docs/mkdocs.yml` a contributor types by hand. `mkDocsSite` builds with
+      # `--strict`, so a broken link or a page missing from the nav fails the
+      # build, and `checks.docs` runs it -- which is what keeps such a break
+      # inside a pull request instead of surfacing as a failed post-merge Pages
+      # deploy.
       docs = {
         root = ./.;
         fileset = nixpkgs.lib.fileset.unions [
           ./docs/mkdocs.yml
           ./docs/src
-          ./CHANGELOG.md
         ];
         mkdocsYmlName = "docs/mkdocs.yml";
       };

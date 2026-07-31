@@ -94,7 +94,7 @@ own checks verify, not a constraint on the library itself.
 ## Deprecation
 
 When an exported symbol is going away, it is deprecated in a minor release —
-documented here and in the [changelog](https://github.com/nerima-lisp/cl-cli/blob/main/CHANGELOG.md),
+documented here and in the [release notes](https://github.com/nerima-lisp/cl-cli/releases),
 with the replacement named — and removed no earlier than the next major
 release.
 
