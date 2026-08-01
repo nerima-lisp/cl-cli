@@ -8,7 +8,7 @@ group.
 
 `make-app`, `make-command`, `make-option`, `make-positional`,
 `exclusive-group`, `required-exclusive-group`, `inclusive-group` — see
-[Option Relations and Grouping](option-relations.md) for the group helpers.
+[Option Relations and Grouping](../guide/option-relations.md) for the group helpers.
 
 `define-app` and `define-command` are macros wrapping those constructors in a
 declarative, clause-based form: `:option`, `:positional`, and `:command`
@@ -16,7 +16,7 @@ clauses replace the nested `:global-options (list ...)` / `:positionals
 (list ...)` / `:commands (list ...)` keywords, and `:commands-from` splices in
 an already-built command list. Each binds its spec with `defparameter`. The
 functional constructors are unchanged and remain usable on their own. See
-[Commands and Dispatch](commands.md#declarative-dsl) for the full clause
+[Commands and Dispatch](../guide/commands.md#declarative-dsl) for the full clause
 vocabulary and a `:commands-from` splicing example.
 
 ## Built-in commands
@@ -27,20 +27,20 @@ keyword). The individual constructors are also exported directly:
 `make-help-command`, `make-version-command`, `make-completion-command`,
 `make-docs-command`, and `make-complete-command` (the hidden dynamic-completion
 callback; `render-complete-reply` is its underlying logic) — see [Shell
-Completion](shell-completion.md) and [Documentation
-Generation](documentation-generation.md).
+Completion](../guide/shell-completion.md) and [Documentation
+Generation](../guide/documentation-generation.md).
 
 ## Parsing and dispatch
 
 `parse-argv` returns an invocation object without running handlers;
 `run-app` parses and dispatches, returning a process exit code — see
-[Validation and Exit Codes](validation.md).
+[Validation and Exit Codes](../guide/validation.md).
 
 ## Help
 
 `print-app-help` and `print-command-help` render help text directly to a
 stream, independent of the built-in `help` command — see [CLI
-Behavior](cli-behavior.md#colored-width-aware-help) for the `:color` /
+Behavior](../guide/cli-behavior.md#colored-width-aware-help) for the `:color` /
 `:width` keywords they accept.
 
 ## Shell completion
@@ -63,7 +63,7 @@ emitted as that document's first member.
 `current-process-argv`, `application-argv`, `extract-application-argv`,
 `default-runtime-markers`, and `strip-argv-separators` normalize
 launcher-inserted tokens and `--` separators — see [CLI
-Behavior](cli-behavior.md#launcher-aware-argv-normalization).
+Behavior](../guide/cli-behavior.md#launcher-aware-argv-normalization).
 
 ## Invocation accessors
 

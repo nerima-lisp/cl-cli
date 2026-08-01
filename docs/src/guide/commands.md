@@ -5,7 +5,7 @@
 Use `:default-command` when a subcommand app should dispatch a command even
 without an explicit command token. Use root `:positionals` plus a root
 `:handler` for script-style CLIs such as `SCRIPT [ARGS...]` — see the [root
-positional example](quick-start.md#root-positional-example). Conversely, pass
+positional example](../getting-started.md#root-positional-example). Conversely, pass
 `:require-command t` to `make-app` when a subcommand is mandatory: parsing
 then fails with `cli-unknown-command` (listing the available commands) if the
 root is invoked without one.

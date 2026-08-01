@@ -126,35 +126,38 @@ markdown_extensions:
       permalink: true
       title: On this page
 
-# The six sections and their order are fixed by DOCS_STANDARD.md. They track
+# The five sections and their order are fixed by DOCS_STANDARD.md. They track
 # reader state: Getting Started has not run anything yet, Guide has it working
-# but does not know the design, Reference is looking up one answer, Internals
-# is about to change something, Project is about to contribute. Readership
-# falls off along that axis, so reference and internals stay at the back.
+# but does not know the design, Reference is looking up one answer, Project is
+# about to contribute. Readership falls off along that axis, so reference
+# stays at the back.
+#
+# The section names match the directories under docs/src/, so the answer to
+# "where does this page live" is the same whether you read the nav or the
+# tree. index.md and getting-started.md stay at the root, outside guide/: a
+# reader who has not run anything yet should not have to look inside the
+# Guide to find the install steps.
 #
 # Guide topics are ordered by dependency, not alphabetically: later pages use
 # the vocabulary the earlier ones introduce.
 nav:
   - Home: index.md
-  - Getting Started:
-      - Installation: installation.md
-      - Quick Start: quick-start.md
+  - Getting Started: getting-started.md
   - Guide:
-      - Option Values and Kinds: option-values.md
-      - Option Relations and Grouping: option-relations.md
-      - Commands and Dispatch: commands.md
-      - Validation and Exit Codes: validation.md
-      - CLI Behavior: cli-behavior.md
-      - Shell Completion: shell-completion.md
-      - Documentation Generation: documentation-generation.md
-      - Migration Guide: migration-guide.md
+      - Option Values and Kinds: guide/option-values.md
+      - Option Relations and Grouping: guide/option-relations.md
+      - Commands and Dispatch: guide/commands.md
+      - Validation and Exit Codes: guide/validation.md
+      - CLI Behavior: guide/cli-behavior.md
+      - Shell Completion: guide/shell-completion.md
+      - Documentation Generation: guide/documentation-generation.md
+      - Migration Guide: guide/migration-guide.md
+      - Scope and Non-Goals: guide/scope.md
   - Reference:
-      - API Reference: api-reference.md
-      - Compatibility: compatibility.md
-  - Internals:
-      - Scope and Non-Goals: scope.md
+      - API: reference/api.md
+      - Compatibility: reference/compatibility.md
   - Project:
-      - Development: development.md
+      - Development: project/development.md
 
 not_in_nav: |
   notes/

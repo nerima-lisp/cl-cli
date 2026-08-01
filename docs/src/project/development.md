@@ -88,7 +88,7 @@ Two suites are gated rather than run everywhere: the fuzz suite needs a harness
 timeout capability `cl-weave` does not offer on every implementation, and the
 benchmark budgets are absolute millisecond thresholds calibrated against SBCL.
 Both report as skipped, with a reason, rather than as failures. See
-[Compatibility](compatibility.md) for the supported implementation matrix.
+[Compatibility](../reference/compatibility.md) for the supported implementation matrix.
 
 ## Writing tests
 
@@ -126,7 +126,7 @@ specs, and reuse the shared normalization helpers instead of re-implementing
 string or list validation in several places.
 
 When the user-visible surface changes, update
-[API Reference](api-reference.md) and the matching guide page in the same pull
+[API Reference](../reference/api.md) and the matching guide page in the same pull
 request. Release history is not kept in the tree: it goes into the
 [GitHub Release description](https://github.com/nerima-lisp/cl-cli/releases)
 when the release is cut.

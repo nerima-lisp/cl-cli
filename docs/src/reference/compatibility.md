@@ -10,7 +10,7 @@ something you depend on can change under you.
 The compatibility promise is about the **external symbols of the `CL-CLI`
 package** — the `:export` list in
 [`src/package.lisp`](https://github.com/nerima-lisp/cl-cli/blob/main/src/package.lisp),
-catalogued in the [API Reference](api-reference.md). Specifically:
+catalogued in the [API Reference](api.md). Specifically:
 
 - the names and lambda lists of exported functions and macros, including every
   keyword accepted by `make-app` / `make-command` / `make-option` /
@@ -45,7 +45,7 @@ without changing the documented contract.
   suite in `t/` does exactly that, and is a reasonable model to copy.
   `render-json`'s *keys* are covered by the promise above; its whitespace is
   not. `render-json` additionally carries its own `schemaVersion` — see
-  [Documentation Generation](documentation-generation.md) — so its shape is
+  [Documentation Generation](../guide/documentation-generation.md) — so its shape is
   versioned independently of the library.
 - **Performance.** The benchmark suite guards against gross regressions, but
   no specific timing is promised.
@@ -100,4 +100,4 @@ release.
 
 Note that this is about `cl-cli`'s own API. Deprecating an *option in your own
 CLI* is a separate, supported feature: see `:deprecated` in
-[Commands and Dispatch](commands.md).
+[Commands and Dispatch](../guide/commands.md).

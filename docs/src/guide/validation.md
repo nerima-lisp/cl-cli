@@ -83,4 +83,4 @@ Concrete usage conditions include `cli-unknown-option`, `cli-unknown-command`,
 `cli-missing-positional`, `cli-invalid-option-value`,
 `cli-invalid-positional-value`, and `cli-unexpected-argument`, each with
 readers such as `cli-error-message` for structured handling — see the [API
-Reference](api-reference.md#conditions) for the full list.
+Reference](../reference/api.md#conditions) for the full list.

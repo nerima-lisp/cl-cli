@@ -1,7 +1,7 @@
 (in-package :cl-cli/test)
 
 ;;;; The exported symbols of :CL-CLI are the SemVer contract (see
-;;;; docs/src/compatibility.md). This file pins that set, in both directions.
+;;;; docs/src/reference/compatibility.md). This file pins that set, in both directions.
 ;;;;
 ;;;; It exists because `:export` fails silently in the direction that matters:
 ;;;; a misspelled name interns a fresh, dead symbol rather than signaling, so

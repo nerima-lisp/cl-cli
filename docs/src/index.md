@@ -29,8 +29,8 @@ in minimal Common Lisp and Nix environments.
     (cl-cli:run-app *app* :argv '("demo" "compile" "input.lisp"))
     ```
 
-    Continue with [Installation](installation.md) → [Quick Start](quick-start.md)
-    → [Option Values and Kinds](option-values.md).
+    Continue with [Getting Started](getting-started.md) →
+    [Option Values and Kinds](guide/option-values.md).
 
 ## Explore the docs
 
@@ -40,11 +40,10 @@ in minimal Common Lisp and Nix environments.
 
     ---
 
-    Every install path — Nix, ASDF, and Quicklisp — and your first parsed and
+    Every install path — Nix and ASDF — and your first parsed and
     dispatched app spec.
 
-    [:octicons-arrow-right-24: Installation](installation.md) ·
-    [Quick Start](quick-start.md)
+    [:octicons-arrow-right-24: Getting Started](getting-started.md)
 
 -   :material-tune:{ .lg .middle } &nbsp; **Modeling a CLI**
 
@@ -53,10 +52,10 @@ in minimal Common Lisp and Nix environments.
     Option kinds and typed values, cross-option relationships and grouping,
     subcommand dispatch, and custom validation with exit codes.
 
-    [:octicons-arrow-right-24: Option Values](option-values.md) ·
-    [Option Relations](option-relations.md) ·
-    [Commands](commands.md) ·
-    [Validation](validation.md)
+    [:octicons-arrow-right-24: Option Values](guide/option-values.md) ·
+    [Option Relations](guide/option-relations.md) ·
+    [Commands](guide/commands.md) ·
+    [Validation](guide/validation.md)
 
 -   :material-console-line:{ .lg .middle } &nbsp; **Runtime Behavior**
 
@@ -65,7 +64,7 @@ in minimal Common Lisp and Nix environments.
     Terminal-aware colored help, response files, abbreviated options,
     negative-number arguments, and launcher-aware argv normalization.
 
-    [:octicons-arrow-right-24: CLI Behavior](cli-behavior.md)
+    [:octicons-arrow-right-24: CLI Behavior](guide/cli-behavior.md)
 
 -   :material-book-open-variant:{ .lg .middle } &nbsp; **Completion and Docs**
 
@@ -75,19 +74,19 @@ in minimal Common Lisp and Nix environments.
     static and runtime-dynamic — plus man pages, Markdown, and JSON straight
     from an app spec.
 
-    [:octicons-arrow-right-24: Shell Completion](shell-completion.md) ·
-    [Documentation Generation](documentation-generation.md)
+    [:octicons-arrow-right-24: Shell Completion](guide/shell-completion.md) ·
+    [Documentation Generation](guide/documentation-generation.md)
 
 </div>
 
 ## Status
 
 Stable. From `1.0.0` the exported API is covered by Semantic Versioning — see
-[Compatibility](compatibility.md) for exactly what that promise includes, which
+[Compatibility](reference/compatibility.md) for exactly what that promise includes, which
 Lisp implementations are tested, and how a symbol is deprecated.
 
 The capability list below is the current public surface, validated by the test
-suite documented in [Development](development.md):
+suite documented in [Development](project/development.md):
 
 - strict, exact-match option and flag parsing, with optional GNU-style
   abbreviated-prefix matching
@@ -117,13 +116,13 @@ suite documented in [Development](development.md):
   for SBCL- and Nix-wrapped executables
 - configurable usage/error exit codes following BSD `sysexits.h` by default
 
-See [Scope and Non-Goals](scope.md) for what `cl-cli` deliberately leaves to
-the application, and [Migration Guide](migration-guide.md) for mapping an
+See [Scope and Non-Goals](guide/scope.md) for what `cl-cli` deliberately leaves to
+the application, and [Migration Guide](guide/migration-guide.md) for mapping an
 existing in-house parser onto `cl-cli`.
 
 ## Contributing
 
-Build, test and formatting commands are in [Development](development.md).
+Build, test and formatting commands are in [Development](project/development.md).
 
 Contribution process, the code of conduct, security reporting and support
 channels are org-wide and live in
