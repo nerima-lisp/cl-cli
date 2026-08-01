@@ -166,8 +166,14 @@
                (:file "t/doc-renderers-json-test")
                (:file "t/doc-commands-test")
                (:file "t/consumer-migrations-test"))
+  ;; checks.ecl runs this system's test-op too (see flake.nix's eclPackage),
+  ;; where CL-HOST-KIT was never loaded -- it is excluded from cl-cli.asd's
+  ;; main :depends-on under #-sbcl. HOST-KIT:SYMBOL-CALL would be an
+  ;; unbound-package reference there, so this stays reader-conditional like
+  ;; every other migrated call in this repository.
   :perform (asdf:test-op (op c)
-             (uiop:symbol-call :cl-cli/test :run-tests)))
+             #+sbcl (host-kit:symbol-call :cl-cli/test :run-tests)
+             #-sbcl (uiop:symbol-call :cl-cli/test :run-tests)))
 
 (asdf:defsystem "cl-cli/test/shell-verification"
   :description
@@ -182,5 +188,8 @@
   :depends-on ("cl-cli/test" "cl-process-kit")
   :serial t
   :components ((:file "t/completion-commands-shell-verification-test"))
+  ;; Unlike cl-cli/test above, this system's own CL-PROCESS-KIT dependency
+  ;; is already SBCL-only and excluded from checks.ecl (see flake.nix's
+  ;; coreTestSystems), so it never runs where CL-HOST-KIT would be absent.
   :perform (asdf:test-op (op c)
-             (uiop:symbol-call :cl-cli/test :run-tests)))
+             (host-kit:symbol-call :cl-cli/test :run-tests)))
