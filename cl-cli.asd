@@ -166,14 +166,15 @@
                (:file "t/doc-renderers-json-test")
                (:file "t/doc-commands-test")
                (:file "t/consumer-migrations-test"))
-  ;; checks.ecl runs this system's test-op too (see flake.nix's eclPackage),
-  ;; where CL-HOST-KIT was never loaded -- it is excluded from cl-cli.asd's
-  ;; main :depends-on under #-sbcl. HOST-KIT:SYMBOL-CALL would be an
-  ;; unbound-package reference there, so this stays reader-conditional like
-  ;; every other migrated call in this repository.
+  ;; Not UIOP:SYMBOL-CALL, and not a sibling-package prefix either: a .asd is
+  ;; read by the plain CL reader before :depends-on is ever consulted, so any
+  ;; PKG:SYMBOL token here must resolve against a package already present in
+  ;; the image. UIOP is safe only because ASDF ships it; CL-HOST-KIT is not
+  ;; loaded yet at this point regardless of implementation. FIND-SYMBOL/
+  ;; FIND-PACKAGE/FUNCALL are CL, always present, and sidestep the problem
+  ;; entirely -- this is what UIOP:SYMBOL-CALL itself boils down to.
   :perform (asdf:test-op (op c)
-             #+sbcl (host-kit:symbol-call :cl-cli/test :run-tests)
-             #-sbcl (uiop:symbol-call :cl-cli/test :run-tests)))
+             (funcall (find-symbol "RUN-TESTS" (find-package "CL-CLI/TEST")))))
 
 (asdf:defsystem "cl-cli/test/shell-verification"
   :description
@@ -188,8 +189,7 @@
   :depends-on ("cl-cli/test" "cl-process-kit")
   :serial t
   :components ((:file "t/completion-commands-shell-verification-test"))
-  ;; Unlike cl-cli/test above, this system's own CL-PROCESS-KIT dependency
-  ;; is already SBCL-only and excluded from checks.ecl (see flake.nix's
-  ;; coreTestSystems), so it never runs where CL-HOST-KIT would be absent.
+  ;; See cl-cli/test's :perform above: a .asd is read before :depends-on is
+  ;; consulted, so this cannot use a CL-HOST-KIT-prefixed symbol either.
   :perform (asdf:test-op (op c)
-             (host-kit:symbol-call :cl-cli/test :run-tests)))
+             (funcall (find-symbol "RUN-TESTS" (find-package "CL-CLI/TEST")))))
