@@ -10,7 +10,8 @@
 
 (defun %env-nonempty (name)
   "Return the value of environment variable NAME when set and non-empty, else NIL."
-  (let ((value (uiop:getenv name)))
+  (let ((value #+sbcl (host-kit:getenv name)
+               #-sbcl (uiop:getenv name)))
     (and value (plusp (length value)) value)))
 
 (defun %positive-integer-or-nil (string)

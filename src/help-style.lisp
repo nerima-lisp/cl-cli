@@ -47,6 +47,10 @@ sets it accepts a positive integer, NIL, or :AUTO; :AUTO resolves via
 (defun %wrap-text (text width)
   "Greedily word-wrap TEXT to WIDTH columns, returning a list of lines."
   (let ((words (remove-if (lambda (w) (zerop (length w)))
+                          #+sbcl
+                          (host-kit:split-string text
+                                                 :separator '(#\Space #\Tab #\Newline))
+                          #-sbcl
                           (uiop:split-string text
                                              :separator '(#\Space #\Tab #\Newline))))
         (current ""))

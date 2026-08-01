@@ -1,6 +1,8 @@
 (in-package :cl-cli)
 
-(defparameter *environment-variable-reader* #'uiop:getenv)
+(defparameter *environment-variable-reader*
+  #+sbcl #'host-kit:getenv
+  #-sbcl #'uiop:getenv)
 
 (defvar *option-value-sources* nil
   "Accumulates the provenance of every option value NOT taken from the argv.

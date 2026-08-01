@@ -59,11 +59,17 @@
     # inputs of its own, so the override has no target and Nix warns
     # `has an override for a non-existent input 'nixpkgs'` on every evaluation.
     #
-    # Every one of these is a TEST dependency. DEPENDENCY_POLICY.md places
-    # cl-cli at L1, and the `cl-cli` system itself depends on uiop alone; that
-    # must stay true, so nothing here may migrate into the .asd :depends-on of
-    # the main system -- which is why they are `lispCheckDependencies` and
-    # never `lispDependencies` below.
+    # Every one of these is a TEST dependency, so they are
+    # `lispCheckDependencies` and never `lispDependencies` below.
+    #
+    # cl-host-kit (declared separately below, near cl-json-kit) is the one
+    # exception as of the 2026-08-01 uiop->cl-host-kit migration: the main
+    # `cl-cli` system's :depends-on now names it too, guarded by `#+sbcl`, so
+    # it is wired through `lispDependencies` instead. DEPENDENCY_POLICY.md's
+    # L1 tier no longer means "zero org-internal dependencies" for every
+    # member -- see its 2026-08-01 revision -- only that depth still
+    # decreases strictly along every edge, which `cl-cli -> cl-host-kit`
+    # satisfies (depth 0 -> 1).
     cl-weave = {
       url = "github:nerima-lisp/cl-weave/v1.0.0";
       flake = false;
@@ -94,6 +100,17 @@
       flake = false;
     };
 
+    # Unlike the siblings above, this one is a REAL runtime dependency (see
+    # cl-cli.asd's :depends-on), not test-only -- the 2026-08-01 uiop->
+    # cl-host-kit org migration. It stays `flake = false` per ADR-0079 like
+    # every other sibling here; it is SBCL-only (its own README), which is
+    # why cl-cli.asd guards it with a `#+sbcl` reader conditional and why
+    # `eclPackage` below explicitly excludes it from the ECL build.
+    cl-host-kit = {
+      url = "github:nerima-lisp/cl-host-kit/v0.2.1";
+      flake = false;
+    };
+
     # treefmt-nix stays a real flake: `mkPackageFlake`'s `treefmt.evalModule`
     # argument below IS `treefmt-nix.lib.evalModule`, so ADR-0079 keeps it at
     # `flake = true` -- and because it is a flake, the `follows` does have a
@@ -117,6 +134,7 @@
       cl-boundary-kit,
       cl-log-kit,
       cl-json-kit,
+      cl-host-kit,
       treefmt-nix,
     }:
     let
@@ -199,6 +217,18 @@
           pname = "cl-json-kit";
           source = cl-json-kit;
           inherit lisp;
+        };
+
+      # The one REAL (non-test) sibling dependency: cl-cli.asd's
+      # :depends-on names "cl-host-kit" under `#+sbcl`. SBCL-only, like
+      # cl-log-kit/cl-boundary-kit/cl-process-kit below, and for the same
+      # reason -- it wraps sb-posix directly.
+      clHostKitSystem =
+        ctx:
+        siblingSystem ctx {
+          pname = "cl-host-kit";
+          source = cl-host-kit;
+          lisp = ctx.pkgs.sbcl;
         };
 
       # `cl-prolog/weave` is one of four systems cl-prolog.asd defines, and its
@@ -293,6 +323,13 @@
           ctx.lispDerivationArgs
           // {
             lisp = ctx.pkgs.ecl;
+            # `ctx.lispDerivationArgs.lispDependencies` is the SBCL-built
+            # cl-host-kit closure (see `lispDependencies` on the
+            # `mkPackageFlake` call below) -- wrong implementation for this
+            # derivation and unneeded besides, since the ECL build reads
+            # cl-cli.asd's `#+sbcl "cl-host-kit"` as absent. Overridden to
+            # empty rather than left to leak through the `//` merge.
+            lispDependencies = [ ];
             lispCheckDependencies = coreTestSystems ctx ctx.pkgs.ecl;
           }
         );
@@ -363,6 +400,11 @@
       # transitively, which is why cl-process-kit alone stands in for itself
       # plus cl-boundary-kit plus cl-log-kit.
       lispCheckDependencies = ctx: coreTestSystems ctx ctx.pkgs.sbcl ++ [ (clProcessKitSystem ctx) ];
+
+      # The real (non-test) dependency cl-cli.asd's `#+sbcl "cl-host-kit"`
+      # names. SBCL-only; `eclPackage` above explicitly zeroes this back out
+      # rather than inheriting it through `ctx.lispDerivationArgs`.
+      lispDependencies = ctx: [ (clHostKitSystem ctx) ];
 
       # Puts the real shells and mandoc on PATH for `checks.default` -- and, via
       # `inputsFrom` on the check-enabled derivation the preset builds the dev

@@ -57,11 +57,13 @@ the cache via %COMPUTE-BUILT-IN-OPTION-SPECS; this just reads it."
   (append (built-in-option-specs app)
           option-specs))
 
-(defparameter *response-file-reader* #'uiop:read-file-string
+(defparameter *response-file-reader*
+  #+sbcl #'host-kit:read-file-string
+  #-sbcl #'uiop:read-file-string
   "Reads a response-file path into its string contents.
 
 Injectable so tests need not touch the filesystem; defaults to
-UIOP:READ-FILE-STRING.")
+HOST-KIT:READ-FILE-STRING on SBCL, UIOP:READ-FILE-STRING elsewhere.")
 
 (defparameter +response-file-max-depth+ 32
   "Guard against a response file that (transitively) includes itself.")
@@ -87,6 +89,10 @@ response-file path itself might be influenced by untrusted input.")
 
 (defun %split-response-file-contents (contents)
   (remove-if (lambda (token) (zerop (length token)))
+             #+sbcl
+             (host-kit:split-string contents
+                                    :separator '(#\Space #\Tab #\Newline #\Return #\Page))
+             #-sbcl
              (uiop:split-string contents
                                 :separator '(#\Space #\Tab #\Newline #\Return #\Page))))
 

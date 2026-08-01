@@ -26,7 +26,13 @@
   :homepage +cl-cli-repository-url+
   :bug-tracker +cl-cli-issues-url+
   :source-control (:git +cl-cli-repository-url+)
-  :depends-on ("uiop")
+  ;; CL-HOST-KIT is SBCL-only (see its own README), and this system's own
+  ;; portability gate (checks.ecl in flake.nix) compiles on ECL too. The
+  ;; reader conditional keeps ECL from ever seeing the dependency name, the
+  ;; same way cl-tty-kit.asd conditions its sb-posix dependency, and the same
+  ;; way src/runtime.lisp's own #+sbcl/#-sbcl split keeps ECL off
+  ;; HOST-KIT:COMMAND-LINE-ARGUMENTS.
+  :depends-on ("uiop" #+sbcl "cl-host-kit")
   :serial t
   ;; Component names carry their own directory rather than using :pathname,
   ;; because the test system below has to reach one file in examples/ that a

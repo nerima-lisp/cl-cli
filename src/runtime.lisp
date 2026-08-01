@@ -55,7 +55,9 @@ scope shadows global scope, matching OPTION-VALUE."
   "Return the current process argv in a portable shape.
 
 On SBCL this returns `sb-ext:*posix-argv*`; on other implementations it falls
-back to `uiop:command-line-arguments`."
+back to `uiop:command-line-arguments`. HOST-KIT:COMMAND-LINE-ARGUMENTS is
+SBCL-only, so it cannot stand in for this fallback branch, which by
+definition only ever compiles on a non-SBCL implementation."
   #+sbcl (copy-list sb-ext:*posix-argv*)
   #-sbcl (copy-list (uiop:command-line-arguments)))
 

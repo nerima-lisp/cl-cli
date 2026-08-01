@@ -4,8 +4,8 @@
   "Normalize a :value-delimiter into a one-character string, or NIL.
 
 Accepts a character or a one-character string. A single character keeps the
-list semantics unambiguous (\"split on comma\") and lets UIOP:SPLIT-STRING use
-it directly as its separator bag."
+list semantics unambiguous (\"split on comma\") and lets SPLIT-STRING use it
+directly as its separator bag, on SBCL via HOST-KIT and elsewhere via UIOP."
   (when delimiter
     (let ((string (etypecase delimiter
                     (character (string delimiter))
@@ -23,7 +23,8 @@ it directly as its separator bag."
 Empty pieces (from a leading, trailing, or doubled delimiter such as \"a,,b\")
 are dropped so a typed parser is never handed an empty token."
   (remove-if (lambda (piece) (zerop (length piece)))
-             (uiop:split-string raw :separator delimiter)))
+             #+sbcl (host-kit:split-string raw :separator delimiter)
+             #-sbcl (uiop:split-string raw :separator delimiter)))
 
 (defun variadic-value-count-p (count)
   "True when COUNT is a variadic :value-count designator (:+ one-or-more, :* any)."
