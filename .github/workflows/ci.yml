@@ -65,3 +65,47 @@ jobs:
       # Catches stray conflict markers and whitespace errors that compile fine.
       - name: Check diff hygiene
         run: git diff --check
+
+  # Second job, per this file's own rule above: artifact upload is one of the
+  # three sanctioned reasons. `checks.coverage` (flake.nix) already builds
+  # inside `check`'s `nix flake check` above, but that job only asserts the
+  # report is non-empty and discards the store path -- nobody can actually
+  # open `cover-index.html` afterward. This job re-resolves the same,
+  # content-addressed, already-cached derivation (a Cachix hit, not a
+  # rebuild) and publishes it as a downloadable artifact, which is the only
+  # way to read a coverage report on a machine that cannot `nix build`
+  # `x86_64-linux` outputs itself -- see this repo's own
+  # `docs/src/reference/compatibility.md#platforms`.
+  coverage-artifact:
+    name: Publish coverage report artifact
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: ./.github/actions/nix-setup
+        with:
+          cachix-cache: ${{ vars.CACHIX_CACHE }}
+          cachix-auth-token: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      # Copies out of /nix/store rather than uploading the store path
+      # directly: upload-artifact needs an ordinary writable, relative path,
+      # and a store path is neither.
+      - name: Build coverage report
+        run: |
+          set -euo pipefail
+          out="$(nix build .#checks.x86_64-linux.coverage --no-link --print-out-paths)"
+          mkdir -p coverage-report
+          cp -r "$out"/. coverage-report/
+          chmod -R u+w coverage-report
+
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: coverage-report
+          path: coverage-report
+          retention-days: 30
