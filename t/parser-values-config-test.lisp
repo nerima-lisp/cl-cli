@@ -57,6 +57,17 @@
                            :config '(:tags ("a" "b")))))
       (expect (equal (option-value inv :tags) '("a" "b")))))
 
+  (it "treats a nil config value as empty for a delimited option"
+    (let ((inv (parse-argv (make-app
+                            :name "tool"
+                            :global-options (list (make-option :name "tags"
+                                                               :kind :value
+                                                               :value-delimiter #\,)))
+                           '("tool")
+                           :config '(:tags nil))))
+      (expect (null (option-value inv :tags)))
+      (expect (member :tags (invocation-global-options inv)))))
+
   (it "wraps a non-list, non-string config value for a delimited option"
     ;; Neither NULL, LISTP, nor STRINGP -- an already-typed scalar (an
     ;; integer, here) that %RESOLVED-DEFAULT-PIECES's delimited branch must
