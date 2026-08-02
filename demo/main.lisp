@@ -25,32 +25,36 @@ stdout into a test or another program stays unaffected by it."
             (format stderr "; --~(~A~) = ~A (from ~(~A~))~%"
                     key (option-value invocation key) source)))))))
 
-(defun %greet (invocation)
-  (%report-invocation invocation)
+(defmacro define-handler ((name) (invocation) &body body)
+  "Define a command HANDLER function NAME taking one INVOCATION argument.
+
+Every handler in this file reports its dispatch path via %REPORT-INVOCATION
+first, runs BODY for its printed output, and returns 0 (EX_OK, the only exit
+code any handler here needs) -- this macro is that shared shape made
+declarative, so a handler definition is nothing but its own printed output."
+  `(defun ,name (,invocation)
+     (%report-invocation ,invocation)
+     ,@body
+     0))
+
+(define-handler (%greet) (invocation)
   (let* ((who (positional-value invocation :name))
          (text (if (option-value invocation :upcase) (string-upcase who) who)))
     (dotimes (i (option-value invocation :repeat))
       (declare (ignore i))
-      (format (invocation-stdout invocation) "Hello, ~A!~%" text)))
-  0)
+      (format (invocation-stdout invocation) "Hello, ~A!~%" text))))
 
-(defun %remote-add (invocation)
-  (%report-invocation invocation)
+(define-handler (%remote-add) (invocation)
   (format (invocation-stdout invocation) "remote add: ~A -> ~A~%"
           (positional-value invocation :name)
-          (positional-value invocation :url))
-  0)
+          (positional-value invocation :url)))
 
-(defun %remote-remove (invocation)
-  (%report-invocation invocation)
+(define-handler (%remote-remove) (invocation)
   (format (invocation-stdout invocation) "remote remove: ~A~%"
-          (positional-value invocation :name))
-  0)
+          (positional-value invocation :name)))
 
-(defun %remote-list (invocation)
-  (%report-invocation invocation)
-  (format (invocation-stdout invocation) "remote list: no remotes configured~%")
-  0)
+(define-handler (%remote-list) (invocation)
+  (format (invocation-stdout invocation) "remote list: no remotes configured~%"))
 
 (defun %remote-command ()
   "A nested subcommand group, the `git remote add` shape MAKE-COMMAND documents.
