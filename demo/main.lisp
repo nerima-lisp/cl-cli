@@ -85,7 +85,7 @@ only ever calls PARSE-ARGV on a flat argv."
                        :description "List remotes."
                        :handler #'%remote-list))))
 
-(defparameter +demo-version+ "1.2.0"
+(defparameter +demo-version+ "1.3.0"
   "The version `cl-cli-demo --version` prints.
 
 A literal, not `(asdf:component-version (asdf:find-system \"cl-cli/demo\"))`:
