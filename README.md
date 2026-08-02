@@ -84,6 +84,13 @@ nix flake check      # tests + formatting + docs, the same gate CI uses
 nix fmt              # format Nix sources (treefmt)
 ```
 
+`cl-cli/demo` is a small, real CLI (`greet`, a `remote` subcommand group,
+plus the standard help/version/completion/docs commands) built entirely from
+`cl-cli`'s own primitives, so the library exercises itself as a binary, not
+only as a test suite. Try it with `nix run .#cl-cli-demo -- greet --upcase
+ada` or `nix build .#cl-cli-demo`. Its source lives in [`demo/`](demo/); its
+end-to-end dispatch tests are in `t/demo-test.lisp`.
+
 Tests live in `t/` and run under
 [cl-weave](https://github.com/nerima-lisp/cl-weave), the org's test framework.
 The suite is split into a portable core (`cl-cli/test`) and a
