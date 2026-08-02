@@ -25,7 +25,7 @@
     # input graph into flake.lock. They earn it by being consumed for their
     # `lib` outputs, which a bare source tree cannot provide.
     cl-nix-forge = {
-      url = "github:nerima-lisp/cl-nix-forge/v0.4.0";
+      url = "github:nerima-lisp/cl-nix-forge/v0.4.1";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -35,7 +35,7 @@
     # check` gate instead of something only an interactive session would ever
     # notice -- a truncated `defun` still reads as a plausible diff.
     paredit-cli = {
-      url = "github:nerima-lisp/paredit-cli/v1.3.0";
+      url = "github:nerima-lisp/paredit-cli/v1.4.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -71,22 +71,28 @@
     # decreases strictly along every edge, which `cl-cli -> cl-host-kit`
     # satisfies (depth 0 -> 1).
     cl-weave = {
-      url = "github:nerima-lisp/cl-weave/v1.0.0";
+      url = "github:nerima-lisp/cl-weave/v1.1.1";
       flake = false;
     };
 
     cl-prolog = {
-      url = "github:nerima-lisp/cl-prolog/v1.0.1";
+      url = "github:nerima-lisp/cl-prolog/v1.3.0";
       flake = false;
     };
 
     cl-process-kit = {
-      url = "github:nerima-lisp/cl-process-kit/v1.0.1";
+      url = "github:nerima-lisp/cl-process-kit/v3.1.0";
       flake = false;
     };
 
+    # v1.0.0, not the latest v2.0.1: pinned to match the exact version
+    # cl-process-kit v3.1.0's OWN flake.lock verifies against (still
+    # `:depends-on (:asdf :cl-log-kit)` there -- v2.0.1 replaced that edge
+    # with `:cl-host-kit`, a combination cl-process-kit's own suite has
+    # never been run against). Bumping past what upstream itself tested
+    # would trade a verified pin for an unverified guess.
     cl-boundary-kit = {
-      url = "github:nerima-lisp/cl-boundary-kit/v0.6.0";
+      url = "github:nerima-lisp/cl-boundary-kit/v1.0.0";
       flake = false;
     };
 
@@ -95,8 +101,18 @@
       flake = false;
     };
 
+    # cl-process-kit v3.0.0 migrated its UTF-8/octet handling onto this
+    # (previously hand-rolled), so it is now a real transitive dependency of
+    # the base "cl-process-kit" ASDF system, not just its PTY extension.
+    # Dependency-free (`:depends-on ()`), SBCL-only usage here since its only
+    # consumer, cl-process-kit, is.
+    cl-codec-kit = {
+      url = "github:nerima-lisp/cl-codec-kit/v0.3.1";
+      flake = false;
+    };
+
     cl-json-kit = {
-      url = "github:nerima-lisp/cl-json-kit/v1.0.0";
+      url = "github:nerima-lisp/cl-json-kit/v1.0.2";
       flake = false;
     };
 
@@ -133,6 +149,7 @@
       cl-process-kit,
       cl-boundary-kit,
       cl-log-kit,
+      cl-codec-kit,
       cl-json-kit,
       cl-host-kit,
       treefmt-nix,
@@ -261,12 +278,15 @@
           lisp = ctx.pkgs.sbcl;
         };
 
-      # cl-boundary-kit v0.6.0 `:depends-on (:asdf :cl-log-kit)`. That edge is
-      # easy to miss by reading a working checkout instead of the pinned tag --
-      # cl-boundary-kit dropped it after v0.6.0 -- and the previous
-      # run-tests.lisp arrangement hid it, because registering all three .asd
-      # files up front let ASDF resolve the graph in whatever order it liked.
-      # Here the graph has to be declared, so a wrong edge is a build failure.
+      # cl-boundary-kit v1.0.0 (the version pinned here) still
+      # `:depends-on (:asdf :cl-log-kit)`; v2.0.1 replaced that edge with
+      # `:cl-host-kit` instead, which is why this pin stays at v1.0.0 rather
+      # than the latest tag -- see the flake input's own comment. That edge is
+      # easy to miss by reading a working checkout instead of the pinned tag,
+      # and the previous run-tests.lisp arrangement hid it too, because
+      # registering all three .asd files up front let ASDF resolve the graph
+      # in whatever order it liked. Here the graph has to be declared, so a
+      # wrong edge is a build failure.
       clBoundaryKitSystem =
         ctx:
         siblingSystem ctx {
@@ -276,11 +296,23 @@
           lispDependencies = [ (clLogKitSystem ctx) ];
         };
 
+      # Dependency-free (`:depends-on ()`), so no `lispDependencies` of its
+      # own. cl-process-kit v3.0.0 migrated its hand-rolled UTF-8/octet
+      # handling onto this, making it a real transitive dependency of the
+      # base "cl-process-kit" system.
+      clCodecKitSystem =
+        ctx:
+        siblingSystem ctx {
+          pname = "cl-codec-kit";
+          source = cl-codec-kit;
+          lisp = ctx.pkgs.sbcl;
+        };
+
       # Only cl-process-kit is ever named in a `lispCheckDependencies` list:
       # `lispDerivation` walks the dependency graph transitively and resolves
-      # the whole closure onto CL_SOURCE_REGISTRY, so cl-boundary-kit and
-      # cl-log-kit arrive because they are named HERE, once, where the ASDF
-      # `:depends-on` that needs them lives.
+      # the whole closure onto CL_SOURCE_REGISTRY, so cl-boundary-kit,
+      # cl-log-kit and cl-codec-kit arrive because they are named HERE, once,
+      # where the ASDF `:depends-on` that needs them lives.
       clProcessKitSystem =
         ctx:
         siblingSystem ctx {
@@ -290,6 +322,7 @@
           lispDependencies = [
             (clBoundaryKitSystem ctx)
             (clLogKitSystem ctx)
+            (clCodecKitSystem ctx)
           ];
         };
 

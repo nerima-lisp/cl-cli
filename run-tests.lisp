@@ -40,12 +40,14 @@
          (prolog-env-source (funcall getenv "CL_PROLOG_SOURCE_DIR"))
          (boundary-kit-env-source (funcall getenv "CL_BOUNDARY_KIT_SOURCE_DIR"))
          (log-kit-env-source (funcall getenv "CL_LOG_KIT_SOURCE_DIR"))
+         (codec-kit-env-source (funcall getenv "CL_CODEC_KIT_SOURCE_DIR"))
          (process-kit-env-source (funcall getenv "CL_PROCESS_KIT_SOURCE_DIR"))
          (json-kit-env-source (funcall getenv "CL_JSON_KIT_SOURCE_DIR"))
          (weave-local-source (merge-pathnames #P"../cl-weave/" project-root))
          (prolog-local-source (merge-pathnames #P"../cl-prolog/" project-root))
          (boundary-kit-local-source (merge-pathnames #P"../cl-boundary-kit/" project-root))
          (log-kit-local-source (merge-pathnames #P"../cl-log-kit/" project-root))
+         (codec-kit-local-source (merge-pathnames #P"../cl-codec-kit/" project-root))
          (process-kit-local-source (merge-pathnames #P"../cl-process-kit/" project-root))
          (json-kit-local-source (merge-pathnames #P"../cl-json-kit/" project-root))
          (shell-verification-p nil))
@@ -64,16 +66,19 @@
                       #P"cl-prolog.asd")
       (load-local-asd (registered-source json-kit-env-source json-kit-local-source)
                       #P"cl-json-kit.asd")
-      ;; cl-process-kit depends on cl-boundary-kit/cl-log-kit, so those two
-      ;; must be registered with ASDF before cl-process-kit.asd loads. All
-      ;; three are needed only by the shell-verification half of the suite --
-      ;; see the split rationale in cl-cli.asd.
+      ;; cl-process-kit depends on cl-boundary-kit/cl-log-kit/cl-codec-kit, so
+      ;; those three must be registered with ASDF before cl-process-kit.asd
+      ;; loads. All four are needed only by the shell-verification half of
+      ;; the suite -- see the split rationale in cl-cli.asd.
       (load-local-asd (registered-source boundary-kit-env-source
                                          boundary-kit-local-source)
                       #P"cl-boundary-kit.asd")
       (load-local-asd (registered-source log-kit-env-source
                                          log-kit-local-source)
                       #P"cl-log-kit.asd")
+      (load-local-asd (registered-source codec-kit-env-source
+                                         codec-kit-local-source)
+                      #P"cl-codec-kit.asd")
       (load-local-asd (registered-source process-kit-env-source
                                          process-kit-local-source)
                       #P"cl-process-kit.asd")
@@ -99,6 +104,7 @@
             (and (find-package "SB-THREAD")
                  (funcall find-system "cl-boundary-kit" nil)
                  (funcall find-system "cl-log-kit" nil)
+                 (funcall find-system "cl-codec-kit" nil)
                  (funcall find-system "cl-process-kit" nil)
                  t)))
     (load (merge-pathnames #P"cl-cli.asd" project-root))
