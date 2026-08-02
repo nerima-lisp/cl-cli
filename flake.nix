@@ -115,6 +115,26 @@
       flake = false;
     };
 
+    # Neither of these is a dependency cl-cli names anywhere. cl-log-kit
+    # v2.0.1's own `:depends-on` is `((:version "cl-date-kit" "0.2.0")
+    # (:version "cl-concurrent-kit" "0.1.0") (:version "cl-host-kit" "0.2.0"))`,
+    # and `siblingSystem` below resolves a system's graph only from the
+    # `lispDependencies` it is handed -- never from the .asd -- so a
+    # transitive edge is invisible until it is spelled out. It was: the
+    # shell-verification half of the suite died with `Component "cl-date-kit"
+    # not found, required by #<SYSTEM "cl-log-kit">`.
+    #
+    # Both are `:depends-on ()` leaves, so neither drags anything further in.
+    cl-date-kit = {
+      url = "github:nerima-lisp/cl-date-kit/v0.2.0";
+      flake = false;
+    };
+
+    cl-concurrent-kit = {
+      url = "github:nerima-lisp/cl-concurrent-kit/v0.4.2";
+      flake = false;
+    };
+
     # cl-process-kit v3.0.0 migrated its UTF-8/octet handling onto this
     # (previously hand-rolled), so it is now a real transitive dependency of
     # the base "cl-process-kit" ASDF system, not just its PTY extension.
@@ -163,6 +183,8 @@
       cl-process-kit,
       cl-boundary-kit,
       cl-log-kit,
+      cl-date-kit,
+      cl-concurrent-kit,
       cl-codec-kit,
       cl-json-kit,
       cl-host-kit,
@@ -282,12 +304,37 @@
       # reason cl-cli.asd splits the shell-verification half of the suite into
       # its own system. An `ecl` flavour of these would be an evaluation error
       # waiting for somebody to add it to the ECL check.
+      # cl-log-kit v2.0.1's three `:depends-on` edges, all spelled out because
+      # `siblingSystem` reads the graph from here and not from the .asd. The two
+      # kit systems below are `:depends-on ()` leaves; cl-host-kit is the same
+      # derivation cl-cli's own runtime dependency uses.
+      clDateKitSystem =
+        ctx:
+        siblingSystem ctx {
+          pname = "cl-date-kit";
+          source = cl-date-kit;
+          lisp = ctx.pkgs.sbcl;
+        };
+
+      clConcurrentKitSystem =
+        ctx:
+        siblingSystem ctx {
+          pname = "cl-concurrent-kit";
+          source = cl-concurrent-kit;
+          lisp = ctx.pkgs.sbcl;
+        };
+
       clLogKitSystem =
         ctx:
         siblingSystem ctx {
           pname = "cl-log-kit";
           source = cl-log-kit;
           lisp = ctx.pkgs.sbcl;
+          lispDependencies = [
+            (clDateKitSystem ctx)
+            (clConcurrentKitSystem ctx)
+            (clHostKitSystem ctx)
+          ];
         };
 
       # cl-boundary-kit v1.0.0 (the version pinned here) still
