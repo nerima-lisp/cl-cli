@@ -389,9 +389,11 @@
       # and without them the shell-verification cases self-skip -- so a bare
       # `nix run .#test` would quietly verify less than `nix flake check` does,
       # while reporting the same "all tests passed".
-      # `packages.cl-cli-demo` -- the `cl-cli/demo` system delivered as a
-      # binary. See `extraOutputs` below for why this is additive rather than
-      # `mkPackageFlake`'s `executable` argument.
+      # The `cl-cli/demo` system delivered as a binary -- published below as
+      # `packages.default`/`apps.default` (so `nix build` yields
+      # `./result/bin/cl-cli-demo`) and as `packages.cl-cli-demo`/
+      # `apps.cl-cli-demo`. See `overrideOutputs` for why the wiring is done
+      # there rather than through `mkPackageFlake`'s `executable` argument.
       #
       # `args` starts from `ctx.lispDerivationArgs`, the exact attrset the
       # preset handed `lispDerivation` for the library, rather than re-spelling
@@ -534,11 +536,29 @@
         paredit-cli.packages.${ctx.system}.default
       ];
 
-      # See `testApp`: the generated app is kept, wrapped only to give the
-      # shell-verification cases the tools they self-skip without.
+      # `apps.test`: see `testApp` -- the generated app is kept, wrapped only to
+      # give the shell-verification cases the tools they self-skip without.
+      #
+      # `packages.default`/`apps.default`: the DELIVERED BINARY, so that a bare
+      # `nix build` in this checkout produces `./result/bin/cl-cli-demo` and
+      # `nix run .` runs it, the same way it does in every other repository in
+      # the org that ships a command. `packages.cl-cli` -- which is what all
+      # seven in-org consumers actually read on their `lispDependencies` edge,
+      # and what `overlays.default`'s attribute is named after -- is untouched
+      # and still the library.
+      #
+      # Done here rather than through `mkPackageFlake`'s own `executable`
+      # argument, which would compute the delivery's `args` as
+      # `lispDerivationArgs // { pname, lispSystem, meta }` and offers no way to
+      # drop anything else. `packageArgs` above puts the seven shells and mandoc
+      # in `nativeBuildInputs` for the shell-verification suite; through
+      # `executable` they would follow into a binary that shells out to nothing,
+      # so `nix build` would build powershell to deliver a demo that never runs
+      # it. `demoExecutable` drops them explicitly, which is why it stays.
       overrideOutputs = ctx: {
         apps.test = testApp ctx;
-        apps.default = testApp ctx;
+        packages.default = demoExecutable ctx;
+        apps.default = ctx.cl.mkApp { drv = demoExecutable ctx; };
       };
 
       # Granularity lives here, NOT in extra GitHub Actions jobs: `nix flake
@@ -548,12 +568,12 @@
         # The one binary this repository ships: `cl-cli/demo`, the executable
         # cl-cli dogfoods itself with (see that system in cl-cli.asd).
         #
-        # ADDITIVE, and deliberately not `mkPackageFlake`'s own `executable`
-        # argument, which would set `packages.default` and `apps.default` to
-        # the binary. `packages.default` here is the LIBRARY -- cl-regex-kit's
-        # flake reads it as `cl-cli.packages.<system>.cl-cli` and every other
-        # consumer reads `.default` -- and `apps.default` is the test runner
-        # (see `overrideOutputs` above). Both must keep meaning what they mean.
+        # The NAMED spelling of what `overrideOutputs` above also publishes as
+        # `packages.default`/`apps.default`. Both names are kept rather than
+        # collapsed into one: `nix build .#cl-cli-demo` is what this repository's
+        # README and docs have advertised since the demo existed, and it says
+        # which binary it builds, which a bare `nix build` cannot. Same
+        # derivation either way, so the duplicate costs nothing.
         packages.cl-cli-demo = demoExecutable ctx;
         apps.cl-cli-demo = ctx.cl.mkApp { drv = demoExecutable ctx; };
 

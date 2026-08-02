@@ -45,16 +45,27 @@ man page. See [Quick Start](https://nerima-lisp.github.io/cl-cli/quick-start/).
 
 ## Install
 
+As a library, from another flake:
+
 ```nix
 # flake.nix
 inputs.cl-cli = {
-  url = "github:nerima-lisp/cl-cli/v1.1.0";
+  url = "github:nerima-lisp/cl-cli/v1.3.0";
   inputs.nixpkgs.follows = "nixpkgs";
 };
 ```
 
 Note the pinned tag. Consumers inside this org must pin a release tag rather
-than follow the default branch.
+than follow the default branch. On a `lispDependencies` edge, read
+`cl-cli.packages.<system>.cl-cli` -- `packages.default` is the demo binary
+described under [Development](#development), not the ASDF system.
+
+To try the demo CLI without adding cl-cli to anything:
+
+```sh
+nix build              # -> ./result/bin/cl-cli-demo
+./result/bin/cl-cli-demo greet --upcase ada
+```
 
 Without Nix, clone the repository somewhere ASDF looks — `~/common-lisp/` or
 `~/quicklisp/local-projects/` — and `(asdf:load-system "cl-cli")`. Full
@@ -80,6 +91,8 @@ instructions, including the ASDF `:depends-on` entry, are in
 
 ```sh
 nix develop          # SBCL, ECL, and the shells the suite verifies against
+nix build            # -> ./result/bin/cl-cli-demo
+nix build .#cl-cli   # the library (the ASDF system, for lispDependencies)
 nix run .#test       # run the SBCL test suite
 nix flake check      # tests + formatting + docs, the same gate CI uses
 nix fmt              # format Nix sources (treefmt)
@@ -88,9 +101,11 @@ nix fmt              # format Nix sources (treefmt)
 `cl-cli/demo` is a small, real CLI (`greet`, a `remote` subcommand group,
 plus the standard help/version/completion/docs commands) built entirely from
 `cl-cli`'s own primitives, so the library exercises itself as a binary, not
-only as a test suite. Try it with `nix run .#cl-cli-demo -- greet --upcase
-ada` or `nix build .#cl-cli-demo`. Its source lives in [`demo/`](demo/); its
-end-to-end dispatch tests are in `t/demo-test.lisp`.
+only as a test suite. It is what this flake delivers as `packages.default`, so
+`nix build` produces it and `nix run . -- greet --upcase ada` runs it; `nix
+build .#cl-cli-demo` and `nix run .#cl-cli-demo` name the same derivation
+explicitly. Its source lives in [`demo/`](demo/); its end-to-end dispatch tests
+are in `t/demo-test.lisp`.
 
 Tests live in `t/` and run under
 [cl-weave](https://github.com/nerima-lisp/cl-weave), the org's test framework.
