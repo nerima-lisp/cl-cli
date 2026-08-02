@@ -58,6 +58,10 @@
       (expect (equal (option-value inv :tags) '("a" "b")))))
 
   (it "treats a nil config value as empty for a delimited option"
+    ;; Unlike a plain option (where a NIL config value still counts as one
+    ;; present piece, see the sibling "present, overriding the default"
+    ;; case below), NIL yields zero pieces for a delimited option, so the
+    ;; key is never set at all -- there is nothing to accumulate.
     (let ((inv (parse-argv (make-app
                             :name "tool"
                             :global-options (list (make-option :name "tags"
@@ -65,8 +69,7 @@
                                                                :value-delimiter #\,)))
                            '("tool")
                            :config '(:tags nil))))
-      (expect (null (option-value inv :tags)))
-      (expect (member :tags (invocation-global-options inv)))))
+      (expect (null (option-value inv :tags)))))
 
   (it "wraps a non-list, non-string config value for a delimited option"
     ;; Neither NULL, LISTP, nor STRINGP -- an already-typed scalar (an
