@@ -70,8 +70,13 @@
     # member -- see its 2026-08-01 revision -- only that depth still
     # decreases strictly along every edge, which `cl-cli -> cl-host-kit`
     # satisfies (depth 0 -> 1).
+    # Re-confirmed 2026-08-02: the sb-cover constraint two paragraphs up
+    # still holds through the latest tag (checked to v1.1.1) -- attempting
+    # that bump broke `checks.ecl` on CI exactly as described ("Module
+    # error: Don't know how to REQUIRE sb-cover"). Re-check before ever
+    # bumping cl-weave again; a future release may split sb-cover out.
     cl-weave = {
-      url = "github:nerima-lisp/cl-weave/v1.1.1";
+      url = "github:nerima-lisp/cl-weave/v1.0.0";
       flake = false;
     };
 
