@@ -67,32 +67,25 @@
     # member -- see its 2026-08-01 revision -- only that depth still
     # decreases strictly along every edge, which `cl-cli -> cl-host-kit`
     # satisfies (depth 0 -> 1).
-    # Still pinned to v1.0.0, deliberately -- NOT yet the latest tag.
     # 2026-08-02: cl-weave's main system used to grow a
     # `(:require "sb-cover")` on every tag from v1.1.0 through v1.1.2,
     # SBCL-only, which took the ECL half of the suite below out at load
-    # time ("Module error: Don't know how to REQUIRE sb-cover"). Reported
-    # and fixed upstream (nerima-lisp/cl-weave#36, released as v1.1.3):
-    # the main system's `:depends-on` is now `#+sbcl`-guarded, since
-    # src/runner-coverage.lisp -- sb-cover's one consumer -- already
-    # handled its absence gracefully at runtime. Attempted the v1.1.3
-    # bump here and hit a SECOND, deeper ECL blocker the sb-cover fix
-    # had been masking: src/cli-image.lisp (and, on inspection, 7 more
-    # files -- isolation.lisp, watch.lisp, runner-concurrency.lisp,
-    # cli-execution.lisp, replay.lisp, matcher-runtime.lisp,
-    # snapshots.lisp) reference SB-EXT/SB-POSIX/SB-SYS unconditionally,
-    # which fails at READ TIME on ECL ("There is no package with the
-    # name SB-EXT") since those packages don't exist there at all --
-    # not a soft compile warning, an unrecoverable reader error. A
-    # proper portability fix for all 8 files is in progress upstream
-    # (extending the existing platform-protocol.lisp/platform-sbcl.lisp
-    # capability-dispatch pattern already used correctly for cl-weave's
-    # :timeout feature). Re-attempt this bump once that lands and
-    # releases; don't jump straight to whatever the latest tag is
-    # without re-verifying checks.ecl fresh, the same way this pin was
-    # twice found to be premature already.
+    # time ("Module error: Don't know how to REQUIRE sb-cover"). Two
+    # rounds of upstream fixes, each verified against this repo's own
+    # checks.ecl after two premature bump attempts here first found them
+    # incomplete: nerima-lisp/cl-weave#36 (the sb-cover :depends-on
+    # itself, released v1.1.3) and #37 (five more unguarded SB-EXT
+    # references the first fix had been masking -- src/cli-image.lisp
+    # and four spots in t/ -- released v1.1.4, this pin). Both extend
+    # cl-weave's own existing platform-protocol.lisp/platform-sbcl.lisp
+    # capability-dispatch pattern, already used correctly for its
+    # :timeout feature, rather than inventing a new shape. If a future
+    # cl-weave bump ever reproduces an ECL load failure, re-open the
+    # upstream issue with the exact error rather than reverting this pin
+    # blind -- see project memory under
+    # `project_cl_weave_ecl_portability` for the full history.
     cl-weave = {
-      url = "github:nerima-lisp/cl-weave/v1.0.0";
+      url = "github:nerima-lisp/cl-weave/v1.1.4";
       flake = false;
     };
 
