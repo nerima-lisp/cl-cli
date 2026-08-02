@@ -218,6 +218,12 @@
          :default-command "deploy")
       (:searches cli-error-message "Unknown :default-command for demo: deploy")))
 
+  (it "rejects a completion candidate that is not a string, symbol, character, or cons"
+    (signals-invalid-specification
+      (demo-app
+       :global-options (list (make-option :name "level" :kind :value
+                                          :completion-candidates (list 42))))))
+
   (it "rejects command options colliding with global options"
     (let ((verbose (make-option :name "verbose" :short #\v))
           (build (make-command :name "build"

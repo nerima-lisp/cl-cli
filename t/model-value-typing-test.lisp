@@ -143,6 +143,12 @@
         (assert-searches text "min: 1")
         (assert-not-searches text "range:"))))
 
+  (it "surfaces a lone maximum in help output"
+    (let ((app (typed-option-app :type :integer :max 10)))
+      (with-app-help-text (text app)
+        (assert-searches text "max: 10")
+        (assert-not-searches text "range:"))))
+
   (it "does not label the default string type in help"
     (let ((app (make-app :name "tool"
                          :global-options (list (make-option :name "name"

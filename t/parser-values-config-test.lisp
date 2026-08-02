@@ -57,6 +57,31 @@
                            :config '(:tags ("a" "b")))))
       (expect (equal (option-value inv :tags) '("a" "b")))))
 
+  (it "wraps a non-list, non-string config value for a delimited option"
+    ;; Neither NULL, LISTP, nor STRINGP -- an already-typed scalar (an
+    ;; integer, here) that %RESOLVED-DEFAULT-PIECES's delimited branch must
+    ;; fall through to its T clause and wrap as a single piece rather than
+    ;; try to split it.
+    (let ((inv (parse-argv (make-app
+                            :name "tool"
+                            :global-options (list (make-option :name "port"
+                                                               :kind :value
+                                                               :type :integer
+                                                               :value-delimiter #\,)))
+                           '("tool")
+                           :config '(:port 80))))
+      (expect (eql (option-value inv :port) 80))))
+
+  (it "wraps a scalar config value into a list for a :multiple-p option"
+    (let ((inv (parse-argv (make-app
+                            :name "tool"
+                            :global-options (list (make-option :name "tags"
+                                                               :kind :value
+                                                               :multiple-p t)))
+                           '("tool")
+                           :config '(:tags "solo"))))
+      (expect (equal (option-value inv :tags) '("solo")))))
+
   (it "treats a nil config value as present, overriding the default"
     (let ((inv (parse-argv (config-app :default "def") '("tool")
                            :config '(:mode nil))))

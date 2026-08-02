@@ -82,6 +82,17 @@
       (with-parsed-argv (inv (response-file-app) '("tool" "@@literal"))
         (expect (equal (positional-value inv :args) '("@literal"))))))
 
+  (it "leaves a bare @ untouched"
+    (with-response-files ()
+      (with-parsed-argv (inv (response-file-app) '("tool" "@"))
+        (expect (equal (positional-value inv :args) '("@"))))))
+
+  (it "passes a non-string argument through unchanged"
+    ;; EXPAND-RESPONSE-FILES is exported, so a direct caller (not only
+    ;; PARSE-ARGV, whose own ARGV is always strings) can hand it a list
+    ;; containing a non-string element; it tolerates rather than errors.
+    (expect (equal (expand-response-files (list "a" :b "c")) (list "a" :b "c"))))
+
   (it "signals a usage error for a missing response file"
     (with-response-files ()
       (signals cli-usage-error
