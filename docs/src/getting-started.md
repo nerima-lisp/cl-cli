@@ -22,9 +22,10 @@ git clone https://github.com/nerima-lisp/cl-cli  ~/common-lisp/cl-cli
     [`cl-weave`](https://github.com/nerima-lisp/cl-weave),
     [`cl-process-kit`](https://github.com/nerima-lisp/cl-process-kit) (plus its
     own [`cl-boundary-kit`](https://github.com/nerima-lisp/cl-boundary-kit) /
-    [`cl-log-kit`](https://github.com/nerima-lisp/cl-log-kit) dependencies), and
-    [`cl-json-kit`](https://github.com/nerima-lisp/cl-json-kit) for you -- all
-    are only needed to run the test suite, not to use `cl-cli` itself:
+    [`cl-log-kit`](https://github.com/nerima-lisp/cl-log-kit) /
+    [`cl-codec-kit`](https://github.com/nerima-lisp/cl-codec-kit) dependencies),
+    and [`cl-json-kit`](https://github.com/nerima-lisp/cl-json-kit) for you --
+    all are only needed to run the test suite, not to use `cl-cli` itself:
 
     ```bash
     nix develop        # drop into a shell with all dependencies available
@@ -52,9 +53,9 @@ git clone https://github.com/nerima-lisp/cl-cli  ~/common-lisp/cl-cli
     sbcl --script run-tests.lisp
     ```
 
-    Adding `cl-process-kit`, `cl-boundary-kit`, and `cl-log-kit` alongside
-    them enables the extra suite that runs generated scripts through the real
-    shells.
+    Adding `cl-process-kit`, `cl-boundary-kit`, `cl-log-kit`, and
+    `cl-codec-kit` alongside them enables the extra suite that runs generated
+    scripts through the real shells.
 
 Both the `sbcl` and `ecl` checks must be green. They do not run the same
 thing: the shell-verification half of the suite needs `cl-process-kit`, whose
