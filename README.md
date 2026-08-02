@@ -8,9 +8,10 @@
 options, arbitrarily deep subcommands, positional and rest arguments,
 context-sensitive help, shell completion for six shells, and offline man
 page/Markdown/JSON generation — all from one declarative app spec. It targets
-SBCL and also runs its portable core on ECL. Unlike the usual alternatives it
-takes no third-party dependency at all: the `cl-cli` system depends on `uiop`
-alone, which ships with every modern ASDF.
+SBCL and also runs its portable core on ECL. It takes almost no third-party
+dependency: the `cl-cli` system depends on `uiop` alone (ships with every
+modern ASDF) on every implementation but SBCL, and additionally on
+[`cl-host-kit`](https://github.com/nerima-lisp/cl-host-kit) on SBCL.
 
 Full documentation is published at <https://nerima-lisp.github.io/cl-cli/>.
 The source for that site lives in [docs/src/](docs/src/).

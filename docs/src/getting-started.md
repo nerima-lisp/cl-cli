@@ -2,9 +2,11 @@
 
 ## Installing
 
-`cl-cli` itself depends only on `uiop`, which ships with every modern ASDF, so
-cloning it where ASDF can find it (for example under `~/common-lisp/`) is
-enough to load it:
+`cl-cli` itself depends on `uiop` (ships with every modern ASDF) on every
+implementation but SBCL, and additionally on
+[`cl-host-kit`](https://github.com/nerima-lisp/cl-host-kit) on SBCL. Cloning
+it where ASDF can find both (for example under `~/common-lisp/`) is enough to
+load it:
 
 ```bash
 git clone https://github.com/nerima-lisp/cl-cli  ~/common-lisp/cl-cli

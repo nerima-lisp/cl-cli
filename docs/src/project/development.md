@@ -19,7 +19,9 @@ shell-verification suite pipes generated output through: `bash`, `zsh`,
 packages, so no checkout layout is assumed.
 
 Without Nix, install SBCL and load the system through ASDF. `cl-cli` itself
-depends only on `uiop`, which ships with every modern ASDF.
+depends on `uiop` (ships with every modern ASDF) on every implementation but
+SBCL, and additionally on
+[`cl-host-kit`](https://github.com/nerima-lisp/cl-host-kit) on SBCL.
 
 ## Commands
 

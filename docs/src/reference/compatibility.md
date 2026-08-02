@@ -54,11 +54,15 @@ without changing the documented contract.
 
 ## Supported implementations
 
-`cl-cli` itself is portable Common Lisp. Its only runtime dependency is
-[UIOP](https://asdf.common-lisp.dev/uiop.html), and it uses four symbols from
-it (`getenv`, `command-line-arguments`, `read-file-string`, `split-string`).
-The library contains exactly two implementation-conditional expressions, both
-of which fall back to a documented conservative answer rather than failing.
+`cl-cli` itself is portable Common Lisp. Its runtime dependencies are
+[UIOP](https://asdf.common-lisp.dev/uiop.html) (always) and, on SBCL only,
+[`cl-host-kit`](https://github.com/nerima-lisp/cl-host-kit). SBCL calls
+`host-kit`'s `getenv`, `split-string`, and `read-file-string`; every other
+implementation uses UIOP's versions of those three plus
+`command-line-arguments`, which `cl-host-kit` does not provide. The library
+contains eight implementation-conditional expressions: six are that
+`host-kit`/`uiop` split, and two (below) fall back to a documented
+conservative answer rather than failing.
 
 | Implementation | Status | What CI runs |
 | --- | --- | --- |
