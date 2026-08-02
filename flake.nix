@@ -25,7 +25,7 @@
     # input graph into flake.lock. They earn it by being consumed for their
     # `lib` outputs, which a bare source tree cannot provide.
     cl-nix-forge = {
-      url = "github:nerima-lisp/cl-nix-forge/v0.4.1";
+      url = "github:nerima-lisp/cl-nix-forge/v0.4.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -106,12 +106,12 @@
     # never been run against). Bumping past what upstream itself tested
     # would trade a verified pin for an unverified guess.
     cl-boundary-kit = {
-      url = "github:nerima-lisp/cl-boundary-kit/v1.0.0";
+      url = "github:nerima-lisp/cl-boundary-kit/v2.0.1";
       flake = false;
     };
 
     cl-log-kit = {
-      url = "github:nerima-lisp/cl-log-kit/v1.0.0";
+      url = "github:nerima-lisp/cl-log-kit/v2.0.1";
       flake = false;
     };
 
@@ -121,7 +121,7 @@
     # Dependency-free (`:depends-on ()`), SBCL-only usage here since its only
     # consumer, cl-process-kit, is.
     cl-codec-kit = {
-      url = "github:nerima-lisp/cl-codec-kit/v0.3.1";
+      url = "github:nerima-lisp/cl-codec-kit/v0.4.0";
       flake = false;
     };
 
@@ -137,7 +137,7 @@
     # why cl-cli.asd guards it with a `#+sbcl` reader conditional and why
     # `eclPackage` below explicitly excludes it from the ECL build.
     cl-host-kit = {
-      url = "github:nerima-lisp/cl-host-kit/v0.2.1";
+      url = "github:nerima-lisp/cl-host-kit/v0.2.5";
       flake = false;
     };
 
