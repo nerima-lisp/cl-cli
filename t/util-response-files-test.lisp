@@ -88,10 +88,11 @@
         (expect (equal (positional-value inv :args) '("@"))))))
 
   (it "passes a non-string argument through unchanged"
-    ;; EXPAND-RESPONSE-FILES is exported, so a direct caller (not only
-    ;; PARSE-ARGV, whose own ARGV is always strings) can hand it a list
-    ;; containing a non-string element; it tolerates rather than errors.
-    (expect (equal (expand-response-files (list "a" :b "c")) (list "a" :b "c"))))
+    ;; EXPAND-RESPONSE-FILES is internal, not exported -- PARSE-ARGV's own
+    ;; ARGV is always strings, so this branch only matters to a caller
+    ;; reaching in directly the way this test does; it tolerates a non-string
+    ;; element rather than erroring on it.
+    (expect (equal (cl-cli::expand-response-files (list "a" :b "c")) (list "a" :b "c"))))
 
   (it "signals a usage error for a missing response file"
     (with-response-files ()
