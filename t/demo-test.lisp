@@ -16,7 +16,7 @@ ARGV carries argv0 as its first element, the C shape RUN-APP wants and the
 shape `cl-cli/demo:main' hands it via APPLICATION-ARGV."
   (let ((stdout (make-string-output-stream))
         (stderr (make-string-output-stream)))
-    (let ((code (run-app (demo-app) :argv argv :stdout stdout :stderr stderr)))
+    (let ((code (run-app (cl-cli/demo:demo-app) :argv argv :stdout stdout :stderr stderr)))
       (values code
               (get-output-stream-string stdout)
               (get-output-stream-string stderr)))))
@@ -107,7 +107,7 @@ shape `cl-cli/demo:main' hands it via APPLICATION-ARGV."
   (it-each (("bash") ("zsh") ("fish") ("powershell") ("nushell") ("elvish"))
       "renders a non-empty ~A completion script"
       (shell)
-    (let ((script (render-completion (demo-app) shell)))
+    (let ((script (render-completion (cl-cli/demo:demo-app) shell)))
       (expect (plusp (length (string-trim '(#\Space #\Newline) script))))
       (expect (search "cl-cli-demo" script))))
 
