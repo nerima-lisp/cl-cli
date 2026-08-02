@@ -22,7 +22,7 @@
   :author "takeokunn <bararararatty@gmail.com>"
   :maintainer "takeokunn <bararararatty@gmail.com>"
   :license "MIT"
-  :version "1.1.0"
+  :version "1.2.0"
   :homepage +cl-cli-repository-url+
   :bug-tracker +cl-cli-issues-url+
   :source-control (:git +cl-cli-repository-url+)
@@ -98,7 +98,7 @@
   :author "takeokunn <bararararatty@gmail.com>"
   :maintainer "takeokunn <bararararatty@gmail.com>"
   :license "MIT"
-  :version "1.1.0"
+  :version "1.2.0"
   :homepage +cl-cli-repository-url+
   :bug-tracker +cl-cli-issues-url+
   :source-control (:git +cl-cli-repository-url+)
@@ -130,7 +130,7 @@
   :author "takeokunn <bararararatty@gmail.com>"
   :maintainer "takeokunn <bararararatty@gmail.com>"
   :license "MIT"
-  :version "1.1.0"
+  :version "1.2.0"
   :homepage +cl-cli-repository-url+
   :bug-tracker +cl-cli-issues-url+
   :source-control (:git +cl-cli-repository-url+)
@@ -219,7 +219,7 @@
   :author "takeokunn <bararararatty@gmail.com>"
   :maintainer "takeokunn <bararararatty@gmail.com>"
   :license "MIT"
-  :version "1.1.0"
+  :version "1.2.0"
   :homepage +cl-cli-repository-url+
   :bug-tracker +cl-cli-issues-url+
   :source-control (:git +cl-cli-repository-url+)
