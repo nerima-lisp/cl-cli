@@ -70,7 +70,7 @@
                                                                :value-delimiter #\,)))
                            '("tool")
                            :config '(:port 80))))
-      (expect (eql (option-value inv :port) 80))))
+      (expect (equal (option-value inv :port) '(80)))))
 
   (it "wraps a scalar config value into a list for a :multiple-p option"
     (let ((inv (parse-argv (make-app
