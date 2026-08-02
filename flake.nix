@@ -342,6 +342,44 @@
       # and without them the shell-verification cases self-skip -- so a bare
       # `nix run .#test` would quietly verify less than `nix flake check` does,
       # while reporting the same "all tests passed".
+      # `packages.cl-cli-demo` -- the `cl-cli/demo` system delivered as a
+      # binary. See `extraOutputs` below for why this is additive rather than
+      # `mkPackageFlake`'s `executable` argument.
+      #
+      # `args` starts from `ctx.lispDerivationArgs`, the exact attrset the
+      # preset handed `lispDerivation` for the library, rather than re-spelling
+      # src/version/lisp/lispDependencies. cl-nix-forge names this as the
+      # supported escape hatch for exactly this case (package-flake.nix's
+      # `rejectOwnedExecutable` message), and the reason is that a dependency
+      # added to the `mkPackageFlake` call above then reaches the binary by
+      # construction -- a hand-written `args` would silently stop shipping
+      # cl-host-kit the day somebody added a second runtime dependency.
+      #
+      # `programPath` is not optional here. It defaults to `lispSystem`, which
+      # is right only when the system name, its `:build-pathname` and its
+      # directory all coincide; `cl-cli/demo` sets `:pathname "demo"` and
+      # `:build-pathname "cl-cli-demo"`, and ASDF's `program-op` resolves the
+      # latter against the former, so the program is written to
+      # `demo/cl-cli-demo` and nothing else finds it.
+      demoExecutable =
+        ctx:
+        ctx.cl.mkExecutable {
+          programPath = "demo/cl-cli-demo";
+          args = ctx.lispDerivationArgs // {
+            pname = "cl-cli-demo";
+            lispSystem = "cl-cli/demo";
+            # The one inherited attribute that is dropped rather than kept.
+            # `packageArgs` puts the seven shells and mandoc here for the
+            # shell-verification suite; `cl-cli/demo` shells out to nothing, so
+            # inheriting them would make `nix build .#cl-cli-demo` pull
+            # powershell into a build that never runs it.
+            nativeBuildInputs = [ ];
+            meta = ctx.lispDerivationArgs.meta // {
+              description = "Runnable demonstration CLI built from cl-cli's own primitives.";
+            };
+          };
+        };
+
       testApp =
         ctx:
         let
@@ -460,6 +498,18 @@
       # check` evaluates each attribute as its own derivation, in parallel,
       # with build caching. Add a check here rather than a job in ci.yml.
       extraOutputs = ctx: {
+        # The one binary this repository ships: `cl-cli/demo`, the executable
+        # cl-cli dogfoods itself with (see that system in cl-cli.asd).
+        #
+        # ADDITIVE, and deliberately not `mkPackageFlake`'s own `executable`
+        # argument, which would set `packages.default` and `apps.default` to
+        # the binary. `packages.default` here is the LIBRARY -- cl-regex-kit's
+        # flake reads it as `cl-cli.packages.<system>.cl-cli` and every other
+        # consumer reads `.default` -- and `apps.default` is the test runner
+        # (see `overrideOutputs` above). Both must keep meaning what they mean.
+        packages.cl-cli-demo = demoExecutable ctx;
+        apps.cl-cli-demo = ctx.cl.mkApp { drv = demoExecutable ctx; };
+
         checks = {
           # The same run-tests.lisp entry point as `checks.default`, under ECL.
           # One runner serves both because its own guard is a capability check:

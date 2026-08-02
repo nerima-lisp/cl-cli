@@ -84,6 +84,39 @@
                (:file "src/completion-commands"))
   :in-order-to ((asdf:test-op (asdf:test-op "cl-cli/test"))))
 
+;;; The one executable this repository ships, and the only system here with a
+;;; `:build-operation`. It lives in its own `demo/` directory and its own
+;;; system rather than inside `cl-cli` above, because PACKAGE_STANDARD.md keeps
+;;; a library's `:components` flat and readable as a table of contents, and
+;;; because a library must never drag a `program-op` entry point into a
+;;; consumer's image. `cl-regex-kit/cli` is the org precedent for this shape.
+;;;
+;;; `:depends-on ("cl-cli")` and nothing else: the demo exists to show that the
+;;; library alone is enough to build a real CLI.
+(asdf:defsystem "cl-cli/demo"
+  :description "cl-cli-demo: a runnable CLI built from cl-cli's own primitives."
+  :author "takeokunn <bararararatty@gmail.com>"
+  :maintainer "takeokunn <bararararatty@gmail.com>"
+  :license "MIT"
+  :version "1.1.0"
+  :homepage +cl-cli-repository-url+
+  :bug-tracker +cl-cli-issues-url+
+  :source-control (:git +cl-cli-repository-url+)
+  :depends-on ("cl-cli")
+  ;; `:pathname` here where the main system above deliberately avoids it: that
+  ;; system's components must be able to reach examples/, this one's must not
+  ;; reach anywhere. It also fixes where ASDF writes the program -- `program-op`
+  ;; resolves `:build-pathname` against the system's `component-pathname`, so
+  ;; the binary lands at `demo/cl-cli-demo`, which is what flake.nix's
+  ;; `programPath` names.
+  :pathname "demo"
+  :serial t
+  :components ((:file "package")
+               (:file "main"))
+  :build-operation "program-op"
+  :build-pathname "cl-cli-demo"
+  :entry-point "cl-cli/demo:main")
+
 ;;; The test suite is split in two so that the portable half stays loadable on
 ;;; every implementation. `cl-cli/test' is the core suite; its dependencies
 ;;; are all portable Common Lisp. `cl-cli/test/shell-verification' adds the
@@ -101,7 +134,10 @@
   :homepage +cl-cli-repository-url+
   :bug-tracker +cl-cli-issues-url+
   :source-control (:git +cl-cli-repository-url+)
-  :depends-on ("cl-cli" "cl-weave" "cl-prolog/weave" "cl-json-kit")
+  ;; `cl-cli/demo` belongs to the PORTABLE half: it depends on nothing but
+  ;; `cl-cli`, so t/demo-test.lisp runs under the ECL gate too -- which is the
+  ;; only thing that would notice the demo growing an SBCL-only form.
+  :depends-on ("cl-cli" "cl-cli/demo" "cl-weave" "cl-prolog/weave" "cl-json-kit")
   :serial t
   :components ((:file "t/package")
                (:file "t/helpers-fixtures")
@@ -165,7 +201,8 @@
                (:file "t/doc-renderers-markdown-test")
                (:file "t/doc-renderers-json-test")
                (:file "t/doc-commands-test")
-               (:file "t/consumer-migrations-test"))
+               (:file "t/consumer-migrations-test")
+               (:file "t/demo-test"))
   ;; Not UIOP:SYMBOL-CALL, and not a sibling-package prefix either: a .asd is
   ;; read by the plain CL reader before :depends-on is ever consulted, so any
   ;; PKG:SYMBOL token here must resolve against a package already present in

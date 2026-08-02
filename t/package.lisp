@@ -1,5 +1,7 @@
 (defpackage #:cl-cli/test
   (:use #:cl #:cl-cli)
+  (:import-from #:cl-cli/demo
+                #:demo-app)
   (:import-from #:cl-prolog
                 #:assertz
                 #:make-rulebase
