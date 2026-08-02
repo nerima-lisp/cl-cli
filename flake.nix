@@ -41,10 +41,7 @@
 
     # Sibling packages are ALWAYS pinned to a release tag. A bare
     # `github:nerima-lisp/cl-weave` follows that repo's default branch, which
-    # means an upstream push to main breaks this repo's CI without warning --
-    # and the pin is load-bearing beyond reproducibility here: cl-weave's main
-    # system grew a `(:require "sb-cover")` after v1.0.0, which would take the
-    # ECL half of the suite below out at load time.
+    # means an upstream push to main breaks this repo's CI without warning.
     #
     # `flake = false` on every one of them, per ADR-0079. Nothing below reads a
     # sibling's `packages`, `checks` or `lib`; each is used only as a source
@@ -70,13 +67,22 @@
     # member -- see its 2026-08-01 revision -- only that depth still
     # decreases strictly along every edge, which `cl-cli -> cl-host-kit`
     # satisfies (depth 0 -> 1).
-    # Re-confirmed 2026-08-02: the sb-cover constraint two paragraphs up
-    # still holds through the latest tag (checked to v1.1.1) -- attempting
-    # that bump broke `checks.ecl` on CI exactly as described ("Module
-    # error: Don't know how to REQUIRE sb-cover"). Re-check before ever
-    # bumping cl-weave again; a future release may split sb-cover out.
+    # 2026-08-02: cl-weave's main system used to grow a
+    # `(:require "sb-cover")` on every tag from v1.1.0 through v1.1.2,
+    # SBCL-only, which took the ECL half of the suite below out at load
+    # time ("Module error: Don't know how to REQUIRE sb-cover"). Reported
+    # and fixed upstream (nerima-lisp/cl-weave#36): the main system's
+    # `:depends-on` is now `#+sbcl`-guarded, since
+    # src/runner-coverage.lisp -- sb-cover's one consumer -- already
+    # handled its absence gracefully at runtime and the system-level
+    # dependency was stricter than the code needed. v1.1.3 (this pin) is
+    # the first tag with the fix; v1.1.2 was cut but never published (its
+    # own release.yml run failed a separate, since-fixed doc-sync
+    # contract check) and is not otherwise usable. If a future cl-weave
+    # bump ever reproduces the original ECL failure, re-open the upstream
+    # issue rather than reverting this pin blind.
     cl-weave = {
-      url = "github:nerima-lisp/cl-weave/v1.0.0";
+      url = "github:nerima-lisp/cl-weave/v1.1.3";
       flake = false;
     };
 
