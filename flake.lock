@@ -34,6 +34,40 @@
         "type": "github"
       }
     },
+    "cl-concurrent-kit": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785670933,
+        "narHash": "sha256-2zO1b5EGw9QfqNTTTkk9apcdsIb0dnt71PB3nFy4UnM=",
+        "owner": "nerima-lisp",
+        "repo": "cl-concurrent-kit",
+        "rev": "0d3bf10915c7b4b9f84674452aa0fc60bb09ea25",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nerima-lisp",
+        "ref": "v0.4.2",
+        "repo": "cl-concurrent-kit",
+        "type": "github"
+      }
+    },
+    "cl-date-kit": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1785429368,
+        "narHash": "sha256-gHRCkMGrq/ZBeNS6Stx8nvx5brNi5P1sRzzN4nGwwTo=",
+        "owner": "nerima-lisp",
+        "repo": "cl-date-kit",
+        "rev": "b0d9cb2f978a0c1ccfd1450ec6c10a33a9b2c858",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nerima-lisp",
+        "ref": "v0.2.0",
+        "repo": "cl-date-kit",
+        "type": "github"
+      }
+    },
     "cl-host-kit": {
       "flake": false,
       "locked": {
@@ -217,6 +251,8 @@
       "inputs": {
         "cl-boundary-kit": "cl-boundary-kit",
         "cl-codec-kit": "cl-codec-kit",
+        "cl-concurrent-kit": "cl-concurrent-kit",
+        "cl-date-kit": "cl-date-kit",
         "cl-host-kit": "cl-host-kit",
         "cl-json-kit": "cl-json-kit",
         "cl-log-kit": "cl-log-kit",
