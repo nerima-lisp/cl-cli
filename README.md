@@ -59,7 +59,7 @@ As a library, from another flake:
 ```nix
 # flake.nix
 inputs.cl-cli = {
-  url = "github:nerima-lisp/cl-cli/v1.3.0";
+  url = "github:nerima-lisp/cl-cli/v1.4.0";
   inputs.nixpkgs.follows = "nixpkgs";
 };
 ```

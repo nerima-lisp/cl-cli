@@ -26,6 +26,11 @@ catalogued in the [API Reference](api.md). Specifically:
   `mandoc`-clean section-1 page, that `render-json` emits an object whose
   documented keys mean what they say
 
+The optional SBCL-only `cl-cli/concurrent` system is versioned with the same
+release. Its exported `cl-cli/concurrent:parse-argv-batch` API is available
+only where SBCL and `cl-concurrent-kit` are available; it does not change the
+portable `cl-cli` implementation matrix below.
+
 A **major** release is required to remove or rename any of the above, to reject
 an argument that used to be accepted, or to change documented behavior
 incompatibly. A **minor** release adds. A **patch** release fixes a defect

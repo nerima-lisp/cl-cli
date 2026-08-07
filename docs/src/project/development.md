@@ -173,10 +173,18 @@ The org-wide procedure is in
 
 Two things are specific to this repository:
 
-- `:version` appears four times in `cl-cli.asd` — in `cl-cli`, `cl-cli/demo`,
-  `cl-cli/test` and `cl-cli/test/shell-verification` — and all four must match.
-  `flake.nix`
-  reads the first `:version` line, and `release.yml` refuses to publish a tag
-  that disagrees with it.
+- `:version` appears five times in `cl-cli.asd` — in `cl-cli`, `cl-cli/demo`,
+  `cl-cli/concurrent`, `cl-cli/test` and `cl-cli/test/shell-verification` —
+  and all five must match. The `+demo-version+` literal in `demo/main.lisp`
+  must also match `cl-cli/demo`; `t/demo-test.lisp` checks that equality.
+  `flake.nix` reads the first `:version` line, and `release.yml` refuses to
+  publish a tag that disagrees with it.
 - A release verified only by the portable core has not exercised the generated
   completion scripts. Confirm the runner's own line about which half it loaded.
+
+After the checks pass, create the release tag locally as an annotated tag:
+
+```sh
+git tag -a vX.Y.Z -m "cl-cli vX.Y.Z"
+git tag -n vX.Y.Z
+```
