@@ -7,11 +7,18 @@
 `cl-cli` builds strict command-line parsers for Common Lisp: flags and typed
 options, arbitrarily deep subcommands, positional and rest arguments,
 context-sensitive help, shell completion for six shells, and offline man
-page/Markdown/JSON generation — all from one declarative app spec. It targets
-SBCL and also runs its portable core on ECL. It takes almost no third-party
-dependency: the `cl-cli` system depends on `uiop` alone (ships with every
-modern ASDF) on every implementation but SBCL, and additionally on
+page/Markdown/JSON generation — all from one declarative app spec or from
+reusable app, command, option, and positional specs. It targets SBCL and also
+runs its portable core on ECL. It takes almost no third-party dependency: the
+`cl-cli` system depends on `uiop` alone (ships with every modern ASDF) on
+every implementation but SBCL, and additionally on
 [`cl-host-kit`](https://github.com/nerima-lisp/cl-host-kit) on SBCL.
+
+For independent argv workloads, the optional SBCL-only `cl-cli/concurrent`
+system provides `cl-cli/concurrent:parse-argv-batch`, backed by
+[`cl-concurrent-kit`](https://github.com/nerima-lisp/cl-concurrent-kit). It
+preserves input order and bounds in-flight requests; the portable `cl-cli`
+system remains unchanged.
 
 Full documentation is published at <https://nerima-lisp.github.io/cl-cli/>.
 The source for that site lives in [docs/src/](docs/src/).
@@ -41,7 +48,9 @@ The source for that site lives in [docs/src/](docs/src/).
 ```
 
 The same spec drives `--help`, `cl-cli:render-completion`, and the generated
-man page. See [Quick Start](https://nerima-lisp.github.io/cl-cli/quick-start/).
+man page. See [Getting Started](https://nerima-lisp.github.io/cl-cli/getting-started/).
+If you prefer named reusable building blocks, the DSL also exports
+`define-app`, `define-command`, `define-option`, and `define-positional`.
 
 ## Install
 
@@ -70,21 +79,23 @@ nix build              # -> ./result/bin/cl-cli-demo
 Without Nix, clone the repository somewhere ASDF looks — `~/common-lisp/` or
 `~/quicklisp/local-projects/` — and `(asdf:load-system "cl-cli")`. Full
 instructions, including the ASDF `:depends-on` entry, are in
-[Installation](https://nerima-lisp.github.io/cl-cli/installation/).
+[Getting Started](https://nerima-lisp.github.io/cl-cli/getting-started/).
+On SBCL, load the optional batch API explicitly with
+`(asdf:load-system "cl-cli/concurrent")`.
 
 ## Documentation
 
-- [Installation](https://nerima-lisp.github.io/cl-cli/installation/) and
-  [Quick Start](https://nerima-lisp.github.io/cl-cli/quick-start/)
-- [Option Values and Kinds](https://nerima-lisp.github.io/cl-cli/option-values/) —
+- [Getting Started](https://nerima-lisp.github.io/cl-cli/getting-started/) —
+  installation and quick start
+- [Option Values and Kinds](https://nerima-lisp.github.io/cl-cli/guide/option-values/) —
   option kinds, typed values, env-var and config defaults, arity
-- [Commands and Dispatch](https://nerima-lisp.github.io/cl-cli/commands/) —
-  nested subcommands, aliases, grouping, the `define-app` DSL
-- [API Reference](https://nerima-lisp.github.io/cl-cli/api-reference/) — every
+- [Commands and Dispatch](https://nerima-lisp.github.io/cl-cli/guide/commands/) —
+  nested subcommands, aliases, grouping, and the `define-*` DSL family
+- [API Reference](https://nerima-lisp.github.io/cl-cli/reference/api/) — every
   exported symbol and condition
-- [Migration Guide](https://nerima-lisp.github.io/cl-cli/migration-guide/) —
+- [Migration Guide](https://nerima-lisp.github.io/cl-cli/guide/migration-guide/) —
   mapping an existing in-house parser onto `cl-cli`
-- [Scope and Non-Goals](https://nerima-lisp.github.io/cl-cli/scope/) — what
+- [Scope and Non-Goals](https://nerima-lisp.github.io/cl-cli/guide/scope/) — what
   `cl-cli` deliberately leaves to the application
 
 ## Development
@@ -96,6 +107,9 @@ nix build .#cl-cli   # the library (the ASDF system, for lispDependencies)
 nix run .#test       # run the SBCL test suite
 nix flake check      # tests + formatting + docs, the same gate CI uses
 nix fmt              # format Nix sources (treefmt)
+SYSTEM=$(nix eval --raw --expr 'builtins.currentSystem')
+nix build ".#checks.${SYSTEM}.coverage" --no-link --print-out-paths
+nix build ".#checks.${SYSTEM}.coverage-gate" --no-link
 ```
 
 `cl-cli/demo` is a small, real CLI (`greet`, a `remote` subcommand group,
@@ -109,11 +123,25 @@ are in `t/demo-test.lisp`.
 
 Tests live in `t/` and run under
 [cl-weave](https://github.com/nerima-lisp/cl-weave), the org's test framework.
+`nix run .#test` is the reproducible test entry point. For a direct SBCL run,
+use `sbcl --script run-tests.lisp`; it discovers adjacent source checkouts, and
+its `CL_*_SOURCE_DIR` environment variables override those locations in an
+isolated worktree.
 The suite is split into a portable core (`cl-cli/test`) and a
 shell-verification half (`cl-cli/test/shell-verification`) that pipes generated
 completion scripts and man pages through the real `bash`, `zsh`, `fish`,
 `nushell`, `pwsh`, `elvish`, and `mandoc`. See
 [Development](https://nerima-lisp.github.io/cl-cli/development/).
+The SBCL-only `cl-cli/concurrent` system is checked as part of the SBCL test
+system; it is not loaded by the ECL check or the portable core.
+
+The coverage check writes an `sb-cover` HTML report containing
+`cover-index.html` to the returned Nix store path. The `coverage-gate` check
+parses that same report and fails if aggregate expression or branch coverage
+falls below 96%. This is a regression floor for the current report, not the
+project target: the target remains 100% of reachable branches inside function
+bodies, while `sb-cover`'s raw expression percentage also counts top-level
+forms and macro-expansion helpers.
 
 ## Contributing
 

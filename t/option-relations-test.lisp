@@ -1,55 +1,5 @@
 (in-package :cl-cli/test)
 
-(deftest-queries normalized-requires-relations
-    ((make-option-relations-rulebase
-      (list (make-option :name "profile"
-                         :aliases '("p")
-                         :kind :value)
-            (make-option :name "config"
-                         :kind :value
-                         :requires '("p")))))
-  ("resolves alias dependencies to canonical keys"
-   (requires :config ?dependency)
-   :ordered
-   (((?dependency . :profile))))
-   ("does not attach dependencies to unrelated options"
-    (requires :profile ?dependency)
-    :fails))
-
-(deftest-queries normalized-requires-relations-character-target
-    ((make-option-relations-rulebase
-      (list (make-option :name "profile"
-                         :aliases '("p")
-                         :kind :value)
-            (make-option :name "config"
-                         :kind :value
-                         ;; A short-option alias may also be given as a raw
-                         ;; character (#\p), not just a string ("p") --
-                         ;; NORMALIZE-OPTION-RELATION-TARGET's ETYPECASE
-                         ;; declares CHARACTER as its own branch, distinct
-                         ;; from STRING.
-                         :requires (list #\p)))))
-  ("resolves a character-designated alias dependency to its canonical key"
-   (requires :config ?dependency)
-   :ordered
-   (((?dependency . :profile)))))
-
-(deftest-queries normalized-conflict-relations
-    ((make-option-relations-rulebase
-      (list (make-option :name "internal-token"
-                         :kind :value
-                         :hidden-p t)
-            (make-option :name "config"
-                         :kind :value
-                         :conflicts-with '(:internal-token)))))
-  ("retains conflicts against hidden targets"
-   (conflicts :config ?target)
-   :ordered
-   (((?target . :internal-token))))
-  ("tracks which options are hidden"
-   (hidden :internal-token)
-   :succeeds))
-
 (describe-sequential "validation relations"
   (it "requires dependent options"
     (with-caught-signal-from-argv
@@ -449,4 +399,45 @@
         (demo-app
          :global-options (list (make-option :name "a" :kind :flag :requires '(:b))
                                (make-option :name "b" :kind :flag :requires '(:a))))
-      (:searches cli-error-message "Option requirements must not contain a cycle."))))
+      (:searches cli-error-message "Option requirements must not contain a cycle.")))
+  (it "supports standalone relation validators without cached lookup tables"
+    (let* ((profile (make-option :name "profile" :kind :value))
+           (config (make-option :name "config" :kind :value
+                                :requires (list :profile)))
+           (specs (list profile config))
+           (values (list :profile "dev" :config "dev.toml"))
+           (graph (cl-cli::make-option-relation-graph specs)))
+      (expect (equal (cl-cli::transitive-required-option-keys graph :config)
+                     (list :profile)))
+      (expect (not (cl-cli::option-requirement-cycle-p specs)))
+      (multiple-value-bind (validated graph)
+          (cl-cli::validate-option-relation-graph specs)
+        (expect (eq validated specs))
+        (expect (equal (cl-cli::transitive-required-option-keys graph :config)
+                       (list :profile))))
+      (expect (eq (cl-cli::validate-option-relationships values specs) values))
+      (expect (null (cl-cli::%validate-related-option-targets
+                     specs config "requires" (list :profile))))
+      (expect (eq (cl-cli::%validate-related-option-target
+                   specs config :profile "requires")
+                  profile)))
+    (let* ((json (make-option :name "json" :kind :flag))
+           (yaml (make-option :name "yaml" :kind :flag))
+           (specs (required-exclusive-group json yaml)))
+      (caught-signal= (cli-missing-option-value condition)
+          (cl-cli::validate-required-option-groups nil specs)
+        (:searches cli-error-message "Exactly one of" "--json" "--yaml")))
+    (let* ((host (make-option :name "host" :kind :value))
+           (port (make-option :name "port" :kind :value))
+           (specs (inclusive-group host port)))
+      (caught-signal= (cli-missing-dependent-option condition)
+          (cl-cli::validate-inclusive-groups (list :host "h") specs)
+        (:searches cli-error-message "must be used together")))
+    (let* ((profile (make-option :name "profile" :kind :value))
+           (config (make-option :name "config" :kind :value
+                                :required-if (list :profile)))
+           (specs (list profile config)))
+      (caught-signal= (cli-missing-option-value condition)
+          (cl-cli::validate-conditional-requirements (list :profile "dev") specs)
+        (:searches cli-error-message "required when")
+      ))))

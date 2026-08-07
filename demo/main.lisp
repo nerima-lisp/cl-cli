@@ -40,9 +40,7 @@ declarative, so a handler definition is nothing but its own printed output."
 (define-handler (%greet) (invocation)
   (let* ((who (positional-value invocation :name))
          (text (if (option-value invocation :upcase) (string-upcase who) who)))
-    (dotimes (i (option-value invocation :repeat))
-      (declare (ignore i))
-      (format (invocation-stdout invocation) "Hello, ~A!~%" text))))
+    (loop repeat (option-value invocation :repeat) do (format (invocation-stdout invocation) "Hello, ~A!~%" text))))
 
 (define-handler (%remote-add) (invocation)
   (format (invocation-stdout invocation) "remote add: ~A -> ~A~%"

@@ -1,14 +1,18 @@
 # API Reference
 
-All public symbols live in the `cl-cli` package. This page groups the full
-export list by role; see the linked guide pages for usage examples of each
-group.
+Core public symbols live in the `cl-cli` package. The optional SBCL-only
+concurrent API lives in `cl-cli/concurrent`. This page groups the public
+exports by role; see the linked guide pages for usage examples of each group.
 
 ## Spec constructors
 
 `make-app`, `make-command`, `make-option`, `make-positional`,
 `exclusive-group`, `required-exclusive-group`, `inclusive-group` — see
 [Option Relations and Grouping](../guide/option-relations.md) for the group helpers.
+
+`define-option` and `define-positional` are macros for binding reusable leaf
+specs; they expand directly to `make-option` and `make-positional` with the
+supplied constructor arguments.
 
 `define-app` and `define-command` are macros wrapping those constructors in a
 declarative, clause-based form: `:option`, `:positional`, and `:command`
@@ -35,6 +39,14 @@ Generation](../guide/documentation-generation.md).
 `parse-argv` returns an invocation object without running handlers;
 `run-app` parses and dispatches, returning a process exit code — see
 [Validation and Exit Codes](../guide/validation.md).
+
+## Concurrent parsing on SBCL
+
+`cl-cli/concurrent:parse-argv-batch` parses independent argv lists with a
+bounded worker pool. It preserves input order, accepts `:parallelism` and
+`:max-in-flight` bounds, and propagates parser errors after submitted work
+settles. Load the optional ASDF system explicitly with
+`(asdf:load-system "cl-cli/concurrent")`.
 
 ## Help
 

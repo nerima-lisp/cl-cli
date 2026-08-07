@@ -400,6 +400,27 @@
                                    :description "Two tags.")))))
       (with-app-help-text (text app)
         (assert-searches text "--tag <TAG> <TAG>"))))
+
+  (it "renders an optional-value placeholder"
+    (let ((app (make-app
+                :name "demo"
+                :global-options
+                (list (make-option :name "profile"
+                                   :kind :optional-value
+                                   :value-name "PROFILE")))))
+      (with-app-help-text (text app)
+        (assert-searches text "--profile[=<PROFILE>]"))))
+
+  (it "renders a required rest positional token"
+    (let ((app (make-app
+                :name "demo"
+                :positionals
+                (list (make-positional :key :args
+                                       :required-p t
+                                       :rest-p t)))))
+      (with-app-help-text (text app)
+        (assert-searches text "ARGS..."))))
+
   (it "renders a typed positional's type metadata"
     (let ((app (make-app
                 :name "demo"
@@ -408,4 +429,5 @@
                                        :type :integer
                                        :description "Port to bind.")))))
       (with-app-help-text (text app)
-        (assert-searches text "type: integer")))))
+        (assert-searches text "type: integer"))))
+  (it "omits the default string type from positional metadata" (let ((app (make-app :name "demo" :positionals (list (make-positional :key :file :type :string :description "Path."))))) (with-app-help-text (text app) (assert-not-searches text "type: string")))))

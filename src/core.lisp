@@ -68,7 +68,8 @@ case-sensitive, unchanged (short option names like -x vs -X are distinct)."
         (values string nil))))
 
 (defun plist-has-key-p (plist key)
-  (not (eq (getf plist key :__missing__) :__missing__)))
+  (loop for tail on plist by #'cddr
+        thereis (eq (first tail) key)))
 
 (defun command-line-option-p (token)
   (and (stringp token)

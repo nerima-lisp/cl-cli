@@ -98,6 +98,17 @@
         "\"c\"d\""
         "\"e\\f\"")))
 
+  (it "removes other control characters from candidate values"
+    (let ((app
+            (demo-app
+              :positionals
+              (list
+               (make-positional
+                 :key :target
+                 :completion-candidates
+                 (list (format nil "a~Cb" (code-char 1))))))))
+      (assert-completion-searches (app "nushell") "[\"ab\"]")))
+
   (it "references the leading-token completer only when it is defined"
     ;; `command?: string@"nu-complete demo command"` is a parse error when the
     ;; named def is absent, and it takes the whole module down with it -- so the

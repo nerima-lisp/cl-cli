@@ -92,6 +92,15 @@ vocabulary, so it can be shared across more than one app. Splice in a list of
 already-built commands — `make-standard-commands`, or a command shared via
 `define-command` — with `:commands-from`:
 
+Reusable leaf specs use the corresponding constructor macros:
+
+```lisp
+(cl-cli:define-option *json-option*
+    (:name "json" :kind :flag))
+(cl-cli:define-positional *input-argument*
+    (:key "input" :required-p t))
+```
+
 ```lisp
 (cl-cli:define-command *status-command*
     (:name "status" :description "Show status.")

@@ -35,12 +35,7 @@ is built.")
   "Render a completion script for SHELL."
   (let* ((resolved-shell (%parse-supported-shell shell))
          (entry (assoc resolved-shell +completion-shells+ :test #'string=)))
-    (if entry
-        (funcall (cdr entry) app stream)
-        (signal-cli-error 'cli-invalid-positional-value
-                          (format nil "Unsupported completion shell: ~A" shell)
-                          :name :shell
-                          :value shell))))
+    (funcall (cdr entry) app stream)))
 
 (defun make-completion-command (&key (name "completion")
                                      (description "Print shell completion script."))

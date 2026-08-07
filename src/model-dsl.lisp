@@ -1,47 +1,43 @@
 (in-package :cl-cli)
 
-(defmacro define-app (name (&rest app-args) &body clauses)
-  "Declaratively bind NAME to an APP-SPEC built via MAKE-APP.
+(defmacro %define-leaf-spec-macro (macro-name constructor binding-kind)
+  `(defmacro ,macro-name (name &rest spec-args)
+     ,(format nil "Declaratively bind NAME to a ~A-SPEC built via ~A.
 
-Each entry in CLAUSES is a list headed by :OPTION, :POSITIONAL, :COMMAND, or
-:COMMANDS-FROM (see %COMMAND-CLAUSE-FORMS); a :COMMAND clause has the shape
-`(:command NAME-FORM (COMMAND-ARGS...) CLAUSE...)` and recursively accepts
-the same clause vocabulary for that command's own options, positionals, and
-subcommands. APP-ARGS are passed through verbatim to MAKE-APP (:NAME,
-:SUMMARY, :DEFAULT-COMMAND, :HANDLER, etc.) -- this macro supplies the
-:GLOBAL-OPTIONS/:POSITIONALS/:COMMANDS keys itself, so APP-ARGS must not
-repeat them.
+SPEC-ARGS are passed through verbatim to ~A. This is additive sugar for
+reusable ~A specs; the underlying functional API remains independently
+usable."
+              (string-upcase binding-kind)
+              (string-upcase constructor)
+              (string-upcase constructor)
+              binding-kind)
+     `(defparameter ,name
+        (,',constructor ,@spec-args))))
 
-Purely additive sugar over the existing functional API: MAKE-APP,
-MAKE-COMMAND, MAKE-OPTION, and MAKE-POSITIONAL are unchanged and remain
-independently usable without this macro.
+(defmacro %define-composite-spec-macro
+    (macro-name constructor options-key positionals-key commands-key docstring)
+  `(defmacro ,macro-name (name (&rest spec-args) &body clauses)
+     ,docstring
+     `(defparameter ,name
+        ,(%clause-spec-form ',constructor spec-args clauses
+                            ,options-key ,positionals-key ,commands-key))))
 
-Example:
+(%define-leaf-spec-macro define-option make-option "option")
+(%define-leaf-spec-macro define-positional make-positional "positional")
 
-  (define-app *cl-cc*
-      (:name \"cl-cc\" :summary \"Compiler-oriented CLI.\")
-    (:option \"verbose\" :short #\\v :kind :flag)
-    (:positional :script-argv :rest-p t)
-    (:commands-from (make-standard-commands :include-completion-p t))
-    (:command \"compile\" (:aliases '(\"build\"))
-      (:option \"output\" :short #\\o :kind :value)
-      (:positional :input :required-p t)))"
-  `(defparameter ,name
-     ,(%clause-spec-form 'make-app app-args clauses
-                         :global-options :positionals :commands)))
+(%define-composite-spec-macro
+ define-app make-app :global-options :positionals :commands
+ "Declaratively bind NAME to an APP-SPEC built via MAKE-APP.
 
-(defmacro define-command (name (&rest command-args) &body clauses)
-  "Declaratively bind NAME to a COMMAND-SPEC built via MAKE-COMMAND.
+CLAUSES may be headed by :OPTION, :POSITIONAL, :COMMAND, or
+:COMMANDS-FROM. A :COMMAND clause recursively accepts the same clause
+vocabulary for nested command specs. APP-ARGS are forwarded to MAKE-APP;
+this macro supplies :GLOBAL-OPTIONS, :POSITIONALS, and :COMMANDS.")
 
-Same clause vocabulary as DEFINE-APP (see %COMMAND-CLAUSE-FORMS): :OPTION,
-:POSITIONAL, :COMMAND (for a subcommand), and :COMMANDS-FROM. COMMAND-ARGS
-are passed through verbatim to MAKE-COMMAND (:NAME, :DESCRIPTION, :ALIASES,
-:HANDLER, etc.) -- this macro supplies the :OPTIONS/:POSITIONALS/:SUBCOMMANDS
-keys itself, so COMMAND-ARGS must not repeat them.
+(%define-composite-spec-macro
+ define-command make-command :options :positionals :subcommands
+ "Declaratively bind NAME to a COMMAND-SPEC built via MAKE-COMMAND.
 
-The bound COMMAND-SPEC is independently reusable -- README's \"reusable app,
-command, option, and positional specs\" -- so it can be spliced into more
-than one DEFINE-APP via a `(:commands-from (list NAME))` clause."
-  `(defparameter ,name
-     ,(%clause-spec-form 'make-command command-args clauses
-                         :options :positionals :subcommands)))
+CLAUSES use the same vocabulary as DEFINE-APP. COMMAND-ARGS are forwarded
+to MAKE-COMMAND; this macro supplies :OPTIONS, :POSITIONALS, and
+:SUBCOMMANDS. The bound spec can be reused through :COMMANDS-FROM.")

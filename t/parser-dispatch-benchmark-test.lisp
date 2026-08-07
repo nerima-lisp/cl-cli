@@ -100,10 +100,10 @@ app in this file (none of which declare any :requires/:conflicts-with)."
                         *benchmark-subcommand-app*)))
       (expect (eq (option-key (first specs)) :help)))))
 
-;; Everything below asserts an absolute wall-clock budget, so it only means
-;; anything on the implementation those budgets were measured against -- see
-;; PERFORMANCE-BUDGETS-CALIBRATED-P in t/test-support.lisp. The two cache
-;; identity checks above are ordinary correctness tests and stay portable.
+;; Everything below asserts an absolute wall-clock budget calibrated for SBCL.
+;; The two cache identity checks above are ordinary correctness tests and stay
+;; portable; the timing suite is read only on SBCL rather than pretending an
+;; absolute budget has the same meaning on every implementation.
 ;;
 ;; Calibration rule for every case here: size the workload so its median on an
 ;; idle machine is around a tenth of its budget. A shared CI runner routinely
@@ -121,7 +121,8 @@ app in this file (none of which declare any :requires/:conflicts-with)."
 ;; did not, the workload is mis-sized -- shrink the iteration count, which
 ;; preserves both the 2000ms convention and the ratio. Raising a budget is the
 ;; one response that destroys the signal.
-(describe-sequential-run-if (performance-budgets-calibrated-p)
+#+sbcl
+(describe-sequential
     "parser benchmark budgets"
   (it "constructs a 100-option relation-heavy app in well under budget"
     ;; VALIDATE-OPTION-RELATIONSHIPS-DECLARED used to rebuild

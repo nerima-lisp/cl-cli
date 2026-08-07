@@ -95,6 +95,8 @@
    :default-runtime-markers
    :define-app
    :define-command
+   :define-option
+   :define-positional
    :exclusive-group
    :extract-application-argv
    :inclusive-group

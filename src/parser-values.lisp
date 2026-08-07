@@ -1,9 +1,5 @@
 (in-package :cl-cli)
 
-(defparameter *environment-variable-reader*
-  #+sbcl #'host-kit:getenv
-  #-sbcl #'uiop:getenv)
-
 (defvar *option-value-sources* nil
   "Accumulates the provenance of every option value NOT taken from the argv.
 
@@ -27,29 +23,6 @@ VALUE uses to fall back to a plain O(n) APPEND for standalone callers.")
 (defun %record-option-source (spec source)
   "Note that SPEC's value was supplied by SOURCE (:env / :config / :default)."
   (setf (getf *option-value-sources* (option-key spec)) source))
-
-(defvar *option-config-values* nil
-  "A plist of option-key -> value consulted for option defaults.
-
-Bound by PARSE-ARGV / RUN-APP from their :CONFIG argument, this lets a caller
-supply values from a loaded configuration file. It sits below CLI arguments and
-environment variables but above literal :default in the precedence chain, so an
-explicit CLI value or environment variable still wins. Values are coerced the
-same way literal defaults are (a string is run through the option parser, a list
-is spread, a delimited option splits a string value).")
-
-(defparameter *config-absent-sentinel* (list :config-absent)
-  "A unique object returned by GETF when a config key is truly absent.
-
-A fresh list is EQ only to itself, so this distinguishes \"no config entry\"
-from a legitimate config value of NIL (or any keyword).")
-
-(defun option-config-value (spec)
-  "Return (VALUES config-value present-p) for SPEC from *OPTION-CONFIG-VALUES*."
-  (let ((value (getf *option-config-values* (option-key spec) *config-absent-sentinel*)))
-    (if (eq value *config-absent-sentinel*)
-        (values nil nil)
-        (values value t))))
 
 (defun option->plist-key (spec)
   (if (typep spec 'option-spec)
@@ -99,71 +72,70 @@ already known truthy (:LAZY or a hash table), never when it is the NIL
         (setf (getf values key) value)))
   values)
 
-(defun option-environment-value (spec)
-  (loop for env-var in (option-env-vars spec)
-        for raw-value = (funcall *environment-variable-reader* env-var)
-        when raw-value
-          do (return (values raw-value t))
-        finally (return (values nil nil))))
+(defun %validate-choice-value (choices raw-value condition message &rest initargs)
+  (when (and choices
+             (stringp raw-value)
+             (not (member raw-value choices :test #'string=)))
+    (apply #'signal-cli-error condition message initargs)))
 
-(defun coerce-option-default-value (spec raw-value)
-  (if (stringp raw-value)
-      (parse-option-value spec raw-value)
-      raw-value))
-
-(defun coerce-positional-default-value (spec raw-value)
-  (if (stringp raw-value)
-      (parse-positional-value spec raw-value)
-      raw-value))
+(defmacro %parse-value-with-handler (parser raw-value condition message &rest initargs)
+  `(with-value-parse-errors (,condition
+                             ,message
+                             ,@initargs)
+     (funcall ,parser ,raw-value)))
 
 (defun validate-option-choice (spec raw-value)
   (let ((choices (option-choices spec)))
-    (when (and choices
-               (stringp raw-value)
-               (not (member raw-value choices :test #'string=)))
-      (signal-cli-error 'cli-invalid-option-value
-                        (format nil "Invalid value for ~A: ~A (expected one of: ~{~A~^, ~})~A"
-                                (%option-display-name spec)
-                                raw-value
-                                choices
-                                (format-suggestion-suffix raw-value choices))
-                        :option (option-key spec)
-                        :value raw-value))))
+    (%validate-choice-value
+     choices
+     raw-value
+     'cli-invalid-option-value
+     (format nil "Invalid value for ~A: ~A (expected one of: ~{~A~^, ~})~A"
+             (%option-display-name spec)
+             raw-value
+             choices
+             (format-suggestion-suffix raw-value choices))
+     :option (option-key spec)
+     :value raw-value)))
 
 (defun parse-option-value (spec raw-value)
   (validate-option-choice spec raw-value)
-  (with-value-parse-errors ('cli-invalid-option-value
-                            (format nil "Invalid value for ~A: ~A"
-                                    (%option-display-name spec)
-                                    raw-value)
-                            :option (option-key spec)
-                            :value raw-value)
-    (funcall (option-parser spec) raw-value)))
+  (%parse-value-with-handler
+   (option-parser spec)
+   raw-value
+   'cli-invalid-option-value
+   (format nil "Invalid value for ~A: ~A"
+           (%option-display-name spec)
+           raw-value)
+   :option (option-key spec)
+   :value raw-value))
 
 (defun validate-positional-choice (spec raw-value)
   (let ((choices (positional-choices spec)))
-    (when (and choices
-               (stringp raw-value)
-               (not (member raw-value choices :test #'string=)))
-      (signal-cli-error 'cli-invalid-positional-value
-                        (format nil "Invalid value for positional ~A: ~A ~
-                                     (expected one of: ~{~A~^, ~})~A"
-                                (positional-key spec)
-                                raw-value
-                                choices
-                                (format-suggestion-suffix raw-value choices))
-                        :name (positional-key spec)
-                        :value raw-value))))
+    (%validate-choice-value
+     choices
+     raw-value
+     'cli-invalid-positional-value
+     (format nil "Invalid value for positional ~A: ~A ~
+                  (expected one of: ~{~A~^, ~})~A"
+             (positional-key spec)
+             raw-value
+             choices
+             (format-suggestion-suffix raw-value choices))
+     :name (positional-key spec)
+     :value raw-value)))
 
 (defun parse-positional-value (spec raw-value)
   (validate-positional-choice spec raw-value)
-  (with-value-parse-errors ('cli-invalid-positional-value
-                            (format nil "Invalid value for positional ~A: ~A"
-                                    (positional-key spec)
-                                    raw-value)
-                            :name (positional-key spec)
-                            :value raw-value)
-    (funcall (positional-parser spec) raw-value)))
+  (%parse-value-with-handler
+   (positional-parser spec)
+   raw-value
+   'cli-invalid-positional-value
+   (format nil "Invalid value for positional ~A: ~A"
+           (positional-key spec)
+           raw-value)
+   :name (positional-key spec)
+   :value raw-value))
 
 (defun prepare-option-parser-state (app option-specs &optional cache)
   ;; The declared option-relationship graph is validated once, at spec
@@ -193,66 +165,6 @@ already known truthy (:LAZY or a hash table), never when it is the NIL
     (let ((key (option-key spec)))
       (when (plist-has-key-p parsed-values key)
         (funcall fn spec key (getf parsed-values key))))))
-
-(defun %option-delimited-p (spec)
-  (and (typep spec 'option-spec)
-       (option-value-delimiter spec)))
-
-(defun %resolved-default-pieces (spec raw)
-  "Split a resolved default/config value RAW into the pieces to store for SPEC.
-
-Delimited: a list stays, a string splits on the delimiter, NIL is empty.
-Repeatable: a list stays, else a one-element list. Otherwise a one-element list
-(so a scalar -- including NIL -- is stored once)."
-  (cond
-    ((%option-delimited-p spec)
-     (cond
-       ((null raw) nil)
-       ((listp raw) raw)
-       ((stringp raw) (split-delimited-value raw (option-value-delimiter spec)))
-       (t (list raw))))
-    ((option-multiple-p spec)
-     (if (listp raw) raw (list raw)))
-    (t (list raw))))
-
-(defun apply-resolved-default (values spec raw)
-  "Store RAW as SPEC's value using default coercion semantics.
-
-A string piece is run through the option parser; a non-string is stored as-is.
-A delimited option always accumulates its pieces into a list; a repeatable
-option accumulates too; otherwise the single value is stored directly. This is
-shared by both literal :default and :config resolution so they behave alike."
-  (let ((append-p (%option-delimited-p spec)))
-    (dolist (piece (%resolved-default-pieces spec raw) values)
-      (let ((coerced (coerce-option-default-value spec piece)))
-        (setf values (if append-p
-                         (%append-option-value values spec coerced)
-                         (store-option-value values spec coerced)))))))
-
-(defun apply-option-defaults (values specs)
-  (dolist (spec specs values)
-    (unless (plist-has-key-p values (option-key spec))
-      (multiple-value-bind (raw-env-value env-present-p)
-          (option-environment-value spec)
-        (multiple-value-bind (config-value config-present-p)
-            (option-config-value spec)
-          (cond
-            ;; Precedence below an explicit CLI value: env var, then :config,
-            ;; then literal :default. A delimited env value is split the same way
-            ;; a CLI value would be, so `TAGS=a,b,c` matches `--tags a,b,c`.
-            ((and env-present-p (%option-delimited-p spec))
-             (%record-option-source spec :env)
-             (setf values (store-delimited-option-value values spec raw-env-value)))
-            (env-present-p
-             (%record-option-source spec :env)
-             (setf values (store-option-value values spec
-                                              (parse-option-value spec raw-env-value))))
-            (config-present-p
-             (%record-option-source spec :config)
-             (setf values (apply-resolved-default values spec config-value)))
-            ((option-default-present-p spec)
-             (%record-option-source spec :default)
-             (setf values (apply-resolved-default values spec (option-default spec))))))))))
 
 (defun validate-required-options (values specs)
   (dolist (spec specs values)

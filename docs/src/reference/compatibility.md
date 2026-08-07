@@ -86,15 +86,15 @@ what is believed to work.
 
 ## Platforms
 
-CI runs on `x86_64-linux` only, and the Nix flake declares outputs for exactly
-that one system — `aarch64-linux`, `aarch64-darwin`, and `x86_64-darwin` were
-each declared at one point but never built or tested anywhere, so the flake no
-longer advertises them; `nix develop`/`nix build` produce nothing on those
-hosts. There is no OS-specific code in the library, though: the completion
-renderers emit scripts for shells, not for operating systems, and the
-PowerShell renderer is as usable on Linux as on Windows. Loading `cl-cli`
-outside Nix is not limited to this platform; it is what the flake's own checks
-verify, not a constraint on the library itself.
+CI runs on `x86_64-linux`. The Nix flake declares outputs for that system and
+for `aarch64-darwin`, where the development shell and package are maintained
+but not covered by the CI gate. `aarch64-linux` and `x86_64-darwin` are not
+declared, so `nix develop`/`nix build` need a builder for one of the supported
+systems on those hosts. There is no OS-specific code in the library, though:
+the completion renderers emit scripts for shells, not for operating systems,
+and the PowerShell renderer is as usable on Linux as on Windows. Loading
+`cl-cli` outside Nix is not limited to these platforms; they describe what the
+flake's own checks verify, not a constraint on the library itself.
 
 ## Deprecation
 

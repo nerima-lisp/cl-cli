@@ -6,6 +6,12 @@
 ;;; :command, :commands-from) rather than re-testing option/positional
 ;;; behavior already covered elsewhere.
 
+(define-option *dsl-shared-json-option*
+  :name "json" :kind :flag :description "Emit JSON.")
+
+(define-positional *dsl-shared-input-positional*
+  :key :input :required-p t :description "Input path.")
+
 (define-app *dsl-demo-app*
     (:name "dsl-demo" :summary "A DEFINE-APP smoke test app.")
   (:option "verbose" :short #\v :kind :flag)
@@ -25,7 +31,27 @@
     (:name "dsl-reuser")
   (:commands-from (list *dsl-shared-status-command*)))
 
+(defparameter *dsl-command-source-evaluation-count* 0)
+
+(defparameter *dsl-functional-app-reusing-shared-specs*
+  (make-app
+   :name "functional-reuser"
+   :global-options (list *dsl-shared-json-option*)
+   :commands (list
+              (make-command
+               :name "convert"
+               :positionals (list *dsl-shared-input-positional*)))))
+
+(defun assert-invalid-dsl (form)
+  (expect (lambda ()
+            (macroexpand-1 form))
+          :to-throw 'error))
+
 (describe-sequential "define-app/define-command DSL"
+  (it "binds DEFINE-OPTION and DEFINE-POSITIONAL names to reusable specs"
+    (expect (equal (option-key *dsl-shared-json-option*) :json))
+    (expect (equal (positional-key *dsl-shared-input-positional*) :input)))
+
   (it "builds global options via :option clauses"
     (expect (equal (mapcar #'option-key (app-global-options *dsl-demo-app*))
                   '(:verbose))))
@@ -37,6 +63,21 @@
   (it "splices :commands-from's list alongside :command clauses"
     (expect (equal (mapcar #'command-name (app-commands *dsl-demo-app*))
                   '("help" "version" "completion" "compile"))))
+
+  (it "evaluates a :commands-from form once when binding an app"
+    (setf *dsl-command-source-evaluation-count* 0)
+    (let ((name (gensym "DSL-EVALUATED-APP-")))
+      (eval
+       (macroexpand-1
+        `(define-app ,name
+             (:name "dsl-evaluated")
+           (:commands-from
+            (progn
+              (incf *dsl-command-source-evaluation-count*)
+              (list *dsl-shared-status-command*))))))
+      (expect (= *dsl-command-source-evaluation-count* 1))
+      (expect (eq (first (app-commands (symbol-value name)))
+                  *dsl-shared-status-command*))))
 
   (it "builds a :command clause's own options and positionals"
     (let ((compile-command (find "compile" (app-commands *dsl-demo-app*)
@@ -77,17 +118,35 @@
     (expect (eq (first (app-commands *dsl-app-reusing-shared-command*))
                *dsl-shared-status-command*)))
 
+  (it "reuses DEFINE-OPTION and DEFINE-POSITIONAL specs through the functional API"
+    (expect (eq (first (app-global-options *dsl-functional-app-reusing-shared-specs*))
+               *dsl-shared-json-option*))
+    (expect (eq (first (command-positionals
+                        (first (app-commands *dsl-functional-app-reusing-shared-specs*))))
+               *dsl-shared-input-positional*)))
+
   (it "signals a clear error for a clause headed by an unknown keyword"
     (signals error
       (macroexpand-1 '(define-app *bad-dsl-app* ()
-                       (:not-a-real-clause "x")))))
+                       (:not-a-real-clause "x"))))))
 
-  (it "rejects DSL args that repeat reserved aggregate keys"
-    (signals error
-      (macroexpand-1 '(define-app *bad-dsl-app* (:name "dup" :commands nil)
-                       (:command "ok" ())))))
+(describe-sequential "define-app/define-command validation"
+  (it "requires exactly one :commands-from form"
+    (assert-invalid-dsl
+     '(define-app *bad-dsl-app* ()
+       (:commands-from)))
+    (assert-invalid-dsl
+     '(define-app *bad-dsl-app* ()
+       (:commands-from '(list) '(list)))))
 
-  (it "rejects :commands-from clauses with more than one source form"
-    (signals error
-      (macroexpand-1 '(define-command *bad-dsl-command* (:name "dup")
-                       (:commands-from (list 1) (list 2)))))))
+  (it "rejects malformed DSL argument plists"
+    (assert-invalid-dsl
+     '(define-app *bad-dsl-app* (:name "bad" :summary)))
+    (assert-invalid-dsl
+     '(define-command *bad-dsl-command* (:name "bad" :options nil))))
+
+  (it "rejects duplicate structure keys supplied by the DSL"
+    (assert-invalid-dsl
+     '(define-app *bad-dsl-app* (:name "bad" :commands nil)))
+    (assert-invalid-dsl
+     '(define-command *bad-dsl-command* (:name "bad" :subcommands nil)))))

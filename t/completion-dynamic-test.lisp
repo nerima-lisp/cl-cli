@@ -127,4 +127,47 @@ branch	desc")
         "def \"nu-complete tool branch\" [] {"
         "  ^\"tool\" __complete branch | lines | each")
       (assert-searches (render-completion app "elvish")
-        "(external 'tool') __complete $dynamic[$prev] $words[-1]"))))
+        "(external 'tool') __complete $dynamic[$prev] $words[-1]")))
+
+(it "indexes dynamic specs in nested commands"
+  (let* ((branch-option
+           (make-option
+            :name "branch"
+            :kind :value
+            :complete (lambda (partial)
+                        (declare (ignore partial))
+                        (list "main"))))
+         (static-option
+           (make-option :name "verbose" :kind :flag))
+         (host-positional
+           (make-positional
+            :key :host
+            :complete (lambda (partial)
+                        (declare (ignore partial))
+                        (list "origin"))))
+         (mode-option
+           (make-option
+            :name "mode"
+            :kind :value
+            :complete (lambda (partial)
+                        (declare (ignore partial))
+                        (list "fast"))))
+         (add-command
+           (make-command :name "add"
+                         :options (list mode-option)))
+         (remote-command
+           (make-command :name "remote"
+                         :options (list branch-option static-option)
+                         :positionals (list host-positional)
+                         :subcommands (list add-command)))
+         (app (make-app :name "tool" :commands (list remote-command)))
+         (index (cl-cli::%dynamic-completion-index app)))
+    (expect (gethash "branch" index))
+    (expect (not (gethash "verbose" index)))
+    (expect (gethash "host" index))
+    (expect (gethash "mode" index))
+    (assert-searches
+     (with-string-output (stream)
+       (render-complete-reply app "mode" "" stream))
+     "fast")))
+)

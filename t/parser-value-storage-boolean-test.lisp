@@ -26,6 +26,7 @@
       (expect (eq (funcall (option-parser threads) "nil") nil))
       (signals cli-invalid-option-value
         (funcall (option-parser threads) "maybe"))))
+  (it "uses a short display name for an invalid boolean designator" (let ((switch (make-option :name "x" :kind :boolean))) (caught-signal= (cli-invalid-option-value condition) (funcall (option-parser switch) "maybe") (:searches cli-error-message "Invalid value for -x: maybe"))))
 
   (it "parses environment defaults"
     (let ((threads (make-option :name "threads"
