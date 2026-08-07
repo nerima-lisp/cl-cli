@@ -59,6 +59,14 @@
            (text (json-text app)))
       (assert-searches text "\"delimiter\":\",\"" "\"default\":[\"a\",\"b\"]")))
 
+  (it "encodes a symbol default as a JSON string"
+    (let* ((app (make-app :name "tool"
+                          :global-options (list (make-option :name "mode"
+                                                             :kind :value
+                                                             :default :fast))))
+           (text (json-text app)))
+      (assert-searches text "\"default\":\"FAST\"")))
+
   (it "escapes special characters in strings"
     (let* ((app (make-app :name "tool"
                           :global-options (list (make-option :name "note"
@@ -124,7 +132,8 @@
     ;; (nerima-lisp/cl-json-kit, a test-only dependency), so decoding the
     ;; writer's own output back and comparing to the original string proves
     ;; genuine round-trip correctness.
-    (let* ((original "a\"b\\c \t\n \"quoted\" \\backslash\\")
+    (let* ((original (format nil "a\"b\\c ~C~C~C \"quoted\" \\backslash\\"
+                             #\Tab #\Newline #\Return))
            (app (make-app :name "tool"
                           :global-options (list (make-option :name "note"
                                                              :kind :value

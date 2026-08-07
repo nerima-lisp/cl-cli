@@ -13,6 +13,7 @@
   (it "consumes N tokens after a short option"
     (with-parsed-argv (inv (multi-value-app :type :integer) '("tool" "-p" "3" "4"))
       (expect (equal (option-value inv :point) '(3 4)))))
+  (it "rejects an attached value for a short multi-value option" (signals cli-usage-error (parse-argv (multi-value-app) (quote ("tool" "-p3" "4")))))
 
   (it "signals a missing value when too few tokens remain"
     (signals cli-missing-option-value

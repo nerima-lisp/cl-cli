@@ -44,6 +44,17 @@
                                                                                    :consume-optional-value-p t)))
                           '("cc" "-c" "true"))
       (option-values= inv :coverage "true")))
+  (it "keeps a bare short optional value as true" (with-parsed-argv (inv (make-app :name "cc" :global-options (list (optional-value-option "coverage" :short #\c :consume-optional-value-p t))) (quote ("cc" "-c"))) (option-values= inv :coverage t)))
+  (it "accepts an attached short optional value" (with-parsed-argv (inv (make-app :name "cc" :global-options (list (optional-value-option "coverage" :short #\c :consume-optional-value-p t))) (quote ("cc" "-cmcdc"))) (option-values= inv :coverage "mcdc")))
+
+  (it "short optional value leaves an option-like token unconsumed"
+    (with-parsed-argv (inv (make-app :name "cc"
+                                     :global-options (list (optional-value-option "coverage"
+                                                                                   :short #\c
+                                                                                   :consume-optional-value-p t)))
+                          '("cc" "-c" "--help"))
+      (option-values= inv :coverage t)
+      (expect (eq (invocation-action inv) :help))))
 
   (it "stop parsing option preserves remaining arguments"
     (with-parsed-invocations (app (make-app
@@ -78,6 +89,7 @@
                                                                          :kind :value)))
                           '("cl-tmux" "-S/tmp/tmux.sock"))
       (option-values= inv :socket "/tmp/tmux.sock")))
+  (it "rejects an attached value for a long flag" (signals cli-usage-error (parse-argv (make-app :name "tool" :global-options (list (make-option :name "verbose" :kind :flag))) (quote ("tool" "--verbose=true")))))
 
   (it "stop parsing script mode can normalize opaque tail"
     (with-parsed-argv (inv (make-app
@@ -100,6 +112,16 @@
                                                                 :default '("src" "tests"))))
                           '("tool"))
       (expect (equal (positional-value inv :args) '("src" "tests")))))
+
+  (it "uses an explicit nil default for an empty rest positional"
+    (with-parsed-argv (inv (make-app
+                            :name "tool"
+                            :positionals (list (make-positional :key :args
+                                                                :rest-p t
+                                                                :default nil)))
+                          '("tool"))
+      (expect (member :args (invocation-positionals inv)))
+      (expect (null (positional-value inv :args)))))
 
   (it "preserves explicit nil option default"
     (let ((app (make-app

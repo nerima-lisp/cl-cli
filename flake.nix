@@ -25,7 +25,7 @@
     # input graph into flake.lock. They earn it by being consumed for their
     # `lib` outputs, which a bare source tree cannot provide.
     cl-nix-forge = {
-      url = "github:nerima-lisp/cl-nix-forge/v0.4.0";
+      url = "github:nerima-lisp/cl-nix-forge/v0.5.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -35,7 +35,7 @@
     # check` gate instead of something only an interactive session would ever
     # notice -- a truncated `defun` still reads as a plausible diff.
     paredit-cli = {
-      url = "github:nerima-lisp/paredit-cli/v1.4.0";
+      url = "github:nerima-lisp/paredit-cli/v1.5.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -67,86 +67,61 @@
     # member -- see its 2026-08-01 revision -- only that depth still
     # decreases strictly along every edge, which `cl-cli -> cl-host-kit`
     # satisfies (depth 0 -> 1).
-    # 2026-08-02: cl-weave's main system used to grow a
-    # `(:require "sb-cover")` on every tag from v1.1.0 through v1.1.2,
-    # SBCL-only, which took the ECL half of the suite below out at load
-    # time ("Module error: Don't know how to REQUIRE sb-cover"). Two
-    # rounds of upstream fixes, each verified against this repo's own
-    # checks.ecl after two premature bump attempts here first found them
-    # incomplete: nerima-lisp/cl-weave#36 (the sb-cover :depends-on
-    # itself, released v1.1.3) and #37 (five more unguarded SB-EXT
-    # references the first fix had been masking -- src/cli-image.lisp
-    # and four spots in t/ -- released v1.1.4, this pin). Both extend
-    # cl-weave's own existing platform-protocol.lisp/platform-sbcl.lisp
-    # capability-dispatch pattern, already used correctly for its
-    # :timeout feature, rather than inventing a new shape. If a future
-    # cl-weave bump ever reproduces an ECL load failure, re-open the
-    # upstream issue with the exact error rather than reverting this pin
-    # blind -- see project memory under
-    # `project_cl_weave_ecl_portability` for the full history.
     cl-weave = {
-      url = "github:nerima-lisp/cl-weave/v1.1.4";
+      url = "github:nerima-lisp/cl-weave/v1.3.0";
       flake = false;
     };
 
     cl-prolog = {
-      url = "github:nerima-lisp/cl-prolog/v1.3.0";
+      url = "github:nerima-lisp/cl-prolog/v1.4.3";
       flake = false;
     };
 
     cl-process-kit = {
-      url = "github:nerima-lisp/cl-process-kit/v3.1.0";
+      url = "github:nerima-lisp/cl-process-kit/v3.2.0";
       flake = false;
     };
 
-    # v1.0.0, not the latest v2.0.1: pinned to match the exact version
-    # cl-process-kit v3.1.0's OWN flake.lock verifies against (still
-    # `:depends-on (:asdf :cl-log-kit)` there -- v2.0.1 replaced that edge
-    # with `:cl-host-kit`, a combination cl-process-kit's own suite has
-    # never been run against). Bumping past what upstream itself tested
-    # would trade a verified pin for an unverified guess.
     cl-boundary-kit = {
-      url = "github:nerima-lisp/cl-boundary-kit/v2.0.1";
+      url = "github:nerima-lisp/cl-boundary-kit/v2.3.0";
       flake = false;
     };
 
     cl-log-kit = {
-      url = "github:nerima-lisp/cl-log-kit/v2.0.1";
+      url = "github:nerima-lisp/cl-log-kit/v2.2.0";
       flake = false;
     };
 
-    # Neither of these is a dependency cl-cli names anywhere. cl-log-kit
-    # v2.0.1's own `:depends-on` is `((:version "cl-date-kit" "0.2.0")
-    # (:version "cl-concurrent-kit" "0.1.0") (:version "cl-host-kit" "0.2.0"))`,
-    # and `siblingSystem` below resolves a system's graph only from the
-    # `lispDependencies` it is handed -- never from the .asd -- so a
-    # transitive edge is invisible until it is spelled out. It was: the
-    # shell-verification half of the suite died with `Component "cl-date-kit"
-    # not found, required by #<SYSTEM "cl-log-kit">`.
+    # cl-cli does not name these systems directly, but the shell-verification
+    # closure does. cl-concurrent-kit v0.6.1 depends on cl-boundary-kit and
+    # cl-date-kit, while cl-log-kit v2.2.0 depends on cl-concurrent-kit,
+    # cl-date-kit, and cl-host-kit. `siblingSystem` below resolves a system's
+    # graph only from the `lispDependencies` it is handed -- never from the
+    # sibling .asd -- so every transitive edge must be spelled out here.
     #
     # Both are `:depends-on ()` leaves, so neither drags anything further in.
     cl-date-kit = {
-      url = "github:nerima-lisp/cl-date-kit/v0.2.0";
+      url = "github:nerima-lisp/cl-date-kit/v1.0.0";
       flake = false;
     };
 
     cl-concurrent-kit = {
-      url = "github:nerima-lisp/cl-concurrent-kit/v0.4.2";
+      url = "github:nerima-lisp/cl-concurrent-kit/v0.6.1";
       flake = false;
     };
 
-    # cl-process-kit v3.0.0 migrated its UTF-8/octet handling onto this
+    # cl-process-kit v3.2.0 migrated its UTF-8/octet handling onto this
     # (previously hand-rolled), so it is now a real transitive dependency of
     # the base "cl-process-kit" ASDF system, not just its PTY extension.
     # Dependency-free (`:depends-on ()`), SBCL-only usage here since its only
     # consumer, cl-process-kit, is.
     cl-codec-kit = {
-      url = "github:nerima-lisp/cl-codec-kit/v0.4.0";
+      url = "github:nerima-lisp/cl-codec-kit/v0.5.0";
       flake = false;
     };
 
     cl-json-kit = {
-      url = "github:nerima-lisp/cl-json-kit/v1.0.2";
+      url = "github:nerima-lisp/cl-json-kit/v1.2.0";
       flake = false;
     };
 
@@ -157,7 +132,7 @@
     # why cl-cli.asd guards it with a `#+sbcl` reader conditional and why
     # `eclPackage` below explicitly excludes it from the ECL build.
     cl-host-kit = {
-      url = "github:nerima-lisp/cl-host-kit/v0.2.5";
+      url = "github:nerima-lisp/cl-host-kit/v0.3.1";
       flake = false;
     };
 
@@ -304,10 +279,11 @@
       # reason cl-cli.asd splits the shell-verification half of the suite into
       # its own system. An `ecl` flavour of these would be an evaluation error
       # waiting for somebody to add it to the ECL check.
-      # cl-log-kit v2.0.1's three `:depends-on` edges, all spelled out because
-      # `siblingSystem` reads the graph from here and not from the .asd. The two
-      # kit systems below are `:depends-on ()` leaves; cl-host-kit is the same
-      # derivation cl-cli's own runtime dependency uses.
+      # cl-concurrent-kit v0.6.1 now depends on both cl-boundary-kit and
+      # cl-date-kit, and cl-log-kit v2.2.0 depends on cl-concurrent-kit,
+      # cl-date-kit and cl-host-kit. Those edges are spelled out here because
+      # `siblingSystem` reads the graph from this file, not from the sibling
+      # .asd forms.
       clDateKitSystem =
         ctx:
         siblingSystem ctx {
@@ -322,6 +298,10 @@
           pname = "cl-concurrent-kit";
           source = cl-concurrent-kit;
           lisp = ctx.pkgs.sbcl;
+          lispDependencies = [
+            (clBoundaryKitSystem ctx)
+            (clDateKitSystem ctx)
+          ];
         };
 
       clLogKitSystem =
@@ -337,26 +317,20 @@
           ];
         };
 
-      # cl-boundary-kit v1.0.0 (the version pinned here) still
-      # `:depends-on (:asdf :cl-log-kit)`; v2.0.1 replaced that edge with
-      # `:cl-host-kit` instead, which is why this pin stays at v1.0.0 rather
-      # than the latest tag -- see the flake input's own comment. That edge is
-      # easy to miss by reading a working checkout instead of the pinned tag,
-      # and the previous run-tests.lisp arrangement hid it too, because
-      # registering all three .asd files up front let ASDF resolve the graph
-      # in whatever order it liked. Here the graph has to be declared, so a
-      # wrong edge is a build failure.
+      # cl-boundary-kit v2.3.0 depends on cl-host-kit, not cl-log-kit. The
+      # hand-written closure here has to match the pinned tag exactly or ASDF
+      # resolution fails inside the sibling build sandbox.
       clBoundaryKitSystem =
         ctx:
         siblingSystem ctx {
           pname = "cl-boundary-kit";
           source = cl-boundary-kit;
           lisp = ctx.pkgs.sbcl;
-          lispDependencies = [ (clLogKitSystem ctx) ];
+          lispDependencies = [ (clHostKitSystem ctx) ];
         };
 
       # Dependency-free (`:depends-on ()`), so no `lispDependencies` of its
-      # own. cl-process-kit v3.0.0 migrated its hand-rolled UTF-8/octet
+      # own. cl-process-kit v3.2.0 migrated its hand-rolled UTF-8/octet
       # handling onto this, making it a real transitive dependency of the
       # base "cl-process-kit" system.
       clCodecKitSystem =
@@ -498,7 +472,7 @@
 
       # Single source of truth for the package version: the `:version` form in
       # cl-cli.asd, so the flake can never drift from the ASDF system
-      # definition. All three systems in that file declare the same version;
+      # definition. All four systems in that file declare the same version;
       # `fromAsdSystem` accepts that unanimity and refuses to pick a winner if
       # they ever disagree -- which the hand-rolled `builtins.match` this
       # replaces did not, since it simply took the first matching line.
@@ -515,7 +489,6 @@
       # nothing else unless named here. README.md is named because cl-cli.asd
       # reads it at ASDF-LOAD time, for `:long-description`, so its absence is
       # not a missing docs file but a system that cannot be found at all.
-      # Nothing else in src/, t/ or examples/ opens a file it does not create.
       sourceInclude = [ ./README.md ];
 
       meta = {
@@ -531,7 +504,13 @@
       # assembling that registry is `lispDerivation`'s job and it does it
       # transitively, which is why cl-process-kit alone stands in for itself
       # plus cl-boundary-kit plus cl-log-kit.
-      lispCheckDependencies = ctx: coreTestSystems ctx ctx.pkgs.sbcl ++ [ (clProcessKitSystem ctx) ];
+      lispCheckDependencies =
+        ctx:
+        coreTestSystems ctx ctx.pkgs.sbcl
+        ++ [
+          (clConcurrentKitSystem ctx)
+          (clProcessKitSystem ctx)
+        ];
 
       # The real (non-test) dependency cl-cli.asd's `#+sbcl "cl-host-kit"`
       # names. SBCL-only; `eclPackage` above explicitly zeroes this back out
@@ -575,11 +554,15 @@
       # one -- so `sbcl --script run-tests.lisp` inside `nix develop` resolves
       # cl-weave and finds zsh on PATH without either being named again here.
       # ecl is not that derivation's implementation, so it does need naming.
-      devShellPackages = ctx: [
-        ctx.pkgs.ecl
-        ctx.pkgs.rlwrap
-        paredit-cli.packages.${ctx.system}.default
-      ];
+      devShellPackages =
+        ctx:
+        [
+          ctx.pkgs.ecl
+          ctx.pkgs.rlwrap
+        ]
+        ++
+          nixpkgs.lib.optional (builtins.hasAttr ctx.system paredit-cli.packages)
+            paredit-cli.packages.${ctx.system}.default;
 
       # `apps.test`: see `testApp` -- the generated app is kept, wrapped only to
       # give the shell-verification cases the tools they self-skip without.
@@ -622,79 +605,130 @@
         packages.cl-cli-demo = demoExecutable ctx;
         apps.cl-cli-demo = ctx.cl.mkApp { drv = demoExecutable ctx; };
 
-        checks = {
-          # The same run-tests.lisp entry point as `checks.default`, under ECL.
-          # One runner serves both because its own guard is a capability check:
-          # it loads the shell-verification half only where SB-THREAD exists and
-          # cl-process-kit is on the registry, and says which half it ran.
-          ecl = ctx.cl.mkScriptCheck {
-            drv = eclPackage ctx;
-            entryPoint = "run-tests.lisp";
-            name = "cl-cli-ecl-test";
-            timeoutSeconds = 600;
-          };
+        checks = (
+          {
+            # The same run-tests.lisp entry point as `checks.default`, under ECL.
+            # One runner serves both because its own guard is a capability check:
+            # it loads the shell-verification half only where SB-THREAD exists and
+            # cl-process-kit is on the registry, and says which half it ran.
+            ecl = ctx.cl.mkScriptCheck {
+              drv = eclPackage ctx;
+              entryPoint = "run-tests.lisp";
+              name = "cl-cli-ecl-test";
+              timeoutSeconds = 600;
+            };
+          }
 
           # Structural parse gate over every Lisp source in the filtered tree:
           # fails if any .lisp/.asd file is not a balanced S-expression
           # document. The suite would not catch it -- an unbalanced file makes
           # ASDF fail to load the system, which reads like any other build
           # error and points at the wrong cause.
-          paredit-lint = paredit-cli.lib.${ctx.system}.mkLintCheck {
-            inherit (ctx) src;
-            name = "cl-cli-paredit-lint";
-          };
+          // nixpkgs.lib.optionalAttrs (builtins.hasAttr ctx.system paredit-cli.lib) {
+            paredit-lint = paredit-cli.lib.${ctx.system}.mkLintCheck {
+              inherit (ctx) src;
+              name = "cl-cli-paredit-lint";
+            };
+          }
 
-          # An sb-cover HTML coverage report for `src/`, as a buildable
-          # artifact rather than a pass/fail gate -- `nix build
-          # .#checks.<system>.coverage --no-link --print-out-paths` prints a
-          # store path whose `cover-index.html` is the report to open.
-          #
-          # This exists because an interactive `sbcl --script` coverage run
-          # against the nix-store sibling dependencies (cl-weave, cl-prolog,
-          # ...) hangs indefinitely on this org's shared dev machines for
-          # reasons never root-caused -- see the project memory this repo's
-          # sessions keep under `reference_cl_cli_interactive_sbcl_hang`. The
-          # identical dependency graph builds correctly and quickly inside the
-          # Nix sandbox, which is what this check exploits: it never touches
-          # an interactive SBCL session at all.
-          #
-          # `ctx.cl.mkCoverageReport` is cl-nix-forge's own battery for
-          # exactly this (`lib/batteries/coverage.nix`) -- built from
-          # `ctx.package`, the SAME doCheck-false derivation `checks.default`
-          # is built from via `mkScriptCheck`, so this costs no build that
-          # check does not already pay for. It handles the
-          # `(declaim (optimize sb-cover:store-coverage-data))` /
-          # `:force t` / `(declaim (optimize (sb-cover:store-coverage-data
-          # 0)))` dance itself (instrumentation is a COMPILE-time property,
-          # and `buildPhase` already compiled `cl-cli` once without it, so a
-          # forced recompile under the declaim is the only way any line ends
-          # up in the report) and fails the build outright if the report
-          # comes back empty, so a broken instrumentation path cannot pass as
-          # a silent no-op the way it did in the abandoned interactive
-          # attempt.
-          #
-          # `systems = [ "cl-cli" ]` rather than the default (`ctx.package`'s
-          # own `lispSystems`, which already resolves to just `[ "cl-cli" ]`
-          # here) is spelled out anyway: it is the one knob that decides what
-          # the report is ABOUT, and leaving it implicit would make a future
-          # multi-system change to this file silently start instrumenting
-          # `cl-cli/test` too.
-          #
-          # No coverage-percentage threshold, and cl-nix-forge deliberately
-          # offers none (see coverage.nix's own comment) -- the project's
-          # `/goal` tracks "no untested reachable branch inside a function
-          # body", which sb-cover's raw expression percentage cannot express
-          # (it under-attributes top-level `defvar`/`defstruct`/
-          # `define-condition` forms and macro-expansion-time helpers by
-          # design), so a numeric gate here would be gating on the wrong
-          # thing.
-          coverage = ctx.cl.mkCoverageReport {
-            drv = ctx.package;
-            systems = [ "cl-cli" ];
-            name = "cl-cli-coverage";
-            timeoutSeconds = 900;
-          };
-        };
+          // (
+            let
+              coverage = ctx.cl.mkCoverageReport {
+                drv = ctx.package;
+                systems = [ "cl-cli" ];
+                name = "cl-cli-coverage";
+                timeoutSeconds = 900;
+              };
+            in
+            {
+
+              # An sb-cover HTML coverage report for `src/`, as a buildable
+              # artifact rather than a pass/fail gate -- `nix build
+              # .#checks.<system>.coverage --no-link --print-out-paths` prints a
+              # store path whose `cover-index.html` is the report to open.
+              #
+              # This uses the Nix sandbox rather than an interactive SBCL process:
+              # dependency resolution and process lifetime stay bounded by the
+              # derivation, and the report is produced in a reproducible location.
+              #
+              # `ctx.cl.mkCoverageReport` is cl-nix-forge's own battery for
+              # exactly this (`lib/batteries/coverage.nix`) -- built from
+              # `ctx.package`, the SAME doCheck-false derivation `checks.default`
+              # is built from via `mkScriptCheck`, so this costs no build that
+              # check does not already pay for. It handles the
+              # `(declaim (optimize sb-cover:store-coverage-data))` /
+              # `:force t` / `(declaim (optimize (sb-cover:store-coverage-data
+              # 0)))` dance itself (instrumentation is a COMPILE-time property,
+              # and `buildPhase` already compiled `cl-cli` once without it, so a
+              # forced recompile under the declaim is the only way any line ends
+              # up in the report) and fails the build outright if the report
+              # comes back empty, so a broken instrumentation path cannot pass as
+              # a silent no-op the way it did in the abandoned interactive
+              # attempt.
+              #
+              # `systems = [ "cl-cli" ]` rather than the default (`ctx.package`'s
+              # own `lispSystems`, which already resolves to just `[ "cl-cli" ]`
+              # here) is spelled out anyway: it is the one knob that decides what
+              # the report is ABOUT, and leaving it implicit would make a future
+              # multi-system change to this file silently start instrumenting
+              # `cl-cli/test` too.
+              #
+              # `coverage-gate` reads the same report and keeps the current
+              # aggregate expression and branch coverage from regressing. The
+              # floor is intentionally below the 100% project target because
+              # sb-cover's raw expression percentage includes top-level forms and
+              # macro-expansion helpers that are not reachable runtime branches.
+              coverage = coverage;
+              coverage-gate =
+                ctx.pkgs.runCommand "cl-cli-coverage-gate"
+                  {
+                    report = coverage;
+                    nativeBuildInputs = [ ctx.pkgs.perl ];
+                  }
+                  ''
+                    perl -0777 -e '
+                      my $html = do {
+                        open my $handle, "<", "$ENV{report}/cover-index.html"
+                          or die "cannot open coverage report: $!";
+                        local $/;
+                        <$handle>
+                      };
+
+                      my ($expression_covered, $expression_total,
+                          $branch_covered, $branch_total) = (0, 0, 0, 0);
+                      while ($html =~ m{<tr[^>]*class=(?:\x27|")(?:odd|even)(?:\x27|")[^>]*>(.*?)</tr>}gs) {
+                        my @cells = $1 =~ m{<td[^>]*>(.*?)</td>}gs;
+                        next unless @cells >= 7;
+
+                        my @values;
+                        for my $cell (@cells[1 .. $#cells]) {
+                          push @values, 0 + $1 if $cell =~ /^\s*(\d+(?:\.\d+)?)\s*$/;
+                        }
+                        next unless @values >= 6;
+
+                        $expression_covered += $values[0];
+                        $expression_total += $values[1];
+                        $branch_covered += $values[3];
+                        $branch_total += $values[4];
+                      }
+
+                      die "coverage report has no source rows\n"
+                        unless $expression_total > 0 && $branch_total > 0;
+
+                      my $expression_percent =
+                        100.0 * $expression_covered / $expression_total;
+                      my $branch_percent = 100.0 * $branch_covered / $branch_total;
+                      printf "coverage: expressions %.2f%% (%d/%d), branches %.2f%% (%d/%d)\n",
+                        $expression_percent, $expression_covered, $expression_total,
+                        $branch_percent, $branch_covered, $branch_total;
+                      die "coverage regression: both metrics must remain at least 96%\n"
+                        if $expression_percent < 96.0 || $branch_percent < 96.0;
+                    '
+                    touch "$out"
+                  '';
+            }
+          )
+        );
       };
     };
 }

@@ -91,7 +91,6 @@
   (it "nests subcommands in json"
     (let ((text (with-string-output (s) (render-json (nested-app) s))))
       (assert-searches text "\"subcommands\":[" "\"name\":\"add\"" "\"name\":\"force\"")))
-
   (it "treats an unknown token as a positional when the command takes one"
     (let ((app (make-app :name "tool"
                          :commands (list (make-command
@@ -101,6 +100,17 @@
                                           :handler (lambda (inv) (declare (ignore inv)) 0))))))
       (with-parsed-argv (inv app '("tool" "run" "build.sh"))
         (expect (string= (positional-value inv :script) "build.sh")))))
+  (it "treats a bare hyphen as a positional before nested dispatch"
+  (let ((app (make-app :name "tool"
+                       :commands (list (make-command
+                                        :name "run"
+                                        :positionals (list (make-positional :key :input))
+                                        :subcommands (list (make-command :name "sub"))
+                                        :handler (lambda (inv)
+                                                   (declare (ignore inv))
+                                                   0))))))
+    (with-parsed-argv (inv app '("tool" "run" "-"))
+      (expect (string= (positional-value inv :input) "-")))))
 
   (it "rejects duplicate nested subcommand names at make time"
     (signals-invalid-specification

@@ -46,10 +46,12 @@
                (:file "src/model-lookup")
                (:file "src/option-relations")
                (:file "src/model-option")
+               (:file "src/model-option-groups")
                (:file "src/model-positional")
                (:file "src/model-command")
                (:file "src/model-validation")
                (:file "src/model-app")
+               (:file "src/model-dsl-clauses")
                (:file "src/model-dsl")
                (:file "src/util")
                (:file "src/terminal")
@@ -57,6 +59,8 @@
                (:file "src/parser-relation-validation")
                (:file "src/parser-option-consumption")
                (:file "src/parser-consumption")
+               (:file "src/parser-cps")
+               (:file "src/parser-defaults")
                (:file "src/parser-values")
                (:file "src/parser-value-storage")
                (:file "src/parser-core")
@@ -67,6 +71,7 @@
                (:file "src/help-printers")
                (:file "src/help-commands")
                (:file "src/runtime")
+               (:file "src/completion-quoting")
                (:file "src/completion-helpers")
                (:file "src/completion-renderer-helpers")
                (:file "src/completion-renderers-bash")
@@ -78,6 +83,7 @@
                (:file "src/doc-helpers")
                (:file "src/doc-renderers-manpage")
                (:file "src/doc-renderers-markdown")
+               (:file "src/doc-renderers-json-writer")
                (:file "src/doc-renderers-json")
                (:file "src/doc-commands")
                (:file "src/completion-dynamic")
@@ -125,6 +131,21 @@
 ;;; https://github.com/nerima-lisp/cl-log-kit/issues/1). Keeping the split at
 ;;; the system boundary means a non-SBCL implementation runs the core suite for
 ;;; real instead of failing to compile the whole thing.
+#+sbcl
+(asdf:defsystem "cl-cli/concurrent"
+  :description "Bounded concurrent parsing of independent cl-cli argv batches."
+  :author "takeokunn <bararararatty@gmail.com>"
+  :maintainer "takeokunn <bararararatty@gmail.com>"
+  :license "MIT"
+  :version "1.3.0"
+  :homepage +cl-cli-repository-url+
+  :bug-tracker +cl-cli-issues-url+
+  :source-control (:git +cl-cli-repository-url+)
+  :depends-on ("cl-cli" "cl-concurrent-kit")
+  :serial t
+  :components ((:file "src/concurrent-package")
+               (:file "src/concurrent")))
+
 (asdf:defsystem "cl-cli/test"
   :description "Core test system for cl-cli."
   :author "takeokunn <bararararatty@gmail.com>"
@@ -137,14 +158,20 @@
   ;; `cl-cli/demo` belongs to the PORTABLE half: it depends on nothing but
   ;; `cl-cli`, so t/demo-test.lisp runs under the ECL gate too -- which is the
   ;; only thing that would notice the demo growing an SBCL-only form.
-  :depends-on ("cl-cli" "cl-cli/demo" "cl-weave" "cl-prolog/weave" "cl-json-kit")
+  :depends-on ("cl-cli" "cl-cli/demo" "cl-weave" "cl-prolog/weave" "cl-json-kit"
+               #+sbcl "cl-cli/concurrent")
   :serial t
   :components ((:file "t/package")
                (:file "t/helpers-fixtures")
                (:file "examples/consumer-migrations")
-               (:file "t/helpers-support")
+               (:file "t/helpers-gates")
+               (:file "t/helpers-assertions")
+               (:file "t/helpers-parser")
+               (:file "t/helpers-prolog")
+               (:file "t/test-runner")
                (:file "t/package-test")
                (:file "t/parser-dispatch-test")
+               (:file "t/parser-cps-test")
                (:file "t/parser-dispatch-property-test")
                (:file "t/model-helpers-mutation-test")
                (:file "t/parser-dispatch-fuzz-test")
@@ -179,6 +206,7 @@
                (:file "t/model-validation-test")
                (:file "t/parser-values-validation-test")
                (:file "t/parser-value-storage-boolean-test")
+               (:file "t/option-relations-queries")
                (:file "t/option-relations-test")
                (:file "t/help-printers-test")
                (:file "t/help-printers-command-footer-test")
@@ -202,7 +230,8 @@
                (:file "t/doc-renderers-json-test")
                (:file "t/doc-commands-test")
                (:file "t/consumer-migrations-test")
-               (:file "t/demo-test"))
+               (:file "t/demo-test")
+               #+sbcl (:file "t/concurrent-test"))
   ;; Not UIOP:SYMBOL-CALL, and not a sibling-package prefix either: a .asd is
   ;; read by the plain CL reader before :depends-on is ever consulted, so any
   ;; PKG:SYMBOL token here must resolve against a package already present in

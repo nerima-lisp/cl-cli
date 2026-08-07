@@ -70,6 +70,15 @@
                           '("tool" "--tags" "a:b:c"))
       (expect (equal (option-value inv :tags) '("a" "b" "c")))))
 
+  (it "accepts a symbol delimiter designator"
+    (with-parsed-argv (inv (make-app
+                            :name "tool"
+                            :global-options (list (make-option :name "tags"
+                                                               :kind :value
+                                                               :value-delimiter :|,|)))
+                          '("tool" "--tags" "a,b,c"))
+      (expect (equal (option-value inv :tags) '("a" "b" "c")))))
+
   (it "surfaces the delimiter in help output"
     (with-app-help-text (text (delimited-option-app))
       (assert-searches text "list (delimited by ',')")))

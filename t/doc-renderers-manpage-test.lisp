@@ -129,4 +129,12 @@
                           :description (format nil "left~Aright" (code-char 9))))
            (text (manpage-text app)))
       (assert-searches text "left right")
-      (assert-not-searches text (format nil "left~Aright" (code-char 9))))))
+      (assert-not-searches text (format nil "left~Aright" (code-char 9)))))
+  (it "escapes literal backslashes in free-form text"
+    (let* ((app (make-app :name "tool"
+                          :description (format nil "path~Ato~Atool" #\\ #\\)))
+           (text (manpage-text app)))
+      (assert-searches text
+                       (format nil "path~Aeto~Aetool" #\\ #\\))
+      (assert-not-searches text
+                           (format nil "path~Ato~Atool" #\\ #\\)))))

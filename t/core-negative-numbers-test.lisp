@@ -32,3 +32,18 @@
   (it "treats -5 as an option cluster when the feature is disabled"
     (signals cli-unknown-option
       (parse-argv (negatives-app :allow nil) '("calc" "-5")))))
+
+(describe-sequential "property-list key presence"
+  (it "recognizes a key whose value matches the old internal sentinel"
+    (expect (cl-cli::plist-has-key-p (list :value :__missing__) :value))
+    (expect (not (cl-cli::plist-has-key-p (list :value :__missing__) :other)))))
+
+(describe-sequential "control character classification"
+  (it "recognizes C0, DEL, and C1 controls without swallowing printable boundaries"
+    (expect (cl-cli::%control-character-code-p 0))
+    (expect (cl-cli::%control-character-code-p 31))
+    (expect (cl-cli::%control-character-code-p 127))
+    (expect (cl-cli::%control-character-code-p 128))
+    (expect (cl-cli::%control-character-code-p 159))
+    (expect (not (cl-cli::%control-character-code-p 32)))
+    (expect (not (cl-cli::%control-character-code-p 160)))))

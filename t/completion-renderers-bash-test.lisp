@@ -15,6 +15,18 @@
                        "value_source=('dev' 'prod')"
                        "for comp_value in \"${value_source[@]}\"; do")))
 
+  (it "renders optional-value scan rules"
+    (let* ((app (demo-app
+                 :global-options
+                 (list (make-option :name "coverage"
+                                    :kind :optional-value
+                                    :consume-optional-value-p t
+                                    :choices '("line" "branch")))))
+           (text (render-completion app "bash")))
+      (assert-searches text
+                       "expect_optional_value=1"
+                       "value_source=('line' 'branch')")))
+
   (it "completes nested subcommands and their option scope"
     (let* ((app (demo-app
                  :global-options (list (make-option :name "verbose" :kind :flag))

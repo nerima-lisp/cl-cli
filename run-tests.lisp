@@ -7,13 +7,6 @@
 ;;; lets flake.nix's `checks.default`, `checks.ecl` and `apps.test` all invoke
 ;;; the same file a contributor invokes by hand.
 ;;;
-;;; It used to only load, leaving the running to an
-;;; `--eval '(cl-cli/test:run-tests)'` that every caller had to remember to
-;;; append -- so a caller that forgot got a green run meaning nothing more than
-;;; "the tests compiled". The older two-step invocations still work unchanged,
-;;; because the exit below happens during `--load` and the trailing `--eval`
-;;; is simply never reached.
-
 (eval-when (:load-toplevel :execute)
   (require :asdf))
 
@@ -22,6 +15,12 @@
                            (error "ASDF package is unavailable.")))
          (uiop-package (or (find-package :uiop)
                            (error "UIOP package is unavailable.")))
+         (clear-source-registry
+           (or (find-symbol "CLEAR-SOURCE-REGISTRY" asdf-package)
+               (error "ASDF does not provide CLEAR-SOURCE-REGISTRY.")))
+         (initialize-source-registry
+           (or (find-symbol "INITIALIZE-SOURCE-REGISTRY" asdf-package)
+               (error "ASDF does not provide INITIALIZE-SOURCE-REGISTRY.")))
          (load-system (or (find-symbol "LOAD-SYSTEM" asdf-package)
                           (error "ASDF does not provide LOAD-SYSTEM.")))
          (load-asd (or (find-symbol "LOAD-ASD" asdf-package)
@@ -36,52 +35,85 @@
          ;; This script sits at the repository root (PACKAGE_STANDARD.md fixes
          ;; the test entry point there), so its own directory IS the root.
          (project-root (funcall directory-pathname test-file))
-         (weave-env-source (funcall getenv "CL_WEAVE_SOURCE_DIR"))
-         (prolog-env-source (funcall getenv "CL_PROLOG_SOURCE_DIR"))
-         (boundary-kit-env-source (funcall getenv "CL_BOUNDARY_KIT_SOURCE_DIR"))
-         (log-kit-env-source (funcall getenv "CL_LOG_KIT_SOURCE_DIR"))
-         (codec-kit-env-source (funcall getenv "CL_CODEC_KIT_SOURCE_DIR"))
-         (process-kit-env-source (funcall getenv "CL_PROCESS_KIT_SOURCE_DIR"))
-         (json-kit-env-source (funcall getenv "CL_JSON_KIT_SOURCE_DIR"))
-         (weave-local-source (merge-pathnames #P"../cl-weave/" project-root))
-         (prolog-local-source (merge-pathnames #P"../cl-prolog/" project-root))
-         (boundary-kit-local-source (merge-pathnames #P"../cl-boundary-kit/" project-root))
-         (log-kit-local-source (merge-pathnames #P"../cl-log-kit/" project-root))
-         (codec-kit-local-source (merge-pathnames #P"../cl-codec-kit/" project-root))
-         (process-kit-local-source (merge-pathnames #P"../cl-process-kit/" project-root))
-         (json-kit-local-source (merge-pathnames #P"../cl-json-kit/" project-root))
-         (shell-verification-p nil))
-    (flet ((registered-source (env-source local-source)
-             (or (and env-source
-                      (plusp (length env-source))
-                      (probe-file env-source))
-                 (probe-file local-source)))
+         (dependency-parent
+           (if (search "/.worktrees/" (namestring project-root))
+               (merge-pathnames #P"../../../" project-root)
+               (merge-pathnames #P"../" project-root)))
+         (dependency-specs
+           (list (list :env "CL_WEAVE_SOURCE_DIR"
+                       :local (merge-pathnames #P"cl-weave/" dependency-parent)
+                       :asd #P"cl-weave.asd")
+                 (list :env "CL_HOST_KIT_SOURCE_DIR"
+                       :local (merge-pathnames #P"cl-host-kit/" dependency-parent)
+                       :asd #P"cl-host-kit.asd")
+                 (list :env "CL_PROLOG_SOURCE_DIR"
+                       :local (merge-pathnames #P"cl-prolog/" dependency-parent)
+                       :asd #P"cl-prolog.asd")
+                 (list :env "CL_JSON_KIT_SOURCE_DIR"
+                       :local (merge-pathnames #P"cl-json-kit/" dependency-parent)
+                       :asd #P"cl-json-kit.asd")
+                 ;; Keep shell-verification dependencies in load order:
+                 ;; cl-process-kit depends on cl-boundary-kit/cl-log-kit/
+                 ;; cl-codec-kit, and cl-log-kit depends on cl-date-kit and
+                 ;; cl-concurrent-kit.
+                 (list :env "CL_BOUNDARY_KIT_SOURCE_DIR"
+                       :local (merge-pathnames #P"cl-boundary-kit/" dependency-parent)
+                       :asd #P"cl-boundary-kit.asd"
+                       :shell-system "cl-boundary-kit")
+                 (list :env "CL_DATE_KIT_SOURCE_DIR"
+                       :local (merge-pathnames #P"cl-date-kit/" dependency-parent)
+                       :asd #P"cl-date-kit.asd"
+                       :shell-system "cl-date-kit")
+                 (list :env "CL_CONCURRENT_KIT_SOURCE_DIR"
+                       :local (merge-pathnames #P"cl-concurrent-kit/" dependency-parent)
+                       :asd #P"cl-concurrent-kit.asd"
+                       :shell-system "cl-concurrent-kit")
+                 (list :env "CL_LOG_KIT_SOURCE_DIR"
+                       :local (merge-pathnames #P"cl-log-kit/" dependency-parent)
+                       :asd #P"cl-log-kit.asd"
+                       :shell-system "cl-log-kit")
+                 (list :env "CL_CODEC_KIT_SOURCE_DIR"
+                       :local (merge-pathnames #P"cl-codec-kit/" dependency-parent)
+                       :asd #P"cl-codec-kit.asd"
+                       :shell-system "cl-codec-kit")
+                 (list :env "CL_PROCESS_KIT_SOURCE_DIR"
+                       :local (merge-pathnames #P"cl-process-kit/" dependency-parent)
+                       :asd #P"cl-process-kit.asd"
+                       :shell-system "cl-process-kit")))
+         (shell-verification-p nil)
+         (shell-verification-reason nil))
+    (flet ((registered-source (spec)
+             (let ((env-source (funcall getenv (getf spec :env)))
+                   (local-source (getf spec :local)))
+               (or (and env-source
+                   (plusp (length env-source))
+                   (probe-file env-source))
+                   (probe-file local-source))))
            (load-local-asd (source asd-name)
              (when source
                (funcall load-asd (merge-pathnames asd-name (truename source)))
-               t)))
-      (load-local-asd (registered-source weave-env-source weave-local-source)
-                      #P"cl-weave.asd")
-      (load-local-asd (registered-source prolog-env-source prolog-local-source)
-                      #P"cl-prolog.asd")
-      (load-local-asd (registered-source json-kit-env-source json-kit-local-source)
-                      #P"cl-json-kit.asd")
-      ;; cl-process-kit depends on cl-boundary-kit/cl-log-kit/cl-codec-kit, so
-      ;; those three must be registered with ASDF before cl-process-kit.asd
-      ;; loads. All four are needed only by the shell-verification half of
-      ;; the suite -- see the split rationale in cl-cli.asd.
-      (load-local-asd (registered-source boundary-kit-env-source
-                                         boundary-kit-local-source)
-                      #P"cl-boundary-kit.asd")
-      (load-local-asd (registered-source log-kit-env-source
-                                         log-kit-local-source)
-                      #P"cl-log-kit.asd")
-      (load-local-asd (registered-source codec-kit-env-source
-                                         codec-kit-local-source)
-                      #P"cl-codec-kit.asd")
-      (load-local-asd (registered-source process-kit-env-source
-                                         process-kit-local-source)
-                      #P"cl-process-kit.asd")
+               t))
+           (shell-system-available-p (spec)
+             (let ((system-name (getf spec :shell-system)))
+               (or (null system-name)
+                   (funcall find-system system-name nil))))
+           (missing-shell-systems ()
+             (loop for spec in dependency-specs
+                   for system-name = (getf spec :shell-system)
+                   unless (or (null system-name)
+                              (funcall find-system system-name nil))
+                     collect system-name into missing
+                   finally (return missing))))
+      ;; Prefer the current checkout unconditionally, then keep inherited
+      ;; registry entries so Nix-provided dependencies remain visible.
+      (funcall clear-source-registry)
+      (funcall initialize-source-registry
+               `(:source-registry
+                 (:tree ,project-root)
+                 :inherit-configuration))
+      (dolist (spec dependency-specs)
+        (load-local-asd (registered-source spec)
+                        (getf spec :asd)))
       ;; Two independent conditions, and neither is "did the LOAD-LOCAL-ASD
       ;; calls above find anything".
       ;;
@@ -96,25 +128,32 @@
       ;; FIND-SYSTEM, because a sibling directory is only one of the ways these
       ;; systems arrive. Under Nix, cl-nix-forge builds each one and resolves
       ;; the closure onto CL_SOURCE_REGISTRY, so there is no CL_*_SOURCE_DIR
-      ;; and no ../cl-process-kit/ to find -- and asking the old question there
-      ;; answered "no" and silently ran the core suite under a check whose name
-      ;; promised the full one. Asking ASDF whether it can resolve the system
-      ;; is the question that was always meant, and it is true on both paths.
-      (setf shell-verification-p
-            (and (find-package "SB-THREAD")
-                 (funcall find-system "cl-boundary-kit" nil)
-                 (funcall find-system "cl-log-kit" nil)
-                 (funcall find-system "cl-codec-kit" nil)
-                 (funcall find-system "cl-process-kit" nil)
-                 t)))
+      ;; and no ../cl-process-kit/ to find. Asking ASDF whether it can resolve
+      ;; the system is the right question on both paths.
+      (let ((sb-thread-package (find-package "SB-THREAD"))
+            (missing-systems (missing-shell-systems)))
+        (setf shell-verification-p
+              (and sb-thread-package
+                   (null missing-systems)
+                   t)
+              shell-verification-reason
+              (cond
+                ((null sb-thread-package)
+                 (format nil "SB-THREAD unavailable on ~A"
+                         (lisp-implementation-type)))
+                (missing-systems
+                 (format nil "missing ASDF systems: ~{~A~^, ~}"
+                         missing-systems))
+                (t
+                 nil)))))
     (load (merge-pathnames #P"cl-cli.asd" project-root))
     ;; Say which half is running, every time. A suite that quietly shrinks
     ;; when a dependency goes missing reads exactly like a suite that passed.
     (format *error-output*
             "~&; cl-cli tests: running the ~:[core suite only (shell-~
-             verification cases excluded: cl-process-kit unavailable on ~A)~;~
+             verification cases excluded: ~A)~;~
              full suite including shell verification~].~%"
-            shell-verification-p (lisp-implementation-type))
+            shell-verification-p shell-verification-reason)
     (funcall load-system (if shell-verification-p
                              "cl-cli/test/shell-verification"
                              "cl-cli/test"))))

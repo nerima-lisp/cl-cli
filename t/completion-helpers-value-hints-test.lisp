@@ -37,6 +37,21 @@
            (text (render-completion app "bash")))
       (expect (search "compgen -f" text))))
 
+  (it "emits file and directory completion for command positionals in bash"
+    (let* ((app (make-app :name "tool"
+                          :commands
+                          (list (make-command
+                                 :name "build"
+                                 :positionals
+                                 (list (make-positional :key :source
+                                                         :value-hint :file)
+                                       (make-positional :key :output
+                                                         :value-hint :dir))))))
+           (text (render-completion app "bash")))
+      (assert-searches text
+                       "compgen -f -- \"$cur\""
+                       "compgen -d -- \"$cur\"")))
+
   (it "emits _files in zsh"
     (let* ((app (make-app :name "tool"
                           :positionals (list (make-positional :key :f :value-hint :file))))

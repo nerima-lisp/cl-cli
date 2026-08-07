@@ -115,6 +115,13 @@
                        "echo ``` cannot close fence")
       (assert-not-searches text escape)))
 
+  (it "maps returns and tabs to spaces in prose metadata"
+    (let* ((app (make-app :name "tool"
+                          :description (format nil "left~Cmid~Cright"
+                                                #\Return #\Tab)))
+           (text (markdown-text app)))
+      (assert-searches text "left mid right")))
+
   (it "counts a backtick run across a dropped control character but not across a space-mapped one"
     ;; CL-CLI::%MD-MAX-BACKTICK-RUN replicates %MD-CONTROL-SAFE-STRING's
     ;; character mapping while counting, instead of building the safe string

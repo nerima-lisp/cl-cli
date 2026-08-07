@@ -7,6 +7,8 @@
    #:make-positional
    #:define-app
    #:define-command
+   #:define-option
+   #:define-positional
    #:exclusive-group
    #:required-exclusive-group
    #:inclusive-group
