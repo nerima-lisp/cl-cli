@@ -41,6 +41,9 @@
          (boundary-kit-env-source (funcall getenv "CL_BOUNDARY_KIT_SOURCE_DIR"))
          (log-kit-env-source (funcall getenv "CL_LOG_KIT_SOURCE_DIR"))
          (codec-kit-env-source (funcall getenv "CL_CODEC_KIT_SOURCE_DIR"))
+         (concurrent-kit-env-source (funcall getenv "CL_CONCURRENT_KIT_SOURCE_DIR"))
+         (date-kit-env-source (funcall getenv "CL_DATE_KIT_SOURCE_DIR"))
+         (host-kit-env-source (funcall getenv "CL_HOST_KIT_SOURCE_DIR"))
          (process-kit-env-source (funcall getenv "CL_PROCESS_KIT_SOURCE_DIR"))
          (json-kit-env-source (funcall getenv "CL_JSON_KIT_SOURCE_DIR"))
          (weave-local-source (merge-pathnames #P"../cl-weave/" project-root))
@@ -48,6 +51,9 @@
          (boundary-kit-local-source (merge-pathnames #P"../cl-boundary-kit/" project-root))
          (log-kit-local-source (merge-pathnames #P"../cl-log-kit/" project-root))
          (codec-kit-local-source (merge-pathnames #P"../cl-codec-kit/" project-root))
+         (concurrent-kit-local-source (merge-pathnames #P"../cl-concurrent-kit/" project-root))
+         (date-kit-local-source (merge-pathnames #P"../cl-date-kit/" project-root))
+         (host-kit-local-source (merge-pathnames #P"../cl-host-kit/" project-root))
          (process-kit-local-source (merge-pathnames #P"../cl-process-kit/" project-root))
          (json-kit-local-source (merge-pathnames #P"../cl-json-kit/" project-root))
          (shell-verification-p nil))
@@ -73,6 +79,17 @@
       (load-local-asd (registered-source boundary-kit-env-source
                                          boundary-kit-local-source)
                       #P"cl-boundary-kit.asd")
+      ;; cl-log-kit now pulls in cl-concurrent-kit/cl-date-kit/cl-host-kit on
+      ;; SBCL, so register those siblings before loading cl-log-kit.asd.
+      (load-local-asd (registered-source concurrent-kit-env-source
+                                         concurrent-kit-local-source)
+                      #P"cl-concurrent-kit.asd")
+      (load-local-asd (registered-source date-kit-env-source
+                                         date-kit-local-source)
+                      #P"cl-date-kit.asd")
+      (load-local-asd (registered-source host-kit-env-source
+                                         host-kit-local-source)
+                      #P"cl-host-kit.asd")
       (load-local-asd (registered-source log-kit-env-source
                                          log-kit-local-source)
                       #P"cl-log-kit.asd")

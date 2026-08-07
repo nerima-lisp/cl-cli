@@ -80,4 +80,14 @@
   (it "signals a clear error for a clause headed by an unknown keyword"
     (signals error
       (macroexpand-1 '(define-app *bad-dsl-app* ()
-                       (:not-a-real-clause "x"))))))
+                       (:not-a-real-clause "x")))))
+
+  (it "rejects DSL args that repeat reserved aggregate keys"
+    (signals error
+      (macroexpand-1 '(define-app *bad-dsl-app* (:name "dup" :commands nil)
+                       (:command "ok" ())))))
+
+  (it "rejects :commands-from clauses with more than one source form"
+    (signals error
+      (macroexpand-1 '(define-command *bad-dsl-command* (:name "dup")
+                       (:commands-from (list 1) (list 2)))))))

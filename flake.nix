@@ -25,7 +25,7 @@
     # input graph into flake.lock. They earn it by being consumed for their
     # `lib` outputs, which a bare source tree cannot provide.
     cl-nix-forge = {
-      url = "github:nerima-lisp/cl-nix-forge/v0.4.0";
+      url = "github:nerima-lisp/cl-nix-forge/v0.5.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -35,7 +35,7 @@
     # check` gate instead of something only an interactive session would ever
     # notice -- a truncated `defun` still reads as a plausible diff.
     paredit-cli = {
-      url = "github:nerima-lisp/paredit-cli/v1.4.0";
+      url = "github:nerima-lisp/paredit-cli/v1.5.0";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -85,12 +85,12 @@
     # blind -- see project memory under
     # `project_cl_weave_ecl_portability` for the full history.
     cl-weave = {
-      url = "github:nerima-lisp/cl-weave/v1.1.4";
+      url = "github:nerima-lisp/cl-weave/v1.3.0";
       flake = false;
     };
 
     cl-prolog = {
-      url = "github:nerima-lisp/cl-prolog/v1.3.0";
+      url = "github:nerima-lisp/cl-prolog/v1.4.3";
       flake = false;
     };
 
@@ -99,39 +99,29 @@
       flake = false;
     };
 
-    # v1.0.0, not the latest v2.0.1: pinned to match the exact version
-    # cl-process-kit v3.1.0's OWN flake.lock verifies against (still
-    # `:depends-on (:asdf :cl-log-kit)` there -- v2.0.1 replaced that edge
-    # with `:cl-host-kit`, a combination cl-process-kit's own suite has
-    # never been run against). Bumping past what upstream itself tested
-    # would trade a verified pin for an unverified guess.
+    # Keep the shared sibling inputs explicit instead of assuming
+    # `siblingSystem` will discover transitive ASDF dependencies on its own.
+    # This lock-step pin set is validated by this repository's test matrix.
     cl-boundary-kit = {
-      url = "github:nerima-lisp/cl-boundary-kit/v2.0.1";
+      url = "github:nerima-lisp/cl-boundary-kit/v2.2.0";
       flake = false;
     };
 
     cl-log-kit = {
-      url = "github:nerima-lisp/cl-log-kit/v2.0.1";
+      url = "github:nerima-lisp/cl-log-kit/v2.2.0";
       flake = false;
     };
 
-    # Neither of these is a dependency cl-cli names anywhere. cl-log-kit
-    # v2.0.1's own `:depends-on` is `((:version "cl-date-kit" "0.2.0")
-    # (:version "cl-concurrent-kit" "0.1.0") (:version "cl-host-kit" "0.2.0"))`,
-    # and `siblingSystem` below resolves a system's graph only from the
-    # `lispDependencies` it is handed -- never from the .asd -- so a
-    # transitive edge is invisible until it is spelled out. It was: the
-    # shell-verification half of the suite died with `Component "cl-date-kit"
-    # not found, required by #<SYSTEM "cl-log-kit">`.
-    #
-    # Both are `:depends-on ()` leaves, so neither drags anything further in.
+    # cl-log-kit pulls these in, but `siblingSystem` only resolves the graph
+    # from the explicit `lispDependencies` list handed to it. Keep them pinned
+    # here so shell verification and local SBCL runs see the same closure.
     cl-date-kit = {
-      url = "github:nerima-lisp/cl-date-kit/v0.2.0";
+      url = "github:nerima-lisp/cl-date-kit/v1.0.0";
       flake = false;
     };
 
     cl-concurrent-kit = {
-      url = "github:nerima-lisp/cl-concurrent-kit/v0.4.2";
+      url = "github:nerima-lisp/cl-concurrent-kit/v0.6.1";
       flake = false;
     };
 
@@ -141,7 +131,7 @@
     # Dependency-free (`:depends-on ()`), SBCL-only usage here since its only
     # consumer, cl-process-kit, is.
     cl-codec-kit = {
-      url = "github:nerima-lisp/cl-codec-kit/v0.4.0";
+      url = "github:nerima-lisp/cl-codec-kit/v0.5.0";
       flake = false;
     };
 

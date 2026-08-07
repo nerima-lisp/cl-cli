@@ -50,6 +50,7 @@
                (:file "src/model-command")
                (:file "src/model-validation")
                (:file "src/model-app")
+               (:file "src/model-dsl-clauses")
                (:file "src/model-dsl")
                (:file "src/util")
                (:file "src/terminal")
