@@ -1,10 +1,10 @@
 (defpackage #:cl-cli/test
   (:use #:cl #:cl-cli)
-  (:import-from #:cl-prolog
+  (:import-from #:cl-prolog-kit
                 #:assertz
                 #:make-rulebase
                 #:query-prolog)
-  (:import-from #:cl-prolog/weave
+  (:import-from #:cl-prolog-kit/weave
                 #:deftest-queries)
   (:import-from #:cl-weave
                 #:assert-mutation-score

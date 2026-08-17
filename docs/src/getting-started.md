@@ -18,7 +18,7 @@ git clone https://github.com/nerima-lisp/cl-cli  ~/common-lisp/cl-cli
 
 === "Nix (recommended for development)"
 
-    The flake wires up [`cl-prolog`](https://github.com/nerima-lisp/cl-prolog),
+    The flake wires up [`cl-prolog-kit`](https://github.com/nerima-lisp/cl-prolog-kit),
     [`cl-weave`](https://github.com/nerima-lisp/cl-weave),
     [`cl-process-kit`](https://github.com/nerima-lisp/cl-process-kit) (plus its
     own [`cl-boundary-kit`](https://github.com/nerima-lisp/cl-boundary-kit) /
@@ -48,7 +48,7 @@ git clone https://github.com/nerima-lisp/cl-cli  ~/common-lisp/cl-cli
 
 === "Running the test suite without Nix"
 
-    Clone `cl-prolog`, `cl-weave`, and `cl-json-kit` where ASDF can find
+    Clone `cl-prolog-kit`, `cl-weave`, and `cl-json-kit` where ASDF can find
     them, the same way as `cl-cli` above, then run `run-tests.lisp` at the
     repository root:
 

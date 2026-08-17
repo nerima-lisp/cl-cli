@@ -35,7 +35,7 @@
 (defparameter *prolog-atom-package* (find-package :cl-cli/test)
   "Fixed package for interning Prolog atoms.
 
-Predicate and atom identity in cl-prolog is symbol identity, so facts must be
+Predicate and atom identity in cl-prolog-kit is symbol identity, so facts must be
 interned into the same package the query literals in the test files are read
 into (CL-CLI/TESTS). Interning into the volatile *PACKAGE* makes rulebases
 non-reproducible: under the CL-USER runtime the suite uses, derived predicates
@@ -49,7 +49,7 @@ would land in the wrong package and the engine would raise EXISTENCE_ERROR.")
     (integer value)))
 
 (defun prolog-fact (&rest term)
-  (cl-prolog:make-clause term))
+  (cl-prolog-kit:make-clause term))
 
 (defun option-atom (option)
   (prolog-atom (option-key option)))
@@ -184,12 +184,12 @@ would land in the wrong package and the engine would raise EXISTENCE_ERROR.")
   "The full (predicate . arity) vocabulary the consumer-migration contracts query.
 
 Kept as an explicit list so the contract surface is documented in one place and
-so absent facts fail cleanly instead of raising cl-prolog's existence_error.")
+so absent facts fail cleanly instead of raising cl-prolog-kit's existence_error.")
 
 (defun consumer-migration-schema-clauses ()
   "Declare every contract predicate with a never-succeeding guard clause.
 
-cl-prolog raises the ISO existence_error(procedure, Name/Arity) for a query
+cl-prolog-kit raises the ISO existence_error(procedure, Name/Arity) for a query
 whose predicate has no clauses at all. A :fails contract such as
 \"nshell script stays optional\" (app-positional-required has zero facts when no
 positional is required) would therefore error instead of failing. Seeding a
@@ -197,15 +197,15 @@ positional is required) would therefore error instead of failing. Seeding a
 mirrors how src/option-relations.lisp declares :requires/:conflicts. The guard
 adds no solutions, so :succeeds and :set contracts are unaffected."
   (loop for (name arity) in *consumer-migration-contract-predicates*
-        collect (cl-prolog:make-clause
+        collect (cl-prolog-kit:make-clause
                  (cons (prolog-atom (symbol-name name))
                        (loop for index below arity
                              collect (intern (format nil "?G~D" index)
                                              *prolog-atom-package*)))
-                 (list (list 'cl-prolog:fail)))))
+                 (list (list 'cl-prolog-kit:fail)))))
 
 (defun consumer-migration-rulebase ()
-  (cl-prolog:make-rulebase
+  (cl-prolog-kit:make-rulebase
    :clauses
    (append (consumer-migration-schema-clauses)
            (mapcan #'app->prolog-clauses

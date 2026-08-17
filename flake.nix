@@ -13,7 +13,7 @@
     # `apps.default` pair and the devShell -- is the single `mkPackageFlake`
     # call below. PACKAGE_STANDARD.md distributes that shape as a *template*
     # copied by hand into 21 repositories, and the copies drift: cl-weave and
-    # cl-prolog have already converged on the preset, and this file's 357 hand-
+    # cl-prolog-kit have already converged on the preset, and this file's 357 hand-
     # written lines were the last copy in the set still re-deriving all of it.
     #
     # Pinned to a release TAG like every other input: a bare
@@ -72,8 +72,8 @@
       flake = false;
     };
 
-    cl-prolog = {
-      url = "github:nerima-lisp/cl-prolog/v1.4.3";
+    cl-prolog-kit = {
+      url = "github:nerima-lisp/cl-prolog-kit/v1.5.0";
       flake = false;
     };
 
@@ -154,7 +154,7 @@
       cl-nix-forge,
       paredit-cli,
       cl-weave,
-      cl-prolog,
+      cl-prolog-kit,
       cl-process-kit,
       cl-boundary-kit,
       cl-log-kit,
@@ -257,18 +257,18 @@
           lisp = ctx.pkgs.sbcl;
         };
 
-      # `cl-prolog/weave` is one of four systems cl-prolog.asd defines, and its
-      # `:depends-on` names both `cl-prolog` (resolved out of that same file, so
+      # `cl-prolog-kit/weave` is one of four systems cl-prolog-kit.asd defines, and its
+      # `:depends-on` names both `cl-prolog-kit` (resolved out of that same file, so
       # nothing to pass) and `cl-weave` (which is not, so it is passed). The
       # ASDF system name carries a slash; `pname` cannot, since it becomes a
       # store path component.
       clPrologWeaveSystem =
         ctx: lisp:
         siblingSystem ctx {
-          pname = "cl-prolog-weave";
-          source = cl-prolog;
-          asdName = "cl-prolog.asd";
-          lispSystem = "cl-prolog/weave";
+          pname = "cl-prolog-kit-weave";
+          source = cl-prolog-kit;
+          asdName = "cl-prolog-kit.asd";
+          lispSystem = "cl-prolog-kit/weave";
           inherit lisp;
           lispDependencies = [ (clWeaveSystem ctx lisp) ];
         };
