@@ -46,9 +46,9 @@
                  (list :env "CL_HOST_KIT_SOURCE_DIR"
                        :local (merge-pathnames #P"cl-host-kit/" dependency-parent)
                        :asd #P"cl-host-kit.asd")
-                 (list :env "CL_PROLOG_SOURCE_DIR"
-                       :local (merge-pathnames #P"cl-prolog/" dependency-parent)
-                       :asd #P"cl-prolog.asd")
+                 (list :env "CL_PROLOG_KIT_SOURCE_DIR"
+                       :local (merge-pathnames #P"cl-prolog-kit/" dependency-parent)
+                       :asd #P"cl-prolog-kit.asd")
                  (list :env "CL_JSON_KIT_SOURCE_DIR"
                        :local (merge-pathnames #P"cl-json-kit/" dependency-parent)
                        :asd #P"cl-json-kit.asd")

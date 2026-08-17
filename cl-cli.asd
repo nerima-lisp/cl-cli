@@ -158,7 +158,7 @@
   ;; `cl-cli/demo` belongs to the PORTABLE half: it depends on nothing but
   ;; `cl-cli`, so t/demo-test.lisp runs under the ECL gate too -- which is the
   ;; only thing that would notice the demo growing an SBCL-only form.
-  :depends-on ("cl-cli" "cl-cli/demo" "cl-weave" "cl-prolog/weave" "cl-json-kit"
+  :depends-on ("cl-cli" "cl-cli/demo" "cl-weave" "cl-prolog-kit/weave" "cl-json-kit"
                #+sbcl "cl-cli/concurrent")
   :serial t
   :components ((:file "t/package")
