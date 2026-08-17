@@ -262,7 +262,7 @@
       # nothing to pass) and `cl-weave` (which is not, so it is passed). The
       # ASDF system name carries a slash; `pname` cannot, since it becomes a
       # store path component.
-      clPrologWeaveSystem =
+      clPrologKitWeaveSystem =
         ctx: lisp:
         siblingSystem ctx {
           pname = "cl-prolog-kit-weave";
@@ -364,7 +364,7 @@
       # and ECL alike, which is what makes the ECL check below possible.
       coreTestSystems = ctx: lisp: [
         (clWeaveSystem ctx lisp)
-        (clPrologWeaveSystem ctx lisp)
+        (clPrologKitWeaveSystem ctx lisp)
         (clJsonKitSystem ctx lisp)
       ];
 
