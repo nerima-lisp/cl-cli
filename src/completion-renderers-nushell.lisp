@@ -2,11 +2,8 @@
 
 ;;;; A Nushell completion renderer.
 ;;;;
-;;;; Emits an `export extern` known-command definition plus a completer function
-;;;; for the leading subcommand token. This covers subcommand names and the
-;;;; app's global option flags; per-subcommand option externs are intentionally
-;;;; omitted to keep the generated module simple and syntactically robust.
-;;;; Follows the same optional-stream convention as the other renderers.
+;;;; Emits an `export extern` definition and a completer for the leading
+;;;; subcommand token, using the optional-stream convention of other renderers.
 
 (defun %completion-nushell-quote (string)
   "Quote STRING as a Nushell double-quoted literal.

@@ -57,21 +57,9 @@ the escape we just added."
 (defun %completion-write-single-quoted (stream string quote-escape)
   "Write STRING single-quoted to STREAM, writing QUOTE-ESCAPE for an embedded quote.
 
-Shared skeleton for the two single-quoting dialects this codebase supports --
-POSIX shells close-escape-reopen (`'\"'\"'`), Elvish/PowerShell double the
-quote (`''`) -- which otherwise differ only in that one substring. Strips
-control characters in the same pass rather than through
-%COMPLETION-CONTROL-SAFE-STRING (a second, separately-allocated
-WITH-OUTPUT-TO-STRING pass): quote-escaping and control-stripping act on
-disjoint character sets (a quote is never itself a control code), so folding
-both into one COND is behavior-preserving and, on an app with many options,
-avoids render-completion's hottest single allocation -- every option/command
-name and description is shell-quoted at least once.
-
-Writing straight to a caller-supplied STREAM (instead of always returning a
-freshly-consed string) lets hot callers that already hold an open stream --
-e.g. the bash renderer's array-literal/case-label builders -- skip an
-intermediate string allocation per quoted value entirely."
+Shared by POSIX shells, Elvish, and PowerShell; QUOTE-ESCAPE selects the
+dialect. Control stripping and quoting happen in one pass while writing
+directly to STREAM, avoiding an intermediate string."
   (let ((value (if string (princ-to-string string) "")))
     (write-char #\' stream)
     (loop for char across value
@@ -110,11 +98,8 @@ reopen. See %COMPLETION-WRITE-SINGLE-QUOTED."
 (defun %completion-write-quoted-joined (stream strings separator)
   "Write STRINGS shell-quoted and SEPARATOR-joined directly to STREAM.
 
-Shared skeleton for %COMPLETION-WRITE-CASE-LABELS (`|`, for `case \"$word\"
-in ...` sections) and %COMPLETION-WRITE-SPACE-JOINED-QUOTED (a space, for
-`compadd`/array-literal builders) -- both quote each value straight into
-STREAM instead of quoting it into its own string, joining those into a
-second string, and copying that into the caller's buffer a third time."
+Direct emission avoids an intermediate string for each value and for the
+joined result."
   (let ((firstp t))
     (dolist (string strings)
       (if firstp

@@ -138,22 +138,9 @@ already known truthy (:LAZY or a hash table), never when it is the NIL
    :value raw-value))
 
 (defun prepare-option-parser-state (app option-specs &optional cache)
-  ;; The declared option-relationship graph is validated once, at spec
-  ;; construction time, by MAKE-APP -> %VALIDATE-APP-SPEC (which checks the
-  ;; identical built-in + global (+ command) spec sets). Specs are immutable
-  ;; after construction, so re-running VALIDATE-OPTION-RELATIONSHIPS-DECLARED on
-  ;; every PARSE-ARGV is pure waste -- it rebuilt the option-relation graph and
-  ;; re-ran its conflicting-closure check twice per parse (~82% of parse time).
-  ;;
-  ;; The same immutability argument applies to the built-in-augmented specs
-  ;; list and its lookup table: %VALIDATE-APP-SPEC/%VALIDATE-COMMAND-NODE
-  ;; already compute both once and cache them as a (SPECS . TABLE) cons on
-  ;; the app (see APP-GLOBAL-OPTION-CACHE / APP-COMMAND-OPTION-CACHES). When
-  ;; a caller supplies that CACHE, reuse it directly -- rebuilding it here
-  ;; would re-run MAKE-OPTION for the built-ins and repopulate a hash table
-  ;; from scratch on every PARSE-ARGV call for no reason. CACHE is optional
-  ;; (and OPTION-SPECS still required) so this stays usable standalone with
-  ;; an ad hoc spec list never run through MAKE-APP.
+  ;; MAKE-APP validates immutable option relationships and caches each scope's
+  ;; built-in-augmented specs/table. Reuse that cache during parsing; the
+  ;; fallback keeps standalone callers with ad hoc specs supported.
   (if cache
       (values (car cache) (cdr cache))
       (let* ((specs (option-specs-with-built-ins app option-specs))

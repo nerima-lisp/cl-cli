@@ -3,14 +3,8 @@
 (defun %completion-bash-write-array-literal (stream strings)
   "Write STRINGS as a bash array literal `(...)` directly to STREAM.
 
-Equivalent to writing (%COMPLETION-BASH-ARRAY-LITERAL STRINGS), but skips
-that function's own MAPCAR-of-freshly-quoted-strings + FORMAT NIL join --
-each element is quoted straight into STREAM instead of into its own
-short-lived string that then gets copied again into a joined string and
-copied a third time into the caller's buffer. This function alone was ~65%
-of cumulative sampled time rendering a 330-option benchmark app (mostly
-WITH-OUTPUT-TO-STRING setup/copy overhead), so cutting two of those three
-copies per value is the highest-leverage single change in this renderer."
+Equivalent to writing (%COMPLETION-BASH-ARRAY-LITERAL STRINGS), but emits
+each quoted element directly to STREAM."
   (write-char #\( stream)
   (let ((firstp t))
     (dolist (string (remove-duplicates strings :test #'equal))
