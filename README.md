@@ -105,7 +105,7 @@ nix develop          # SBCL, ECL, and the shells the suite verifies against
 nix build            # -> ./result/bin/cl-cli-demo
 nix build .#cl-cli   # the library (the ASDF system, for lispDependencies)
 nix run .#test       # run the SBCL test suite
-nix flake check      # tests + formatting + docs, the same gate CI uses
+nix flake check --print-build-logs  # tests + formatting + docs, the same gate CI uses
 nix fmt              # format Nix sources (treefmt)
 SYSTEM=$(nix eval --raw --expr 'builtins.currentSystem')
 nix build ".#checks.${SYSTEM}.coverage" --no-link --print-out-paths

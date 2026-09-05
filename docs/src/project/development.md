@@ -28,7 +28,7 @@ The optional SBCL-only `cl-cli/concurrent` system additionally depends on
 ## Commands
 
 ```console
-$ nix flake check      # the full gate: SBCL, ECL, formatting, docs
+$ nix flake check --print-build-logs  # the full gate: SBCL, ECL, formatting, docs
 $ nix run .#test       # SBCL suite only, fastest feedback
 $ nix fmt              # format Nix sources (treefmt/nixfmt)
 $ nix build .#docs     # render the documentation site with --strict
