@@ -37,6 +37,12 @@ $ nix build ".#checks.${SYSTEM}.coverage" --no-link --print-out-paths
 $ nix build ".#checks.${SYSTEM}.coverage-gate" --no-link
 ```
 
+For a focused change, run `nix run .#test` first. It invokes the same
+`run-tests.lisp` entry point as the flake's SBCL check and includes the shell
+verification suite. Before publishing a completed change, run
+`nix flake check --print-build-logs`; this also rebuilds the documentation and
+checks its links with MkDocs' strict mode.
+
 Granularity lives in the flake's `checks.*` attributes rather than in extra CI
 jobs, so `nix flake check` runs exactly what CI runs:
 
