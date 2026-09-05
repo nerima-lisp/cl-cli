@@ -1,11 +1,8 @@
 (in-package :cl-cli)
 
-;;;; A Markdown documentation renderer.
-;;;;
-;;;; Follows the same optional-stream convention as the completion and man-page
-;;;; renderers: with no stream RENDER-MARKDOWN returns the document as a string;
-;;;; with a stream it writes to it and returns no values. The output is designed
-;;;; to drop straight into a README or a docs site (GitHub-flavored Markdown).
+;;;; Markdown documentation renderer.
+;;;; With no stream, RENDER-MARKDOWN returns a string; with a stream, it writes
+;;;; to it and returns no values.
 
 (defun %md-escape-prose (text)
   "Escape free-form prose so metadata cannot inject raw HTML or Markdown.

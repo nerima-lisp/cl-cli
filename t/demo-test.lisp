@@ -1,13 +1,6 @@
 (in-package :cl-cli/test)
 
-;;;; The demo executable, end to end through RUN-APP -- the same entry point
-;;;; `cl-cli/demo:main` calls, driven with string streams instead of the
-;;;; process's own.
-;;;;
-;;;; This is the only place the library is exercised as a WHOLE CLI rather than
-;;;; a unit: argv in, exit code and rendered text out. A dispatch regression
-;;;; that every unit test still passes (an alias resolving to the wrong node, a
-;;;; default subcommand stopping at its parent) surfaces here as wrong output.
+;;;; Exercise the demo end to end through RUN-APP with string streams.
 
 (defun %demo-run (argv)
   "Run the demo app on ARGV, returning (values exit-code stdout stderr).

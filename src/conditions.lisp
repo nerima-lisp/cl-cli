@@ -1,8 +1,6 @@
 (in-package :cl-cli)
 
-;;;; The condition hierarchy is the primary integration point for a consumer
-;;;; CLI, so it distinguishes two kinds of failure that must not be handled the
-;;;; same way:
+;;;; Separate user input errors from invalid application specifications:
 ;;;;
 ;;;;   CLI-ERROR
 ;;;;     CLI-USAGE-ERROR ............ the *user* typed something wrong. Print
@@ -11,10 +9,8 @@
 ;;;;                                  A bug in the app spec, surfaced by
 ;;;;                                  MAKE-APP / MAKE-COMMAND / MAKE-OPTION.
 ;;;;
-;;;; Keeping the second one out of CLI-USAGE-ERROR matters: the idiomatic
-;;;; handler is `(handler-case (run-app ...) (cli-usage-error (e) ...))`, and
-;;;; if a spec bug landed in that branch the developer's own mistake would be
-;;;; swallowed and reported to the end user as a usage message.
+;;;; Specification errors must not be caught by a handler intended for usage
+;;;; errors.
 
 (defvar *cli-error-app* nil)
 (defvar *cli-error-command* nil)

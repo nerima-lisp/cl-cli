@@ -1,10 +1,6 @@
 (in-package :cl-cli)
 
-;;;; An Elvish completion renderer.
-;;;;
-;;;; Registers an `edit:completion:arg-completer` that puts subcommand names and
-;;;; option tokens as candidates; Elvish narrows them by the current prefix.
-;;;; Follows the same optional-stream convention as the other renderers.
+;;;; Elvish completion renderer using edit:completion:arg-completer.
 
 (defun %completion-elvish-quote (string)
   "Quote STRING as an Elvish single-quoted literal (a quote doubles itself).

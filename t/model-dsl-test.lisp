@@ -1,10 +1,6 @@
 (in-package :cl-cli/test)
 
-;;; DEFINE-APP/DEFINE-COMMAND are purely additive sugar over MAKE-APP/
-;;; MAKE-COMMAND/MAKE-OPTION/MAKE-POSITIONAL (src/model-dsl.lisp) -- these
-;;; cases exercise the clause vocabulary itself (:option, :positional,
-;;; :command, :commands-from) rather than re-testing option/positional
-;;; behavior already covered elsewhere.
+;;; DEFINE-APP/DEFINE-COMMAND clause vocabulary.
 
 (define-option *dsl-shared-json-option*
   :name "json" :kind :flag :description "Emit JSON.")

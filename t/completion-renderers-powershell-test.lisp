@@ -1,12 +1,6 @@
 (in-package :cl-cli/test)
 
 ;;;; Output assertions for the PowerShell renderer.
-;;;;
-;;;; PowerShell is the most capable of the three flat completers: it keeps a
-;;;; per-command option map and narrows to it once a top-level subcommand is on
-;;;; the line. It does not do per-option value completion, so the only place a
-;;;; user-supplied value reaches a quoted literal is the root positional pool --
-;;;; which is where the escaping case below aims.
 
 (defun completion-powershell-hidden-command-options-fixture ()
   "An app whose hidden command carries options of its own."

@@ -1,9 +1,6 @@
 (in-package :cl-cli/test)
 
-;;;; Dynamic (runtime __complete) completion for the three flat completers --
-;;;; powershell, nushell, elvish. Previously only bash/zsh/fish shelled out to
-;;;; the program's __complete callback; these three offered only a static pool.
-;;;; The generated scripts here were verified against real pwsh / nu / elvish.
+;;;; Dynamic completion for PowerShell, Nushell, and Elvish.
 
 (defun flat-dynamic-app ()
   (make-app

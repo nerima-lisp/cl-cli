@@ -1,10 +1,7 @@
 ;;;; demo/main.lisp
 (in-package #:cl-cli/demo)
 
-;;; The demo is deliberately stateless: every handler reports what the parser
-;;; decided rather than mutating anything. A CLI-parsing library's executable
-;;; demonstration is the PARSE, so an in-memory store that dies with the
-;;; process would only obscure the thing being shown.
+;;; Keep the demo stateless so its output shows parsing and dispatch directly.
 
 (defun %command-path-string (invocation)
   "The dispatched command path as a space-separated string (\"remote add\")."

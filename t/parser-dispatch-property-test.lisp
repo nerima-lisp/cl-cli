@@ -1,10 +1,6 @@
 (in-package :cl-cli/test)
 
-;;; Property-based coverage for the parser. These exercise invariants that must
-;;; hold for *any* generated name/value, complementing the example-based cases.
-;;; The name alphabet is restricted to letters that cannot spell the built-in
-;;; "help"/"version" options, and a minimum length of 2 keeps generated names in
-;;; the long-option space (single characters are short options).
+;;; Property-based parser coverage for long options.
 
 (defun property-option-keyword (name)
   (intern (string-upcase name) :keyword))

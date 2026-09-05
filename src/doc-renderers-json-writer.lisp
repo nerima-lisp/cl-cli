@@ -1,8 +1,6 @@
 (in-package :cl-cli)
 
-;;;; Low-level JSON writer primitives shared by schema/document renderers.
-;;;; Keep this separate from the CLI-spec projection layer so the higher-level
-;;;; file only describes how app/command/option data maps into JSON members.
+;;;; Low-level JSON writer primitives shared by document renderers.
 
 (defvar *json-object-first-member-p* "True when no member of the JSON object currently being written via
 WITH-JSON-OBJECT has been written yet -- rebound per object (including

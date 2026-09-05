@@ -1,17 +1,9 @@
 (in-package :cl-cli)
 
-;;;; A JSON schema renderer: emits an app spec as a machine-readable object for
-;;;; external tooling (doc generators, GUIs, shell integrations). Dependency
-;;;; light -- a small self-contained JSON writer, no external JSON library.
-;;;;
-;;;; The output describes the author-declared surface: hidden options/commands
-;;;; and the auto-added help/version built-ins are omitted, matching the man and
-;;;; Markdown renderers. Follows the same optional-stream convention.
-;;;;
-;;;; Every %WRITE-*-JSON function writes straight to a shared STREAM instead of
-;;;; building and returning its own string for a parent to copy again. The
-;;;; low-level JSON writer primitives live in DOC-RENDERERS-JSON-WRITER so this
-;;;; file can stay focused on mapping app/command/option data into JSON.
+;;;; JSON schema renderer for the author-declared application surface.
+;;;; Hidden options/commands and auto-added help/version commands are omitted.
+;;;; Writers use a shared stream; low-level JSON primitives live in
+;;;; DOC-RENDERERS-JSON-WRITER.
 
 (defun %write-option-json (stream option)
   (with-json-object

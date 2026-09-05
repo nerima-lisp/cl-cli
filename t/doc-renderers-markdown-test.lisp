@@ -1,8 +1,6 @@
 (in-package :cl-cli/test)
 
-;; Reuses MANPAGE-DEMO-APP (defined in t/cases-doc-manpage.lisp): a
-;; version'd, summarized app with a count option, a hidden option, a command
-;; with its own option + positional, a hidden command, and an example.
+;; Reuses MANPAGE-DEMO-APP from t/cases-doc-manpage.lisp.
 
 (defun markdown-text (app)
   (with-string-output (stream)

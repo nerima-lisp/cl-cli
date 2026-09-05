@@ -1,10 +1,8 @@
 (in-package :cl-cli)
 
-;;;; A section-1 man page renderer (roff / man macros).
-;;;;
-;;;; Follows the same optional-stream convention as the completion renderers:
-;;;; with no stream RENDER-MANPAGE returns the page as a string; with a stream
-;;;; it writes to it and returns no values.
+;;;; Section-1 man-page renderer (roff / man macros).
+;;;; With no stream, RENDER-MANPAGE returns a string; with a stream, it writes
+;;;; to it and returns no values.
 
 (defun %roff-escape (text)
   "Escape TEXT for inline use in a roff document.

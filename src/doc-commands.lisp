@@ -1,8 +1,6 @@
 (in-package :cl-cli)
 
-;;;; A built-in `docs [FORMAT]` command, parallel to the `completion [SHELL]`
-;;;; command: it prints generated reference documentation (a man page,
-;;;; Markdown, or JSON) for the owning app straight to stdout.
+;;;; Built-in `docs [FORMAT]` command for man-page, Markdown, or JSON output.
 
 (defun %parse-doc-format (value)
   (let ((format (canonical-name value)))

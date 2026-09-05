@@ -1,9 +1,6 @@
 (in-package :cl-cli)
 
-;;;; A Nushell completion renderer.
-;;;;
-;;;; Emits an `export extern` definition and a completer for the leading
-;;;; subcommand token, using the optional-stream convention of other renderers.
+;;;; Nushell completion renderer using export extern and a leading-token completer.
 
 (defun %completion-nushell-quote (string)
   "Quote STRING as a Nushell double-quoted literal.

@@ -1,11 +1,6 @@
-;;; Command-line entry point:
+;;; Universal test entry point:
 ;;;   sbcl --script run-tests.lisp
 ;;;   ecl --shell run-tests.lisp
-;;;
-;;; This script LOADS AND RUNS the suite, and exits with its verdict. That is
-;;; what PACKAGE_STANDARD.md means by a universal test entry point, and what
-;;; lets flake.nix's `checks.default`, `checks.ecl` and `apps.test` all invoke
-;;; the same file a contributor invokes by hand.
 ;;;
 (eval-when (:load-toplevel :execute)
   (require :asdf))
@@ -158,13 +153,8 @@
                              "cl-cli/test/shell-verification"
                              "cl-cli/test"))))
 
-;;; `cl-cli/test:run-tests` signals on any failing suite, so the handler is
-;;; what turns that into an exit code instead of a backtrace whose meaning
-;;; depends on which implementation's `--script` flag was used.
-;;;
-;;; Symbols are resolved at run time rather than read time for the same reason
-;;; the form above does it: the CL-CLI/TEST package does not exist while this
-;;; file is being read.
+;;; Resolve the test package after loading the system, then map failures to a
+;;; portable exit code.
 (eval-when (:load-toplevel :execute)
   (let* ((uiop-package (or (find-package :uiop)
                            (error "UIOP package is unavailable.")))

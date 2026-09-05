@@ -1,11 +1,6 @@
 (in-package :cl-cli)
 
-;;;; A PowerShell completion renderer.
-;;;;
-;;;; Emits a `Register-ArgumentCompleter -Native` script block that offers
-;;;; subcommands and option tokens, narrowing to a subcommand's own options once
-;;;; that subcommand appears on the line. Follows the same optional-stream
-;;;; convention as the other completion renderers.
+;;;; PowerShell completion renderer using Register-ArgumentCompleter -Native.
 
 (defun %completion-powershell-quote (string)
   "Quote STRING as a PowerShell single-quoted literal.

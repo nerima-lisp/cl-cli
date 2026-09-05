@@ -1,10 +1,6 @@
 (in-package :cl-cli/test)
 
 ;;;; Output assertions for the Nushell renderer.
-;;;;
-;;;; Nushell gets an `export extern` signature (global flags only) plus one
-;;;; `nu-complete <app> command` def for the leading token. It does not narrow
-;;;; to a subcommand's options, so nothing here asserts a per-command scope.
 
 (describe-sequential "completion nushell"
   (it "includes visible commands and options"

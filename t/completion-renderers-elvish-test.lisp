@@ -1,11 +1,6 @@
 (in-package :cl-cli/test)
 
 ;;;; Output assertions for the Elvish renderer.
-;;;;
-;;;; Elvish gets a single arg-completer that puts one flat candidate pool --
-;;;; subcommand names, global option tokens, root positional values -- and lets
-;;;; Elvish narrow by prefix. There is no per-command scope and no per-option
-;;;; value completion, so nothing here asserts either.
 
 (describe-sequential "completion elvish"
   (it "includes visible commands and options"

@@ -1,10 +1,6 @@
 (in-package :cl-cli)
 
-;;;; Shared helpers for the offline documentation renderers (man page, Markdown).
-;;;;
-;;;; These renderers reuse the same spec accessors and metadata helpers the
-;;;; interactive help printer uses, so generated docs stay aligned with `--help`
-;;;; without a second source of truth.
+;;;; Shared helpers for the man-page and Markdown renderers.
 
 (defun %doc-visible-options (options)
   "Public (non-hidden) options in declaration order."

@@ -1,15 +1,7 @@
 (in-package :cl-cli/test)
 
-;;;; Verify generated scripts with the REAL tools that consume them (bash, zsh,
-;;;; fish, nushell, powershell, elvish, mandoc) -- catching structural errors
-;;;; substring assertions cannot. Each check is skipped when its tool is absent.
-;;;;
-;;;; Every subprocess launch here goes through CL-PROCESS-KIT with an explicit
-;;;; :TIMEOUT: a hung syntax-checker (a broken local install prompting on
-;;;; stdin, for example) escalates SIGTERM/SIGKILL and returns rather than
-;;;; blocking the test run indefinitely. PROCESS-KIT also puts each child in
-;;;; its own process group, so a timeout cannot leave an orphaned grandchild
-;;;; behind the way a bare terminate-process could.
+;;;; Verify generated scripts with the tools that consume them. Checks are
+;;;; skipped when the corresponding tool is absent; subprocesses have timeouts.
 
 (defparameter +shell-tool-timeout-seconds+ 60
   "Deadline for every real-shell verification subprocess in this file.
