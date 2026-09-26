@@ -212,7 +212,10 @@ and a custom `:parser` — plus positional-specific shape:
 (cl-cli:make-positional :key :files :rest-p t :min-count 1 :max-count 8)
 ```
 
-A rest positional (`:rest-p t`) collects every remaining token and can bound
+A rest positional (`:rest-p t`) collects every remaining positional token
+(options after its first item are still parsed as options; see
+[Interspersed arguments](cli-behavior.md#interspersed-arguments) for `--` and
+`:stop-parsing-p`) and can bound
 how many values it accepts with `:min-count` / `:max-count` (too few signals
 `cli-missing-positional`, too many `cli-unexpected-argument`). A required
 positional may not follow an optional one — declaring one signals

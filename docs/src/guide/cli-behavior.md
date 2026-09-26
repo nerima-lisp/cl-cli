@@ -80,6 +80,28 @@ Command and global options may also appear after command positionals when a
 consumer CLI expects interspersed arguments, such as
 `demo compile input.lisp --output out.fasl --verbose`.
 
+This holds for a rest positional (`:rest-p t`) too: it collects the positional
+tokens around the options rather than every token after its first item. With
+positionals `pattern` and `paths` (rest) and an `--output` option,
+`grep search foo src --output count lib` yields `paths` `("src" "lib")` and
+`output` `"count"`. Long options (`--output count`, `--output=count`), short
+options and clusters, flags, and global options are recognized in any
+position.
+
+Only two things end option parsing:
+
+- a literal `--`: every later token, including another `--` and any
+  option-looking token, is positional, so `grep search foo -- --output count`
+  yields `paths` `("--output" "count")`;
+- an option declared with `:stop-parsing-p t` (see below).
+
+Before that point an option-looking token is always parsed as an option, so an
+undeclared one signals `cli-unknown-option` instead of joining the rest
+positional. A token like `-5` follows the
+[negative-number policy](#negative-number-arguments): with
+`:allow-negative-numbers t` it is a positional item, otherwise it is a
+short-option cluster. A bare `-` is always positional.
+
 ## Stopping parsing for opaque tails
 
 Use `:stop-parsing-p t` for options such as shell `-c COMMAND [ARGS...]`
