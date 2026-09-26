@@ -172,6 +172,7 @@
                (:file "t/package-test")
                (:file "t/parser-dispatch-test")
                (:file "t/parser-cps-test")
+               (:file "t/parser-cps-rest-positional-test")
                (:file "t/parser-dispatch-property-test")
                (:file "t/model-helpers-mutation-test")
                (:file "t/parser-dispatch-fuzz-test")

@@ -39,24 +39,41 @@ token streams without additional dynamic stack frames."
       (%scan-options-prefix validated-specs table tokens initial-values
                             :dispatch nil #'values))))
 
-(defun %scan-mixed-arguments-consume-positional (pending positional-values remaining)
-  "Consume one positional token, or signal CLI-USAGE-ERROR when none is pending.
+(defun %scan-mixed-arguments-consume-positional
+    (pending positional-values rest-tokens remaining)
+  "Consume the first token of REMAINING as the next pending positional, or
+signal CLI-USAGE-ERROR when none is pending.
 
-Returns (values new-pending new-positional-values new-remaining)."
+A rest positional takes one token at a time and stays pending: the token is
+pushed onto REST-TOKENS (most recent first) and the spec is applied only when
+the scan ends, so options after the rest positional's first item are still
+recognized.
+
+Returns (values new-pending new-positional-values new-rest-tokens
+new-remaining)."
   (when (null pending)
     (signal-unexpected-positionals remaining))
   (let ((spec (first pending)))
-    (multiple-value-bind (new-positional-values new-remaining)
-        (apply-positional-spec spec positional-values remaining)
-      (values (if (positional-rest-p spec) nil (rest pending))
-              new-positional-values
-              new-remaining))))
+    (if (positional-rest-p spec)
+        (values pending positional-values
+                (cons (first remaining) rest-tokens)
+                (rest remaining))
+        (multiple-value-bind (new-positional-values new-remaining)
+            (apply-positional-spec spec positional-values remaining)
+          (values (rest pending) new-positional-values rest-tokens
+                  new-remaining)))))
 
 (defun %scan-mixed-arguments (validated-specs table remaining pending option-values
-                              positional-values action literal-mode-p on-done)
+                              positional-values rest-tokens action literal-mode-p
+                              on-done)
   "Scan REMAINING as an interleaved option/positional stream, calling ON-DONE
 with the final (pending option-values positional-values action) once every
 token is consumed.
+
+Option tokens are recognized anywhere until a literal \"--\" or a
+stop-parsing option switches to LITERAL-MODE-P, including after a rest
+positional has started collecting: REST-TOKENS holds its items (most recent
+first) and is applied to the pending rest spec when REMAINING runs out.
 
 Genuine continuation-passing style, mirroring %SCAN-OPTIONS-PREFIX: every
 terminal case calls ON-DONE, and every other case is a tail call threading the
@@ -64,17 +81,24 @@ full scan state through explicit arguments. Implementations that optimize tail
 calls can process long token streams without additional dynamic stack frames."
   (cond
     ((null remaining)
-     (funcall on-done pending option-values positional-values action))
+     (if rest-tokens
+         (funcall on-done nil option-values
+                  (apply-positional-spec (first pending) positional-values
+                                         (reverse rest-tokens))
+                  action)
+         (funcall on-done pending option-values positional-values action)))
     ((and (not literal-mode-p) (string= (first remaining) "--"))
      (%scan-mixed-arguments validated-specs table (rest remaining) pending
-                            option-values positional-values action t on-done))
+                            option-values positional-values rest-tokens action t
+                            on-done))
     (literal-mode-p
-     (multiple-value-bind (new-pending new-positional-values new-remaining)
+     (multiple-value-bind (new-pending new-positional-values new-rest-tokens
+                           new-remaining)
          (%scan-mixed-arguments-consume-positional pending positional-values
-                                                    remaining)
+                                                    rest-tokens remaining)
        (%scan-mixed-arguments validated-specs table new-remaining new-pending
-                              option-values new-positional-values action t
-                              on-done)))
+                              option-values new-positional-values new-rest-tokens
+                              action t on-done)))
     (t
      (multiple-value-bind (status new-values new-remaining new-action)
          (%consume-option-token-step (first remaining) validated-specs table
@@ -82,15 +106,17 @@ calls can process long token streams without additional dynamic stack frames."
        (case status
          ((:done :continue)
           (%scan-mixed-arguments validated-specs table new-remaining pending
-                                 new-values positional-values new-action
-                                 (eq status :done) on-done))
+                                 new-values positional-values rest-tokens
+                                 new-action (eq status :done) on-done))
          (t
-          (multiple-value-bind (new-pending new-positional-values new-remaining)
+          (multiple-value-bind (new-pending new-positional-values new-rest-tokens
+                                new-remaining)
               (%scan-mixed-arguments-consume-positional pending positional-values
-                                                         remaining)
+                                                         rest-tokens remaining)
             (%scan-mixed-arguments validated-specs table new-remaining
                                    new-pending option-values new-positional-values
-                                   action literal-mode-p on-done))))))))
+                                   new-rest-tokens action literal-mode-p
+                                   on-done))))))))
 
 (defun %validate-mixed-option-relationships
     (app command option-values validated-specs)
@@ -133,7 +159,7 @@ calls can process long token streams without additional dynamic stack frames."
     (multiple-value-bind (validated-specs table)
         (prepare-option-parser-state app option-specs cache)
       (%scan-mixed-arguments
-       validated-specs table tokens positional-specs initial-option-values nil
+       validated-specs table tokens positional-specs initial-option-values nil nil
        :dispatch nil
        (lambda (pending option-values positional-values action)
          (%finalize-mixed-parse app command validated-specs pending

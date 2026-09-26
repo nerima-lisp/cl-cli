@@ -100,7 +100,10 @@ Use these `cl-cli` features:
 - built-in help/version flags
 - `:stop-parsing-p t` on `-c`
 - root positionals with a trailing `:rest-p t` positional for script argv —
-  see the [root positional example](../getting-started.md#root-positional-example)
+  see the [root positional example](../getting-started.md#root-positional-example).
+  Options are still parsed after the script name, so script arguments that
+  look like options go after `--` (`nshell build.ns -- --json`); see
+  [Interspersed arguments](cli-behavior.md#interspersed-arguments)
 
 Existing coverage: root positional parsing is shown in the `script-runner`
 example in [Getting Started](../getting-started.md#root-positional-example);

@@ -35,7 +35,7 @@
     (let ((positionals (list (make-positional :key :input :required-p t))))
       (cl-weave:with-continuation-values (captured next called-p)
           (cl-cli::%scan-mixed-arguments
-           nil nil '("--" "input") positionals nil nil :dispatch nil #'next)
+           nil nil '("--" "input") positionals nil nil nil :dispatch nil #'next)
         (expect called-p)
         (expect (null (first captured)))
         (expect (null (second captured)))
