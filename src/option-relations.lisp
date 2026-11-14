@@ -90,11 +90,14 @@ requirement, and paired with any alternative it fails a :conflicts check."
   "True when some KEY's reachable :requires closure (itself included) contains
 two options that conflict with each other."
   (some (lambda (root)
-          (let ((reachable (cons root (transitive-required-option-keys graph root))))
+          (let ((reachable (cons root (transitive-required-option-keys graph root)))
+                (reachable-table (make-hash-table :test #'eql)))
+            (dolist (key reachable)
+              (setf (gethash key reachable-table) t))
             (some (lambda (left)
-                    (some (lambda (right)
-                            (member right (gethash left (option-relation-graph-conflicts graph))))
-                          reachable))
+                    (some (lambda (conflict)
+                            (gethash conflict reachable-table))
+                          (gethash left (option-relation-graph-conflicts graph))))
                   reachable)))
         keys))
 

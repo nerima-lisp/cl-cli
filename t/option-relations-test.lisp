@@ -278,6 +278,54 @@
                              (make-option :name "b" :kind :flag
                                          :conflicts-with '(:c))
                              (make-option :name "c" :kind :flag)))))
+  (it "matches pairwise closure validation across fixed-order three-option DAGs and conflict graphs"
+    (let ((keys '(:a :b :c))
+          (edges '((:a :b) (:a :c) (:b :c)))
+          (checked 0))
+      (labels ((pairwise-conflict-p (graph roots)
+                 (some (lambda (root)
+                         (let ((reachable
+                                 (cons root (cl-cli::transitive-required-option-keys
+                                             graph root))))
+                           (some (lambda (left)
+                                   (some (lambda (right)
+                                           (member right
+                                                   (gethash left
+                                                            (cl-cli::option-relation-graph-conflicts
+                                                             graph))))
+                                         reachable))
+                                 reachable)))
+                       roots)))
+        (dotimes (requires-mask 8)
+          (dotimes (conflicts-mask 8)
+            (let ((graph (cl-cli::%make-option-relation-graph)))
+              (loop for (left right) in edges
+                    for bit from 0
+                    do (when (logbitp bit requires-mask)
+                         (push right (gethash left
+                                              (cl-cli::option-relation-graph-requires graph))))
+                       (when (logbitp bit conflicts-mask)
+                         (push right (gethash left (cl-cli::option-relation-graph-conflicts graph)))
+                         (push left (gethash right (cl-cli::option-relation-graph-conflicts graph)))))
+              (dolist (key keys)
+                (setf (gethash key (cl-cli::option-relation-graph-transitive-requires graph))
+                      (cl-cli::%relation-graph-transitive-requires graph key)))
+              (dolist (roots (cons keys (mapcar #'list keys)))
+                (expect (eql (not (null (pairwise-conflict-p graph roots)))
+                             (not (null (cl-cli::%relation-graph-conflicting-closure-p
+                                         graph roots))))))
+              (incf checked)))))
+      (expect (= 64 checked))))
+  (it "preserves eql conflict matching for numeric option keys"
+    (let* ((graph (cl-cli::%make-option-relation-graph))
+           (reachable-key (parse-integer "1000000000000000000000000000000"))
+           (conflict-key (parse-integer "1000000000000000000000000000000")))
+      (setf (gethash :a (cl-cli::option-relation-graph-transitive-requires graph))
+            (list reachable-key)
+            (gethash :a (cl-cli::option-relation-graph-conflicts graph))
+            (list conflict-key))
+      (expect (eql reachable-key conflict-key))
+      (expect (cl-cli::%relation-graph-conflicting-closure-p graph '(:a)))))
 
   (it "keeps each app's cached relation rulebase independent when a command is reused across apps"
     ;; COMMAND-SPEC is documented as a reusable, composable object -- the same

@@ -126,11 +126,20 @@ to control characters; see %COMPLETION-WRITE-CONTROL-SAFE."
                    ""))
               (otherwise "")))))
 
-(defun %completion-zsh-option-specs-for-options (options)
-  (%completion-option-items-for-options
-   options
-   #'%completion-recognized-option-names
-   #'%completion-zsh-option-spec))
+(defun %completion-zsh-option-specs-for-options (options &optional cache)
+  (collecting
+    (dolist (option options)
+      (unless (option-hidden-p option)
+        (let ((specs
+                (if cache
+                    (or (gethash option cache)
+                        (setf (gethash option cache)
+                              (%completion-zsh-option-specs-for-specs
+                               (list option))))
+                    (%completion-zsh-option-specs-for-specs (list option)))))
+          ;; Do not splice the cached list into a mutable output accumulator.
+          (dolist (spec specs)
+            (collect spec)))))))
 
 (defun %completion-zsh-option-specs-for-specs (options)
   (%completion-option-items-for-specs
@@ -141,10 +150,10 @@ to control characters; see %COMPLETION-WRITE-CONTROL-SAFE."
 (defun %completion-zsh-built-in-option-specs (app)
   (%completion-zsh-option-specs-for-specs (built-in-option-specs app)))
 
-(defun %completion-zsh-write-option-specs (stream options variable-name &key app)
+(defun %completion-zsh-write-option-specs (stream options variable-name &key app cache)
   (%completion-zsh-write-assignment
    stream variable-name
-   (append (%completion-zsh-option-specs-for-options options)
+   (append (%completion-zsh-option-specs-for-options options cache)
            (when app
              (%completion-zsh-built-in-option-specs app)))))
 

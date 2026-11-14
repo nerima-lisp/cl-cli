@@ -33,7 +33,8 @@
    stream "subcommand_specs"
    (%completion-zsh-command-specs subcommands)))
 
-(defun %completion-zsh-write-command-node (stream app command scope-options depth)
+(defun %completion-zsh-write-command-node (stream app command scope-options depth
+                                           &optional option-cache)
   "Write the `NAME) ... ;;' case clause for COMMAND at word index DEPTH directly to STREAM.
 
 SCOPE-OPTIONS accumulates globals plus every ancestor command's options; a
@@ -50,12 +51,14 @@ same fix applied to the bash renderer."
     (format stream "    ")
     (%completion-zsh-write-command-labels stream command)
     (format stream ")~%")
-    (%completion-zsh-write-option-specs stream options "command_option_specs" :app app)
+    (%completion-zsh-write-option-specs stream options "command_option_specs"
+                                        :app app :cache option-cache)
     (%completion-zsh-render-value-cases options stream)
     (when subcommands
       (format stream "      case \"${words[~A]}\" in~%" child-depth)
       (dolist (subcommand subcommands)
-        (%completion-zsh-write-command-node stream app subcommand options child-depth))
+        (%completion-zsh-write-command-node stream app subcommand options child-depth
+                                            option-cache))
       (format stream "      esac~%"))
     (format stream "      if [[ \"$current_word\" == -* ]]; then~%")
     (format stream "        _describe 'options' command_option_specs~%")
@@ -80,8 +83,9 @@ same fix applied to the bash renderer."
     (format stream "      return 0~%")
     (format stream "      ;;~%")))
 
-(defun %completion-zsh-write-command-case-source (stream app command)
-  (%completion-zsh-write-command-node stream app command (app-global-options app) 2))
+(defun %completion-zsh-write-command-case-source (stream app command &optional option-cache)
+  (%completion-zsh-write-command-node stream app command (app-global-options app) 2
+                                      option-cache))
 
 (defun %completion-zsh-write-positional-fallback (app stream indent)
   "Write INDENT-prefixed compadd/_files fallback lines for APP's own
@@ -106,7 +110,8 @@ With no STREAM, return the completion script as a string. With a STREAM,
 write the script to it and return no values."
   (ensure-output-stream stream render-zsh-completion app)
   (let ((function-name (%completion-function-name app))
-        (app-name (%completion-control-safe-string (app-name app))))
+        (app-name (%completion-control-safe-string (app-name app)))
+        (option-cache (make-hash-table :test #'eq)))
     (format stream "#compdef ~A~%" app-name)
     (format stream "~A() {~%" function-name)
     (format stream "  local current_word previous_word command_word~%")
@@ -124,13 +129,14 @@ write the script to it and return no values."
     (format stream "    command_word=~%")
     (format stream "  fi~%")
     (%completion-zsh-write-command-specs stream app)
-    (%completion-zsh-write-option-specs stream (app-global-options app) "option_specs" :app app)
+    (%completion-zsh-write-option-specs stream (app-global-options app) "option_specs"
+                                        :app app :cache option-cache)
     (%completion-zsh-render-value-cases (app-global-options app) stream)
     (if (%completion-visible-commands app)
         (progn
           (format stream "  case \"$command_word\" in~%")
           (dolist (command (%completion-visible-commands app))
-            (%completion-zsh-write-command-case-source stream app command))
+            (%completion-zsh-write-command-case-source stream app command option-cache))
           (format stream "    *)~%")
           (format stream "      if [[ \"$current_word\" == -* ]]; then~%")
           (format stream "        _describe 'options' option_specs~%")

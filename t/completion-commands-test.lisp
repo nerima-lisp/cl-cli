@@ -217,4 +217,52 @@
       (expect (string= (render-nushell-completion app)
                        (with-string-output (out) (render-nushell-completion app out))))
       (expect (string= (render-elvish-completion app)
-                       (with-string-output (out) (render-elvish-completion app out)))))))
+                       (with-string-output (out) (render-elvish-completion app out))))))
+  (it "reuses zsh option descriptors only within a render cache"
+    (let* ((option (make-option :name "verbose" :short #\v :kind :flag
+                                :description "first:[value]"))
+           (hidden (make-option :name "secret" :kind :flag :hidden-p t))
+           (options (list option hidden))
+           (cache (make-hash-table :test #'eq))
+           (first (cl-cli::%completion-zsh-option-specs-for-options options cache))
+           (again (cl-cli::%completion-zsh-option-specs-for-options options cache)))
+      (expect (equal first
+                     (cl-cli::%completion-option-items-for-options
+                      options #'cl-cli::%completion-recognized-option-names
+                      #'cl-cli::%completion-zsh-option-spec)))
+      (expect (= 1 (hash-table-count cache)))
+      (expect (= 2 (length first)))
+      (expect (equal first again))
+      (expect (every #'eq first again))
+      (expect (equal first (gethash option cache)))
+      (setf (car first) "poison")
+      (expect (not (equal first again)))
+      (expect (equal again (gethash option cache)))
+      (setf (option-description option) "second")
+      (expect (not (equal again
+                          (cl-cli::%completion-zsh-option-specs-for-options
+                           options (make-hash-table :test #'eq)))))))
+  (it "refreshes zsh descriptors between renders and shares them with child commands"
+    (let* ((option (make-option :name "verbose" :kind :flag :description "before"))
+           (child-option (make-option :name "leaf" :kind :flag))
+           (parent (make-command :name "parent"
+                                 :subcommands (list (make-command :name "child"
+                                                                 :options (list child-option)))))
+           (app (demo-app :global-options (list option) :commands (list parent)))
+           (cache (make-hash-table :test #'eq))
+           (before (render-zsh-completion app)))
+      (expect (string=
+               (with-output-to-string (s)
+                 (cl-cli::%completion-zsh-write-command-case-source s app parent cache))
+               (with-output-to-string (s)
+                 (cl-cli::%completion-zsh-write-command-case-source s app parent))))
+      (expect (= 2 (hash-table-count cache)))
+      (expect (gethash child-option cache))
+      (setf (option-description option) "after")
+      (let ((after (render-zsh-completion app)))
+        (expect (not (string= before after)))
+        (expect (search "--verbose[after]" after))
+        (expect (not (search "--verbose[before]" after)))
+        (expect (string= after (with-output-to-string (s)
+                                (expect (null (multiple-value-list
+                                               (render-zsh-completion app s)))))))))))
